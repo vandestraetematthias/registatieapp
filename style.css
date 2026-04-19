@@ -535,12 +535,10 @@ textarea { resize: vertical; min-height: 80px; }
 .overleg-kaartje-body  { font-size: 0.85rem; color: var(--tekst); }
 .overleg-acties        { margin-top: 6px; font-size: 0.8rem; color: var(--zacht); }
 
-/* Navigatie — altijd zichtbaar onderaan de kaart */
+/* Navigatie — onderaan de inhoud van de kaart */
 .navigatie {
   display: flex; justify-content: space-between; align-items: center;
   margin-top: 18px; padding-top: 12px; border-top: 1.5px solid var(--rand);
-  position: sticky;
-  bottom: 0;
   background: rgba(228, 255, 140, 0.97);
   margin-left: -20px;
   margin-right: -20px;
@@ -548,7 +546,6 @@ textarea { resize: vertical; min-height: 80px; }
   padding-left: 20px;
   padding-right: 20px;
   padding-bottom: 14px;
-  z-index: 2;
 }
 .btn-terug {
   background: none; border: 1.5px solid var(--rand); border-radius: 10px;

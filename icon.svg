@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Achtergrond — collectief blauw -->
+  <rect width="512" height="512" rx="108" fill="#2c6e8a"/>
+
+  <!-- Linker persoon — hoofd -->
+  <circle cx="170" cy="172" r="66" fill="white"/>
+  <!-- Linker persoon — schouders/romp -->
+  <path d="M36 402 C44 314 100 258 170 258 C240 258 296 314 304 402 Z" fill="white"/>
+
+  <!-- Rechter persoon — hoofd -->
+  <circle cx="342" cy="172" r="66" fill="white"/>
+  <!-- Rechter persoon — schouders/romp -->
+  <path d="M208 402 C216 314 272 258 342 258 C412 258 468 314 476 402 Z" fill="white"/>
+</svg>
