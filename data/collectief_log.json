@@ -1,0 +1,168 @@
+﻿[
+    {
+        "ID":  "e37da75f-f53d-4864-9f05-be69f27e8ace",
+        "Module":  null,
+        "Maand":  "M",
+        "Jaar":  2026,
+        "TypeActie":  [
+                          "Bewoners activering"
+                      ],
+        "NaamVanDeActie":  "rommelmarkt",
+        "Duur":  "1",
+        "Cluster":  [
+                        "Deelnemer/partner van georganiseerde ontmoeting"
+                    ],
+        "Thema":  [
+                      "Communicatie"
+                  ],
+        "AantalBewoners":  1,
+        "WaarvanNieuweBewoners":  0,
+        "AantalVrijwilligers":  1,
+        "NaamVrijwilligers":  [
+                                  "felix test"
+                              ],
+        "TotaalBereikte":  2,
+        "NaamPartner":  "samentuin",
+        "Datum":  "2026-03-28 21:21:16",
+        "Status":  "actief"
+    },
+    {
+        "ID":  "f46def45-2aa7-4f4a-a03d-3518f9866412",
+        "Module":  "Logistiek",
+        "NaamVanDeActie":  "rommelmarkt",
+        "Datum":  "2026-03-28",
+        "UitlegType":  [
+                           "boodschappen"
+                       ],
+        "Uitgaven":  [
+                         {
+                             "Beschrijving":  "cola",
+                             "Leverancier":  "asalam",
+                             "Bedrag":  100
+                         },
+                         {
+                             "Beschrijving":  "frieten",
+                             "Leverancier":  "asalam",
+                             "Bedrag":  20
+                         }
+                     ],
+        "Signalen":  true,
+        "SignaalTypes":  [
+                             "overlast"
+                         ],
+        "Notitie":  "",
+        "Aangemaakt":  "2026-03-28 21:23:33",
+        "Status":  "actief"
+    },
+    {
+        "ID":  "58b37adc-8db7-48f9-9b9a-e524dac0fde1",
+        "Module":  "Overleg",
+        "NaamVanDeActie":  "rommelmarkt",
+        "Datum":  "2026-03-28",
+        "Signalen":  false,
+        "SignaalTypes":  [
+
+                         ],
+        "Notitie":  "",
+        "Aangemaakt":  "2026-03-28 21:25:33",
+        "Status":  "actief"
+    },
+    {
+        "ID":  "6df529fa-a28f-45ee-aac6-91b447eaad7c",
+        "Module":  null,
+        "Maand":  "M",
+        "Jaar":  2026,
+        "TypeActie":  [
+                          "Inkoop en voorbereiding"
+                      ],
+        "NaamVanDeActie":  "soep met brood 01/03",
+        "Duur":  "4",
+        "Cluster":  [
+                        "Deelnemer/partner van georganiseerde ontmoeting"
+                    ],
+        "Thema":  [
+                      "Diversiteit"
+                  ],
+        "AantalBewoners":  10,
+        "WaarvanNieuweBewoners":  5,
+        "AantalVrijwilligers":  2,
+        "NaamVrijwilligers":  [
+                                  "felix test",
+                                  "jan test"
+                              ],
+        "TotaalBereikte":  12,
+        "NaamPartner":  "samentuin",
+        "Datum":  "2026-03-28 21:28:27",
+        "Status":  "actief"
+    },
+    {
+        "ID":  "94fbde1d-82c3-4797-8aee-50cdeb46c682",
+        "Module":  "Activiteit",
+        "NaamVanDeActie":  "soep met brood 01/03",
+        "Locatie":  "B",
+        "Type":  "B",
+        "Uitgaven":  [
+                         {
+                             "Beschrijving":  "kaas",
+                             "Leverancier":  "asalam",
+                             "Bedrag":  20
+                         },
+                         {
+                             "Beschrijving":  "groenten",
+                             "Leverancier":  "asalam",
+                             "Bedrag":  10
+                         }
+                     ],
+        "Inkomsten":  [
+                          {
+                              "Beschrijving":  "drank",
+                              "Bedrag":  2
+                          }
+                      ],
+        "Participatie":  [
+                             "Kijken"
+                         ],
+        "Doel":  [
+                     "Sociale doelen"
+                 ],
+        "Impact":  [
+                       "nieuwe contacten gelegd"
+                   ],
+        "Signalen":  true,
+        "SignaalTypes":  [
+                             "vrije tijd",
+                             "fysieke gezondheid"
+                         ],
+        "Notitie":  "",
+        "Aangemaakt":  "2026-03-28 21:30:51",
+        "Status":  "actief"
+    },
+    {
+        "ID":  "60f7c17b-8fde-43e5-8c70-611cf139bceb",
+        "Module":  null,
+        "Maand":  "M",
+        "Jaar":  2026,
+        "TypeActie":  [
+                          "Bewoners activering"
+                      ],
+        "NaamVanDeActie":  "soep met brood 01/03",
+        "Duur":  "3",
+        "Cluster":  [
+                        "Deelnemer/partner van georganiseerde ontmoeting"
+                    ],
+        "Thema":  [
+                      "Financieel/inkomen"
+                  ],
+        "AantalBewoners":  1,
+        "WaarvanNieuweBewoners":  0,
+        "AantalVrijwilligers":  2,
+        "NaamVrijwilligers":  [
+                                  "felix test",
+                                  "groot test"
+                              ],
+        "TotaalBereikte":  3,
+        "NaamPartner":  "",
+        "Datum":  "2026-03-28 21:31:33",
+        "Status":  "actief"
+    }
+]

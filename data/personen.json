@@ -1,0 +1,25 @@
+﻿{
+    "Volgnummer":  1,
+    "Voornaam":  "jan",
+    "Familienaam":  "test",
+    "Adres":  "harelbeeksestraat 33",
+    "Postcode":  "8520",
+    "Gemeente":  "kuurne",
+    "Inkomen":  [
+                    "Weet niet"
+                ],
+    "Woonsituatie":  [
+                         "Dak/Thuisloos"
+                     ],
+    "Gekend":  "A",
+    "GekendJaartal":  0,
+    "EersteContact":  [
+                          "Sleutelfiguur"
+                      ],
+    "GekendBij":  [
+                      "Brugfiguur"
+                  ],
+    "Notitie":  "jan met de pet",
+    "Aangemaakt":  "2026-03-28 19:15:30",
+    "Status":  "actief"
+}

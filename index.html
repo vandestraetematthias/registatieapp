@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Buurtwerk">
+<meta name="theme-color" content="#4a7c59">
+<title>Buurtwerk Venning</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/jpeg" href="logo app/logo app.jpg">
+<link rel="apple-touch-icon" href="logo app/logo app.jpg">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="bg-foto" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════
+     1. STARTPAGINA
+══════════════════════════════════════════ -->
+<div class="pagina actief" id="pg-start">
+  <div class="start-wrap">
+    <div class="start-header">
+      <img src="logo app/logo app.jpg" alt="Buurtwerk Venning" class="start-logo">
+      <h1>Buurtwerk Venning</h1>
+      <p>Registratie &amp; opvolging</p>
+    </div>
+
+    <div class="start-keuzes">
+      <div class="start-kaart" onclick="App.nav('pg-individueel-start')">
+        <div class="start-kaart-icon"><i data-lucide="user-plus"></i></div>
+        <h2>Individueel</h2>
+        <p>Persoon registreren of actie loggen</p>
+      </div>
+      <div class="start-kaart blauw" onclick="App.nav('pg-collectief-start')">
+        <div class="start-kaart-icon"><i data-lucide="users"></i></div>
+        <h2>Collectief</h2>
+        <p>Collectieve actie &amp; modules</p>
+      </div>
+      <div class="start-kaart paars" onclick="App.nav('pg-jaarplan')">
+        <div class="start-kaart-icon"><i data-lucide="bar-chart-2"></i></div>
+        <h2>Rapporten</h2>
+        <p>Overzichten &amp; beheer</p>
+      </div>
+      <div class="start-kaart oranje" onclick="App.nav('pg-dashboard')">
+        <div class="start-kaart-icon"><i data-lucide="layout-dashboard"></i></div>
+        <h2>Dashboard</h2>
+        <p>Beleidsinzichten &amp; analyses</p>
+      </div>
+    </div>
+
+    <div class="start-sectie-titel">Recente activiteiten</div>
+    <div id="start-recente"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     2A. INDIVIDUEEL — START
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-individueel-start">
+  <div class="start-wrap sectie-ind">
+    <div class="start-header">
+      <div class="start-icon"><i data-lucide="user-plus"></i></div>
+      <h1>Individueel</h1>
+      <p>Persoon of actie registreren</p>
+    </div>
+
+    <div class="start-keuzes" style="grid-template-columns:1fr 1fr;max-width:480px">
+      <div class="start-kaart" onclick="App.nav('pg-persoon-wiz')">
+        <div class="start-kaart-icon"><i data-lucide="user-plus"></i></div>
+        <h2>Persoon</h2>
+        <p>Nieuwe persoon registreren</p>
+      </div>
+      <div class="start-kaart" onclick="App.nav('pg-ind-actie-wiz')">
+        <div class="start-kaart-icon"><i data-lucide="zap"></i></div>
+        <h2>Actie</h2>
+        <p>Individuele actie loggen</p>
+      </div>
+    </div>
+
+    <div class="actie-rij">
+      <button onclick="App.nav('pg-start')">← Terug</button>
+    </div>
+
+    <div class="start-sectie-titel" style="margin-top:32px">Recente personen</div>
+    <div id="ind-recente-personen"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     2B. PERSOON REGISTREREN — WIZARD
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-persoon-wiz">
+  <div class="wizard-wrap sectie-ind">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-individueel-start')">← Individueel</button>
+    </div>
+    <div class="wiz-header">
+      <h1>Persoon registreren</h1>
+      <p>Vul de gegevens in van de nieuwe persoon</p>
+    </div>
+
+    <!-- Stappen -->
+    <div class="voortgang" id="per-voortgang">
+      <div class="stap-indicator actief" id="per-stap-1">
+        <div class="stap-cirkel">1</div>
+        <div class="stap-naam">Basis</div>
+      </div>
+      <div class="stap-indicator" id="per-stap-2">
+        <div class="stap-cirkel">2</div>
+        <div class="stap-naam">Situatie</div>
+      </div>
+      <div class="stap-indicator" id="per-stap-3">
+        <div class="stap-cirkel">3</div>
+        <div class="stap-naam">Contact</div>
+      </div>
+    </div>
+
+    <!-- Stap 1: Basisgegevens -->
+    <div class="kaart" id="per-s1">
+      <div class="kaart-titel">Basisgegevens</div>
+      <div class="kaart-sub">Naam en adres van de persoon</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Voornaam <span class="verplicht">*</span></div>
+        <input type="text" id="per-voornaam" placeholder="Voornaam">
+      </div>
+      <div class="vraag">
+        <div class="vraag-label">Familienaam <span class="verplicht">*</span></div>
+        <input type="text" id="per-familienaam" placeholder="Familienaam">
+      </div>
+      <div class="vraag">
+        <div class="vraag-label">Adres</div>
+        <input type="text" id="per-adres" placeholder="Straat en huisnummer">
+      </div>
+      <div class="twee-kolommen">
+        <div class="vraag">
+          <div class="vraag-label">Postcode</div>
+          <input type="text" id="per-postcode" placeholder="8500">
+        </div>
+        <div class="vraag">
+          <div class="vraag-label">Gemeente</div>
+          <input type="text" id="per-gemeente" placeholder="Kortrijk">
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Leeftijd</div>
+        <div class="keuzes" id="per-leeftijd">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">-18</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">18-25</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">26-40</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">41-60</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">61-80</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-leeftijd')">80+</div>
+        </div>
+      </div>
+
+      <div class="navigatie">
+        <span class="stap-teller">Stap 1 / 3</span>
+        <button class="btn-volgende" onclick="App.perStap(2)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 2: Situatie -->
+    <div class="kaart" id="per-s2" style="display:none">
+      <div class="kaart-titel">Situatie</div>
+      <div class="kaart-sub">Inkomen en woonsituatie</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Inkomen</div>
+        <div class="keuzes" id="per-inkomen">
+          <div class="keuze" onclick="App.toggle(this)">niet gekend</div>
+          <div class="keuze" onclick="App.toggle(this)">Leefloon</div>
+          <div class="keuze" onclick="App.toggle(this)">Geen inkomen</div>
+          <div class="keuze" onclick="App.toggle(this)">Invaliditeit</div>
+          <div class="keuze" onclick="App.toggle(this)">Werkloosheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Pensioen</div>
+          <div class="keuze" onclick="App.toggle(this)">Arbeid</div>
+          <div class="keuze" onclick="App.toggle(this)">Budgetbegeleiding</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Huisvesting</div>
+        <div class="keuzes" id="per-woon">
+          <div class="keuze" onclick="App.toggle(this)">Dak/Thuisloos</div>
+          <div class="keuze" onclick="App.toggle(this)">Woont bij ouders</div>
+          <div class="keuze" onclick="App.toggle(this)">Huurt woning</div>
+          <div class="keuze" onclick="App.toggle(this)">Huurt sociale woning</div>
+          <div class="keuze" onclick="App.toggle(this)">Heeft woning</div>
+          <div class="keuze" onclick="App.toggle(this)">Begeleid wonen</div>
+          <div class="keuze" onclick="App.toggle(this)">Housing First</div>
+          <div class="keuze" onclick="App.toggle(this)">Kracht.Wonen</div>
+          <div class="keuze" onclick="App.toggle(this)">RCK</div>
+          <div class="keuze" onclick="App.toggle(this)">niet gekend</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Woonsituatie</div>
+        <div class="keuzes" id="per-woonsituatie">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">alleenstaand</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">samen</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">gezin</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">alleenstaand met kinderen</div>
+        </div>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.perStap(1)">← Terug</button>
+        <button class="btn-volgende" onclick="App.perStap(3)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 3: Contact -->
+    <div class="kaart" id="per-s3" style="display:none">
+      <div class="kaart-titel">Contact &amp; kennis</div>
+      <div class="kaart-sub">Hoe is de persoon gekend?</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Eerste contact</div>
+        <div class="keuzes" id="per-eerste">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">vindplaatsgericht</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via netwerk gast</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via collega's</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">zelfaanmelding</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via externe organisatie</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">geen idee meer</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Type</div>
+        <div class="keuzes" id="per-type">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">sleutelfiguur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">hulpvrager</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">vrijwilliger</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Gekend bij</div>
+        <div class="keuzes" id="per-gekend-bij">
+          <div class="keuze" onclick="App.toggle(this)">MW</div>
+          <div class="keuze" onclick="App.toggle(this)">SHW</div>
+          <div class="keuze" onclick="App.toggle(this)">Woonzorg</div>
+          <div class="keuze" onclick="App.toggle(this)">Brugfiguur</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Notitie (optioneel)</div>
+        <textarea id="per-notitie" placeholder="Extra opmerkingen…"></textarea>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.perStap(2)">← Terug</button>
+        <button class="btn-volgende opslaan" onclick="App.slaPerOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     2C. INDIVIDUELE ACTIE — WIZARD
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-ind-actie-wiz">
+  <div class="wizard-wrap sectie-ind">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-individueel-start')">← Individueel</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="user-plus"></i></div>
+      <h1>Individuele actie</h1>
+      <p>Log een contact of actie met een bewoner</p>
+    </div>
+
+    <div class="voortgang">
+      <div class="stap-indicator actief" id="ia-stap-1">
+        <div class="stap-cirkel">1</div>
+        <div class="stap-naam">Persoon</div>
+      </div>
+      <div class="stap-indicator" id="ia-stap-2">
+        <div class="stap-cirkel">2</div>
+        <div class="stap-naam">Context</div>
+      </div>
+      <div class="stap-indicator" id="ia-stap-3">
+        <div class="stap-cirkel">3</div>
+        <div class="stap-naam">Methodiek</div>
+      </div>
+    </div>
+
+    <!-- Stap 1: Persoon zoeken -->
+    <div class="kaart" id="ia-s1">
+      <div class="kaart-titel">Persoon selecteren</div>
+      <div class="kaart-sub">Zoek de bewoner op naam</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Zoek op naam</div>
+        <div class="zoek-wrap">
+          <span class="zoek-icon">🔍</span>
+          <input type="text" id="ia-zoek" placeholder="Voornaam of familienaam…" oninput="App.zoekPersoon()" autocomplete="off">
+        </div>
+      </div>
+      <div id="ia-zoek-resultaten"></div>
+      <div id="ia-gekozen-persoon" style="display:none;margin-top:8px;padding:12px;background:var(--groen-licht);border-radius:10px;font-weight:700;color:var(--groen)"></div>
+
+      <div style="margin-top:16px">
+        <button class="toevoeg-btn" onclick="App.nav('pg-persoon-wiz')">➕ Nieuwe persoon registreren</button>
+      </div>
+
+      <div class="navigatie">
+        <span class="stap-teller">Stap 1 / 3</span>
+        <button class="btn-volgende blauw" onclick="App.iaStap(2)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 2: Context -->
+    <div class="kaart" id="ia-s2" style="display:none">
+      <div class="kaart-titel">Context</div>
+      <div class="kaart-sub">Wanneer en waar vond het contact plaats?</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Maand <span class="verplicht">*</span></div>
+        <div class="keuzes" id="ia-maand">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Januari</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Februari</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Maart</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">April</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Mei</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Juni</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Juli</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Augustus</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">September</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">Oktober</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">November</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-maand')">December</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Jaar <span class="verplicht">*</span></div>
+        <input type="number" id="ia-jaar" min="2020" max="2099" style="max-width:120px">
+        <script>document.getElementById('ia-jaar').value = new Date().getFullYear();</script>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.iaStap(1)">← Terug</button>
+        <button class="btn-volgende blauw" onclick="App.iaStap(3)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 3: Methodiek -->
+    <div class="kaart" id="ia-s3" style="display:none">
+      <div class="kaart-titel">Methodiek &amp; opvolging</div>
+      <div class="kaart-sub">Wat werd gedaan en wat zijn de vervolgstappen?</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Levensdomein</div>
+        <div class="keuzes" id="ia-leven">
+
+          <div class="keuze" onclick="App.toggle(this)">Financiën</div>
+          <div class="keuze" onclick="App.toggle(this)">Juridisch</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisvesting</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Fysieke gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Tewerkstelling/opleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Verslaving</div>
+          <div class="keuze" onclick="App.toggle(this)">Psychisch welzijn</div>
+          <div class="keuze" onclick="App.toggle(this)">Relationeel</div>
+          <div class="keuze" onclick="App.toggle(this)">Sociaal-emotioneel</div>
+          <div class="keuze" onclick="App.toggle(this)">Leefomgeving</div>
+          <div class="keuze" onclick="App.toggle(this)">Andere</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Vindplaats</div>
+        <div class="keuzes" id="ia-vindplaats">
+          <div class="keuze" onclick="App.toggle(this)">Bureau</div>
+          <div class="keuze" onclick="App.toggle(this)">Horeca en Handel</div>
+          <div class="keuze" onclick="App.toggle(this)">Publieke ruimte</div>
+          <div class="keuze" onclick="App.toggle(this)">Sociaal ontmoetingspunt</div>
+          <div class="keuze" onclick="App.toggle(this)">Thuis bij gast</div>
+          <div class="keuze" onclick="App.toggle(this)">Thuis bij anderen</div>
+          <div class="keuze" onclick="App.toggle(this)">Online/Telefoon</div>
+          <div class="keuze" onclick="App.toggle(this)">Eigen organisatie</div>
+          <div class="keuze" onclick="App.toggle(this)">Andere organisatie</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Actie</div>
+        <div class="keuzes" id="ia-methodiek">
+          <div class="keuze" onclick="App.toggle(this)">informeren</div>
+          <div class="keuze" onclick="App.toggle(this)">toeleiden</div>
+          <div class="keuze" onclick="App.toggle(this)">praktische begeleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">probleemoplossend werken</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Extra info (optioneel)</div>
+        <textarea id="ia-extra" placeholder="Extra opmerkingen…"></textarea>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Toegeleid naar</div>
+        <div class="keuzes" id="ia-toeleiding">
+          <div class="keuze" onclick="App.toggle(this)">OCMW</div>
+          <div class="keuze" onclick="App.toggle(this)">CAW</div>
+          <div class="keuze" onclick="App.toggle(this)">Justitie</div>
+          <div class="keuze" onclick="App.toggle(this)">Ziekenhuis</div>
+          <div class="keuze" onclick="App.toggle(this)">VDAB</div>
+          <div class="keuze" onclick="App.toggle(this)">sociaal-artistiek project</div>
+          <div class="keuze" onclick="App.toggle(this)">MSOC</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisarts/Psycholoog</div>
+          <div class="keuze" onclick="App.toggle(this)">Advocaat</div>
+          <div class="keuze" onclick="App.toggle(this)">Stadsdiensten</div>
+          <div class="keuze" onclick="App.toggle(this)">aanbod vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Housing First</div>
+          <div class="keuze" onclick="App.toggle(this)">Kracht.Wonen</div>
+          <div class="keuze" onclick="App.toggle(this)">RCK</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Tijd besteed</div>
+        <div class="keuzes" id="ia-tijd">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">5 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">15 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">30 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">1 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">1u30</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">2 uur</div>
+        </div>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.iaStap(2)">← Terug</button>
+        <button class="btn-volgende opslaan" onclick="App.slaIaOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3A. COLLECTIEF — START
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-collectief-start">
+  <div class="start-wrap sectie-col">
+    <div class="start-header">
+      <div class="start-icon"><i data-lucide="users"></i></div>
+      <h1>Collectief</h1>
+      <p>Collectieve acties en modules</p>
+    </div>
+
+    <div class="start-keuzes" style="grid-template-columns:1fr 1fr;max-width:480px">
+      <div class="start-kaart blauw" onclick="App.startNieuweCollActie()">
+        <div class="start-kaart-icon"><i data-lucide="plus-circle"></i></div>
+        <h2>Nieuwe actie</h2>
+        <p>Start een nieuwe collectieve actie</p>
+      </div>
+      <div class="start-kaart blauw" onclick="App.nav('pg-collectief-module')">
+        <div class="start-kaart-icon"><i data-lucide="link-2"></i></div>
+        <h2>Module toevoegen</h2>
+        <p>Logistiek, Overleg of Activiteit</p>
+      </div>
+    </div>
+
+    <div class="actie-rij">
+      <button onclick="App.nav('pg-start')">← Terug</button>
+    </div>
+
+    <div class="start-sectie-titel" style="margin-top:32px">Recente acties</div>
+    <div id="col-recente"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3B. COLLECTIEVE ACTIE — WIZARD
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-col-actie-wiz">
+  <div class="wizard-wrap sectie-col">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-collectief-start')">← Collectief</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="users"></i></div>
+      <h1>Collectieve actie</h1>
+      <p>Registreer een nieuwe collectieve actie</p>
+    </div>
+
+    <div class="voortgang">
+      <div class="stap-indicator actief" id="ca-stap-1">
+        <div class="stap-cirkel">1</div>
+        <div class="stap-naam">Basis</div>
+      </div>
+      <div class="stap-indicator" id="ca-stap-2">
+        <div class="stap-cirkel">2</div>
+        <div class="stap-naam">Bereik</div>
+      </div>
+      <div class="stap-indicator" id="ca-stap-3">
+        <div class="stap-cirkel">3</div>
+        <div class="stap-naam">Details</div>
+      </div>
+    </div>
+
+    <!-- Stap 1: Basis -->
+    <div class="kaart" id="ca-s1">
+      <div class="kaart-titel">Basisgegevens actie</div>
+      <div class="kaart-sub">Wat voor actie is dit?</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Maand <span class="verplicht">*</span></div>
+        <div class="keuzes" id="ca-maand">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Januari</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Februari</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Maart</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">April</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Mei</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Juni</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Juli</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Augustus</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">September</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">Oktober</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">November</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-maand')">December</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Jaartal <span class="verplicht">*</span></div>
+        <input type="number" id="ca-jaar" min="2020" max="2099" style="max-width:120px">
+        <script>document.getElementById('ca-jaar').value = new Date().getFullYear();</script>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Naam van de actie <span class="verplicht">*</span></div>
+        <input type="text" id="ca-naam" placeholder="Bijv. Buurtbarbecue Venning 2024">
+        <div id="ca-naam-suggesties" style="margin-top:8px"></div>
+      </div>
+
+      <div class="navigatie">
+        <span class="stap-teller">Stap 1 / 3</span>
+        <button class="btn-volgende blauw" onclick="App.caStap(2)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 2: Bereik -->
+    <div class="kaart" id="ca-s2" style="display:none">
+      <div class="kaart-titel">Bereik</div>
+      <div class="kaart-sub">Hoeveel personen werden bereikt?</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Totaal (bewoners + vrijwilligers)</div>
+        <div class="teller-wrap">
+          <input class="teller-inp" type="number" id="ca-totaal" value="0" min="0" readonly style="background:var(--bg);cursor:default">
+        </div>
+      </div>
+
+      <div class="twee-kolommen">
+        <div class="vraag">
+          <div class="vraag-label">Aantal bewoners</div>
+          <div class="teller-wrap">
+            <button class="teller-btn" onclick="App.teller('ca-bewoners',-1)">−</button>
+            <input class="teller-inp" type="number" id="ca-bewoners" value="0" min="0" onchange="App.updateTotaal()">
+            <button class="teller-btn" onclick="App.teller('ca-bewoners',1)">+</button>
+          </div>
+        </div>
+        <div class="vraag">
+          <div class="vraag-label">Waarvan nieuw</div>
+          <div class="teller-wrap">
+            <button class="teller-btn" onclick="App.teller('ca-nieuw',-1)">−</button>
+            <input class="teller-inp" type="number" id="ca-nieuw" value="0" min="0">
+            <button class="teller-btn" onclick="App.teller('ca-nieuw',1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Aantal vrijwilligers</div>
+        <div class="teller-wrap">
+          <button class="teller-btn" onclick="App.teller('ca-vrijw',-1)">−</button>
+          <input class="teller-inp" type="number" id="ca-vrijw" value="0" min="0" onchange="App.updateVrijwNames();App.updateTotaal()">
+          <button class="teller-btn" onclick="App.teller('ca-vrijw',1)">+</button>
+        </div>
+      </div>
+      <div id="ca-vrijw-namen" style="margin-top:12px"></div>
+
+      <div class="vraag" style="margin-top:16px">
+        <div class="vraag-label">Naam partner (optioneel)</div>
+        <input type="text" id="ca-partner" placeholder="Naam van de partnerorganisatie">
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.caStap(1)">← Terug</button>
+        <button class="btn-volgende blauw" onclick="App.caStap(3)">Verder →</button>
+      </div>
+    </div>
+
+    <!-- Stap 3: Details -->
+    <div class="kaart" id="ca-s3" style="display:none">
+      <div class="kaart-titel">Cluster &amp; Thema</div>
+      <div class="kaart-sub">Categoriseer de actie verder</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Cluster (rol)</div>
+        <div class="keuzes" id="ca-cluster">
+          <div class="keuze" onclick="App.toggle(this)">Deelnemer/partner van georganiseerde ontmoeting</div>
+          <div class="keuze" onclick="App.toggle(this)">Deur aan deur</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisbezoek</div>
+          <div class="keuze" onclick="App.toggle(this)">Overleg/afstemming partner</div>
+          <div class="keuze" onclick="App.toggle(this)">Presentie</div>
+          <div class="keuze" onclick="App.toggle(this)">Trekker/facilitator van georganiseerde ontmoeting</div>
+          <div class="keuze" onclick="App.toggle(this)">Andere</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Thema</div>
+        <div class="keuzes" id="ca-thema">
+          <div class="keuze" onclick="App.toggle(this)">Communicatie</div>
+          <div class="keuze" onclick="App.toggle(this)">Diversiteit</div>
+          <div class="keuze" onclick="App.toggle(this)">Financieel/inkomen</div>
+          <div class="keuze" onclick="App.toggle(this)">Gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Huiswerkbegeleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Inschrijving</div>
+          <div class="keuze" onclick="App.toggle(this)">Ontmoeting</div>
+          <div class="keuze" onclick="App.toggle(this)">Opleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Praktisch</div>
+          <div class="keuze" onclick="App.toggle(this)">Psychosociaal</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Andere</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Extra info</div>
+        <div class="keuzes" id="ca-type">
+          <div class="keuze" onclick="App.toggle(this)">Bewoners activering</div>
+          <div class="keuze" onclick="App.toggle(this)">Inkoop en voorbereiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Logistieke opbouw</div>
+          <div class="keuze" onclick="App.toggle(this)">Logistieke afbouw</div>
+          <div class="keuze" onclick="App.toggle(this)">Activiteit ondersteunen</div>
+          <div class="keuze" onclick="App.toggle(this)">Activiteit coördineren</div>
+          <div class="keuze" onclick="App.toggle(this)">Overleg</div>
+          <div class="keuze" onclick="App.toggle(this)">Buurtverkenning en signalering</div>
+          <div class="keuze" onclick="App.toggle(this)">Presentiebezoek</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Buurt</div>
+        <input type="text" id="ca-buurt" value="centrum 2: venning">
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Duur</div>
+        <div class="keuzes" id="ca-duur">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">15 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">30 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">45 min</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">1 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">1u30</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">2 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">3 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">4 uur</div>
+        </div>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.caStap(2)">← Terug</button>
+        <button class="btn-volgende opslaan blauw" onclick="App.slaCaOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3C. MODULE KIEZEN
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-collectief-module">
+  <div class="start-wrap sectie-col">
+    <div class="start-header">
+      <div class="start-icon"><i data-lucide="users"></i></div>
+      <h1>Module toevoegen</h1>
+      <p>Voeg een vervolg toe aan een bestaande actie</p>
+    </div>
+
+    <div class="vraag" style="max-width:480px;width:100%;margin-bottom:20px">
+      <div class="vraag-label">Kies de actie</div>
+      <select id="mod-actie-keuze" onchange="App.selecteerModActie(this.value)">
+        <option value="">— Selecteer een actie —</option>
+      </select>
+    </div>
+
+    <div class="start-keuzes" style="grid-template-columns:1fr 1fr 1fr;max-width:600px">
+      <div class="start-kaart paars" onclick="App.startModule('Logistiek')">
+        <div class="start-kaart-icon">🔧</div>
+        <h2>Logistiek</h2>
+        <p>Follow-up en kosten</p>
+      </div>
+      <div class="start-kaart blauw" onclick="App.startModule('Overleg')">
+        <div class="start-kaart-icon">🗣</div>
+        <h2>Overleg</h2>
+        <p>Overlegmoment</p>
+      </div>
+      <div class="start-kaart" onclick="App.startModule('Activiteit')">
+        <div class="start-kaart-icon">🎉</div>
+        <h2>Activiteit</h2>
+        <p>Buurtactiviteit</p>
+      </div>
+    </div>
+
+    <div class="actie-rij" style="margin-top:20px">
+      <button onclick="App.nav('pg-collectief-start')">← Terug</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3D. LOGISTIEK MODULE
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-mod-logistiek">
+  <div class="wizard-wrap sectie-col">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-collectief-module')">← Terug</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="users"></i></div>
+      <h1>Logistiek &amp; Follow-up</h1>
+      <p id="log-actienaam-lbl">—</p>
+    </div>
+    <div class="kaart">
+      <div class="kaart-titel">Logistiek record</div>
+      <div class="kaart-sub">Datum, type en kosten</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Datum</div>
+        <input type="date" id="log-datum">
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Type uitleg</div>
+        <div class="keuzes" id="log-type">
+          <div class="keuze" onclick="App.toggle(this)">Flyeren</div>
+          <div class="keuze" onclick="App.toggle(this)">Boodschappen</div>
+          <div class="keuze" onclick="App.toggle(this)">Materiaal ophalen</div>
+          <div class="keuze" onclick="App.toggle(this)">Materiaal terugbrengen</div>
+          <div class="keuze" onclick="App.toggle(this)">Stockbeheer buurthuis</div>
+          <div class="keuze" onclick="App.toggle(this)">Opkuis</div>
+          <div class="keuze" onclick="App.toggle(this)">Ondersteunen vrijwilliger</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Uitgaven</div>
+        <div id="log-uitgaven-lijst"></div>
+        <button class="toevoeg-btn" onclick="App.voegUitgaveToe('log')">+ Uitgave toevoegen</button>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Signalen?</div>
+        <div class="keuzes" id="log-signalen">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'log-signalen');App.toggleSignalen('log',false)">Nee</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'log-signalen');App.toggleSignalen('log',true)">Ja</div>
+        </div>
+      </div>
+      <div id="log-signaal-types" style="display:none" class="vraag">
+        <div class="vraag-label">Type signaal</div>
+        <div class="keuzes" id="log-sig-types">
+          <div class="keuze" onclick="App.toggle(this)">Overlast</div>
+          <div class="keuze" onclick="App.toggle(this)">Financiën</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisvesting</div>
+          <div class="keuze" onclick="App.toggle(this)">Juridisch</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Fysieke gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Mentale gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Tewerkstelling/opleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Verslaving</div>
+          <div class="keuze" onclick="App.toggle(this)">Relationeel</div>
+          <div class="keuze" onclick="App.toggle(this)">SW+</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Notitie (optioneel)</div>
+        <textarea id="log-notitie" placeholder="Extra opmerkingen…"></textarea>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.nav('pg-collectief-module')">← Annuleren</button>
+        <button class="btn-volgende opslaan paars" onclick="App.slaLogOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3E. OVERLEG MODULE
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-mod-overleg">
+  <div class="wizard-wrap sectie-col">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-collectief-module')">← Terug</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="users"></i></div>
+      <h1>Overleg</h1>
+      <p id="ov-actienaam-lbl">—</p>
+    </div>
+    <div class="kaart">
+      <div class="kaart-titel">Overlegmoment</div>
+      <div class="kaart-sub">Datum en signalen</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Datum</div>
+        <input type="date" id="ov-datum">
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Signalen?</div>
+        <div class="keuzes" id="ov-signalen">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ov-signalen');App.toggleSignalen('ov',false)">Nee</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ov-signalen');App.toggleSignalen('ov',true)">Ja</div>
+        </div>
+      </div>
+      <div id="ov-signaal-types" style="display:none" class="vraag">
+        <div class="vraag-label">Type signaal</div>
+        <div class="keuzes" id="ov-sig-types">
+          <div class="keuze" onclick="App.toggle(this)">Overlast</div>
+          <div class="keuze" onclick="App.toggle(this)">Financiën</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisvesting</div>
+          <div class="keuze" onclick="App.toggle(this)">Juridisch</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Fysieke gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Mentale gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Tewerkstelling/opleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Verslaving</div>
+          <div class="keuze" onclick="App.toggle(this)">Relationeel</div>
+          <div class="keuze" onclick="App.toggle(this)">SW+</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Notitie (optioneel)</div>
+        <textarea id="ov-notitie" placeholder="Wat werd besproken?"></textarea>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.nav('pg-collectief-module')">← Annuleren</button>
+        <button class="btn-volgende opslaan blauw" onclick="App.slaOvOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     3F. ACTIVITEIT MODULE
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-mod-activiteit">
+  <div class="wizard-wrap sectie-col">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-collectief-module')">← Terug</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="users"></i></div>
+      <h1>Activiteit</h1>
+      <p id="act-actienaam-lbl">—</p>
+    </div>
+    <div class="kaart">
+      <div class="kaart-titel">Activiteit details</div>
+      <div class="kaart-sub">Locatie, financiën en impact</div>
+
+      <div class="vraag">
+        <div class="vraag-label">Locatie</div>
+        <div class="keuzes" id="act-locatie">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Buurthuis</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Parking Karting</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Gentsesteenweg</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Vaart</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Loodwitstraat</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Stasegemsesteenweg</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Juweliersplein</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-locatie')">Zandbergstraat</div>
+        </div>
+        <input type="text" id="act-locatie-vrij" placeholder="Andere locatie…" style="margin-top:8px">
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Type activiteit</div>
+        <div class="keuzes" id="act-type">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-type')">Buurtactiviteit</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-type')">Buurtwerk</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="vraag">
+        <div class="vraag-label">Uitgaven</div>
+        <div id="act-uitgaven-lijst"></div>
+        <button class="toevoeg-btn" onclick="App.voegUitgaveToe('act')">+ Uitgave toevoegen</button>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Inkomsten</div>
+        <div id="act-inkomsten-lijst"></div>
+        <button class="toevoeg-btn" onclick="App.voegInkomstToe('act')">+ Inkomst toevoegen</button>
+      </div>
+
+      <div class="fin-totaal" id="act-fin-totaal">
+        <div class="fin-vak neg"><div class="getal" id="act-tot-ug">€0,00</div><div class="lbl">Uitgaven</div></div>
+        <div class="fin-vak pos"><div class="getal" id="act-tot-ik">€0,00</div><div class="lbl">Inkomsten</div></div>
+        <div class="fin-vak"   ><div class="getal" id="act-tot-net">€0,00</div><div class="lbl">Netto</div></div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="vraag">
+        <div class="vraag-label">Participatie</div>
+        <div class="keuzes" id="act-participatie">
+          <div class="keuze" onclick="App.toggle(this)">Kijken</div>
+          <div class="keuze" onclick="App.toggle(this)">Deelnemen</div>
+          <div class="keuze" onclick="App.toggle(this)">Feedback geven</div>
+          <div class="keuze" onclick="App.toggle(this)">Advies geven</div>
+          <div class="keuze" onclick="App.toggle(this)">Meedenken</div>
+          <div class="keuze" onclick="App.toggle(this)">Mee organiseren</div>
+          <div class="keuze" onclick="App.toggle(this)">Helpen</div>
+          <div class="keuze" onclick="App.toggle(this)">Trekken</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Doel</div>
+        <div class="keuzes" id="act-doel">
+          <div class="keuze" onclick="App.toggle(this);App.updateImpact()">Sociale doelen</div>
+          <div class="keuze" onclick="App.toggle(this);App.updateImpact()">Individuele doelen</div>
+          <div class="keuze" onclick="App.toggle(this);App.updateImpact()">Ontwikkelingsgerichte doelen</div>
+          <div class="keuze" onclick="App.toggle(this);App.updateImpact()">Activerende doelen</div>
+          <div class="keuze" onclick="App.toggle(this);App.updateImpact()">Organisatorische doelen</div>
+        </div>
+      </div>
+
+      <div class="vraag" id="act-impact-wrap" style="display:none">
+        <div class="vraag-label">Impact</div>
+        <div class="keuzes" id="act-impact"></div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Signalen?</div>
+        <div class="keuzes" id="act-signalen">
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-signalen');App.toggleSignalen('act',false)">Nee</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'act-signalen');App.toggleSignalen('act',true)">Ja</div>
+        </div>
+      </div>
+      <div id="act-signaal-types" style="display:none" class="vraag">
+        <div class="vraag-label">Type signaal</div>
+        <div class="keuzes" id="act-sig-types">
+          <div class="keuze" onclick="App.toggle(this)">Overlast</div>
+          <div class="keuze" onclick="App.toggle(this)">Financiën</div>
+          <div class="keuze" onclick="App.toggle(this)">Huisvesting</div>
+          <div class="keuze" onclick="App.toggle(this)">Juridisch</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Fysieke gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Mentale gezondheid</div>
+          <div class="keuze" onclick="App.toggle(this)">Tewerkstelling/opleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Verslaving</div>
+          <div class="keuze" onclick="App.toggle(this)">Relationeel</div>
+          <div class="keuze" onclick="App.toggle(this)">SW+</div>
+        </div>
+      </div>
+
+      <div class="vraag">
+        <div class="vraag-label">Notitie (optioneel)</div>
+        <textarea id="act-notitie" placeholder="Extra opmerkingen…"></textarea>
+      </div>
+
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.nav('pg-collectief-module')">← Annuleren</button>
+        <button class="btn-volgende opslaan" onclick="App.slaActOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     4. JAARPLAN (RAPPORTEN & BEHEER)
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-jaarplan">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-start')">← Start</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Rapporten</h1>
+      <p>Rapporten, exports en beheer</p>
+    </div>
+    <div class="kaart">
+      <div class="kaart-titel">Overzicht</div>
+      <div class="kaart-sub">Exporteer of bekijk je gegevens</div>
+
+      <div class="actie-rij" style="margin-bottom:20px">
+        <button onclick="App.nav('pg-rapport-personen')"><i data-lucide="users"></i> Personen</button>
+        <button onclick="App.nav('pg-rapport-individueel')"><i data-lucide="user-plus"></i> Individueel</button>
+        <button class="blauw" onclick="App.nav('pg-rapport-collectief')"><i data-lucide="users"></i> Collectief</button>
+        <button class="bruin" onclick="App.nav('pg-archief')"><i data-lucide="archive"></i> Archief</button>
+        <button class="bruin" onclick="App.nav('pg-jaarplan-mod')"><i data-lucide="bar-chart-2"></i> Rapporten</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="kaart-titel" style="margin-bottom:12px">Exporteren</div>
+      <div class="actie-rij">
+        <button onclick="App.exportCSV('personen')">📥 Personen CSV</button>
+        <button onclick="App.exportCSV('individueel')">📥 Individueel CSV</button>
+        <button onclick="App.exportCSV('collectief')">📥 Collectief CSV</button>
+        <button onclick="App.exportPDF()">📄 PDF rapport</button>
+        <button onclick="App.exporteerJaarplanPDF()">📋 Jaarplan PDF</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="kaart-titel" style="margin-bottom:12px">Beheer</div>
+      <div class="actie-rij">
+        <button class="oranje" onclick="App.importCSVDialog()">📤 CSV importeren</button>
+        <button class="rood" onclick="App.wisAlles()">⚠️ Alle data wissen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     5. RAPPORT PERSONEN
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-rapport-personen">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Personen</h1>
+      <p id="rp-teller">0 personen geregistreerd</p>
+    </div>
+    <div class="zoek-wrap">
+      <span class="zoek-icon">🔍</span>
+      <input type="text" id="rp-zoek" placeholder="Zoek op naam…" oninput="App.renderPersonenRap()">
+    </div>
+    <div class="kaart" style="padding:0;overflow:hidden">
+      <div class="tabel-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Voornaam</th><th>Familienaam</th><th>Gemeente</th><th>Inkomen</th><th>Gekend</th><th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="rp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     6. RAPPORT INDIVIDUEEL
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-rapport-individueel">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Individuele acties</h1>
+      <p id="ri-teller">0 acties geregistreerd</p>
+    </div>
+    <div class="filter-balk">
+      <span class="filter-lbl">📅 Filteren:</span>
+      <div class="filter-groep">
+        <label class="filter-label-klein">Jaar</label>
+        <select id="ri-jaar-filter" onchange="App._indJaarChange()"></select>
+      </div>
+      <div class="filter-groep">
+        <label class="filter-label-klein">Maand</label>
+        <select id="ri-maand-filter" onchange="App.renderIndRap()"></select>
+      </div>
+    </div>
+    <div class="kaart" style="padding:0;overflow:hidden">
+      <div class="tabel-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th><th>Maand</th><th>Persoon</th><th>Vindplaats</th><th>Tijd</th><th>Methodiek</th><th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="ri-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     7. RAPPORT COLLECTIEF
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-rapport-collectief">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Collectieve acties</h1>
+      <p id="rc-teller">0 acties geregistreerd</p>
+    </div>
+    <div class="filter-balk">
+      <span class="filter-lbl">📅 Filteren:</span>
+      <div class="filter-groep">
+        <label class="filter-label-klein">Jaar</label>
+        <select id="rc-jaar-filter" onchange="App._colJaarChange()"></select>
+      </div>
+      <div class="filter-groep">
+        <label class="filter-label-klein">Maand</label>
+        <select id="rc-maand-filter" onchange="App.renderColRap()"></select>
+      </div>
+    </div>
+    <div class="kaart" style="padding:0;overflow:hidden">
+      <div class="tabel-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Naam</th><th>Maand</th><th>Bewoners</th><th>Vrijwilligers</th><th>Type</th><th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="rc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     8. ARCHIEF
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-archief">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Archief</h1>
+      <p>Gearchiveerde records</p>
+    </div>
+    <div id="archief-inhoud" style="max-width:580px;width:100%"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SUCCES OVERLAY (herbruikbaar)
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-succes">
+  <div class="wizard-wrap">
+    <div class="kaart">
+      <div class="succes">
+        <div class="succes-icon" id="suc-icon">✅</div>
+        <h2 id="suc-titel">Opgeslagen!</h2>
+        <p id="suc-tekst">Het record is succesvol opgeslagen.</p>
+        <div class="succes-btns">
+          <button class="btn-volgende" id="suc-btn1" onclick="App.nav('pg-start')">🏠 Naar start</button>
+          <button class="btn-volgende opslaan" id="suc-btn2" onclick="App.nav('pg-start')">➕ Nog een</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     9. JAARPLAN MODULE (aggregatie per project)
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-jaarplan-mod">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="bar-chart-2"></i></div>
+      <h1>Jaarplan</h1>
+      <p>Overzicht per project (gegroepeerd op naam)</p>
+    </div>
+    <div id="jp-lijst" style="max-width:580px;width:100%"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     10. PERSOON DETAIL / BEWERK
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-persoon-detail">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-rapport-personen')">← Personen</button>
+    </div>
+    <div class="wiz-header">
+      <h1 id="pd-titel">Persoon</h1>
+      <p id="pd-nr">Nr. —</p>
+    </div>
+    <div class="kaart" id="pd-kaart">
+      <div class="kaart-titel">Basisgegevens</div>
+      <div class="vraag">
+        <div class="vraag-label">Voornaam</div>
+        <input type="text" id="pd-voornaam">
+      </div>
+      <div class="vraag">
+        <div class="vraag-label">Familienaam</div>
+        <input type="text" id="pd-familienaam">
+      </div>
+      <div class="vraag">
+        <div class="vraag-label">Adres</div>
+        <input type="text" id="pd-adres">
+      </div>
+      <div class="twee-kolommen">
+        <div class="vraag">
+          <div class="vraag-label">Postcode</div>
+          <input type="text" id="pd-postcode">
+        </div>
+        <div class="vraag">
+          <div class="vraag-label">Gemeente</div>
+          <input type="text" id="pd-gemeente">
+        </div>
+      </div>
+      <div class="vraag">
+        <div class="vraag-label">Notitie</div>
+        <textarea id="pd-notitie"></textarea>
+      </div>
+      <div id="pd-acties-info" style="margin-top:16px;padding:12px;background:var(--bg);border-radius:10px;font-size:0.88rem;color:var(--zacht)"></div>
+      <div class="navigatie">
+        <button class="btn-terug" onclick="App.nav('pg-rapport-personen')">← Annuleren</button>
+        <button class="btn-volgende opslaan" onclick="App.slaBewerktPerOp()">Opslaan ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-dashboard">
+  <div class="dash-wrap sectie-dash">
+
+    <div class="dash-header">
+      <div>
+        <div class="dash-titel">Dashboard</div>
+        <div class="dash-sub" id="dash-ts"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="filter-groep">
+          <label class="filter-label-klein">Jaar</label>
+          <select id="dash-jaar-filter" onchange="App._dashResetMaandEnRender()" style="width:auto"></select>
+        </div>
+        <div class="filter-groep">
+          <label class="filter-label-klein">Maand</label>
+          <select id="dash-maand-filter" onchange="App.renderDashboard()" style="width:auto"></select>
+        </div>
+        <button class="btn-volgende" onclick="App.exportDashboardPDF()" style="padding:8px 16px;font-size:0.85rem">📄 PDF</button>
+        <button class="btn-terug" onclick="App.nav('pg-start')" style="padding:8px 16px;font-size:0.85rem">← Terug</button>
+      </div>
+    </div>
+
+    <div class="dash-kpi-rij">
+      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-personen">—</div><div class="dash-kpi-l">Personen</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n blauw" id="kpi-ind">—</div><div class="dash-kpi-l">Ind. acties</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-uren">—</div><div class="dash-kpi-l">Uren ind.</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n oranje" id="kpi-col">—</div><div class="dash-kpi-l">Col. acties</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n paars" id="kpi-bereik">—</div><div class="dash-kpi-l">Bereik col.</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-nieuw">—</div><div class="dash-kpi-l">Nieuwe bew.</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n blauw" id="kpi-vrijw">—</div><div class="dash-kpi-l">Vrijwilligers</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n rood" id="kpi-signalen">—</div><div class="dash-kpi-l">Signalen</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n oranje" id="kpi-toeleiding">—</div><div class="dash-kpi-l">Toegeleid</div></div>
+    </div>
+
+    <div class="dash-sec-kop"><span class="dash-badge groen-badge">👤 Individueel</span></div>
+
+    <div class="dash-kaart-full">
+      <div class="dash-kt">Top 20 personen</div>
+      <div class="dash-ks">Meeste uren individuele begeleiding</div>
+      <div id="dash-top20"></div>
+    </div>
+
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Vindplaatsen — Contacten</div>
+        <div class="dash-ks">Aantal registraties per vindplaats</div>
+        <div id="dash-vp-contacten"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Vindplaatsen — Uren</div>
+        <div class="dash-ks">Tijdsinvestering per vindplaats</div>
+        <div id="dash-vp-uren"></div>
+      </div>
+    </div>
+
+    <div class="dash-kaart-full">
+      <div class="dash-kt">Levensdomeinen heatmap</div>
+      <div class="dash-ks">Frequentie (groen) en uren (blauw) per levensdomein</div>
+      <div id="dash-levensdomeinen"></div>
+    </div>
+
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Methodiek</div>
+        <div class="dash-ks">Gebruikte methodieken</div>
+        <div id="dash-methodiek-ind"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Toeleiding</div>
+        <div class="dash-ks">Doorverwijzingen per organisatie</div>
+        <div id="dash-toeleiding"></div>
+      </div>
+    </div>
+    <div id="dash-toeleiding-ratio" class="dash-ratio" style="margin-bottom:10px"></div>
+
+    <div class="dash-sec-kop"><span class="dash-badge blauw-badge">🏘 Collectief</span></div>
+
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Bereik per cluster</div>
+        <div class="dash-ks">Totaal bewoners per cluster-rol</div>
+        <div id="dash-cluster-bereik"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Rendement per cluster</div>
+        <div class="dash-ks">Gem. bewoners per registratie</div>
+        <div id="dash-cluster-rend"></div>
+      </div>
+    </div>
+
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Thema ranking</div>
+        <div class="dash-ks">Bereik per thema</div>
+        <div id="dash-thema"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Signalen monitor</div>
+        <div class="dash-ks">Frequentie signaaltypen</div>
+        <div id="dash-signalen"></div>
+      </div>
+    </div>
+
+    <div class="dash-kaart-full">
+      <div class="dash-kt">Instroom nieuwe bewoners</div>
+      <div class="dash-ks">% nieuwe bewoners per collectieve actie</div>
+      <div id="dash-instroom"></div>
+    </div>
+
+    <div class="dash-kaart-full">
+      <div class="dash-kt">Vrijwilligers</div>
+      <div class="dash-ks">Inzet en betrokkenheid per vrijwilliger</div>
+      <div id="dash-vrijwilligers"></div>
+    </div>
+
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Financieel overzicht</div>
+        <div class="dash-ks">Inkomsten en uitgaven per project</div>
+        <div id="dash-fin"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Partner-afhankelijkheid</div>
+        <div class="dash-ks">Bereik per partnerorganisatie</div>
+        <div id="dash-partners"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bn-item actief" data-page="pg-start" onclick="App.nav('pg-start')">
+    <i data-lucide="home"></i>
+    <span>Home</span>
+  </button>
+  <button class="bn-item" data-page="pg-individueel-start" onclick="App.nav('pg-individueel-start')">
+    <i data-lucide="user"></i>
+    <span>Individueel</span>
+  </button>
+  <button class="bn-item" data-page="pg-collectief-start" onclick="App.nav('pg-collectief-start')">
+    <i data-lucide="users"></i>
+    <span>Collectief</span>
+  </button>
+  <button class="bn-item" data-page="pg-jaarplan" onclick="App.nav('pg-jaarplan')">
+    <i data-lucide="bar-chart-2"></i>
+    <span>Rapporten</span>
+  </button>
+  <button class="bn-item" data-page="pg-dashboard" onclick="App.nav('pg-dashboard')">
+    <i data-lucide="layout-dashboard"></i>
+    <span>Dashboard</span>
+  </button>
+  <button class="bn-item" data-page="pg-archief" onclick="App.nav('pg-archief')">
+    <i data-lucide="archive"></i>
+    <span>Archief</span>
+  </button>
+</nav>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js');
+  }
+</script>
+</body>
+</html>

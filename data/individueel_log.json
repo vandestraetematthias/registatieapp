@@ -1,0 +1,22 @@
+﻿{
+    "ID":  "73da0693-8b43-4a8b-801a-e326d0608c15",
+    "Maand":  "M",
+    "Jaar":  2026,
+    "PersoonNummer":  1,
+    "Vindplaats":  [
+                       "Bureau"
+                   ],
+    "Tijd":  "1",
+    "Levensdomein":  [
+                         "Financien"
+                     ],
+    "Methodiek":  [
+                      "Informatieverstrekking"
+                  ],
+    "ExtraInfo":  "brave man",
+    "Toeleiding":  [
+                       "OCMW"
+                   ],
+    "Datum":  "2026-03-28 21:20:17",
+    "Status":  "actief"
+}

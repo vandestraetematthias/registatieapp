@@ -1,0 +1,25 @@
+{
+  "name": "Buurtwerk Venning",
+  "short_name": "Buurtwerk",
+  "description": "Registratie & opvolging Buurtwerk Venning",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#4a7c59",
+  "theme_color": "#4a7c59",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "logo%20app/logo%20app.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo%20app/logo%20app.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
