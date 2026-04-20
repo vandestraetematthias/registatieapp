@@ -538,14 +538,7 @@ textarea { resize: vertical; min-height: 80px; }
 /* Navigatie — onderaan de inhoud van de kaart */
 .navigatie {
   display: flex; justify-content: space-between; align-items: center;
-  margin-top: 18px; padding-top: 12px; border-top: 1.5px solid var(--rand);
-  background: rgba(228, 255, 140, 0.97);
-  margin-left: -20px;
-  margin-right: -20px;
-  margin-bottom: -16px;
-  padding-left: 20px;
-  padding-right: 20px;
-  padding-bottom: 14px;
+  margin-top: 24px; padding-top: 16px; border-top: 1.5px solid var(--rand);
 }
 .btn-terug {
   background: none; border: 1.5px solid var(--rand); border-radius: 10px;
@@ -971,3 +964,54 @@ tr:nth-child(even) td { background: #fafaf9; }
 .sectie-col .start-icon { background: rgba(44,110,138,0.88); box-shadow: 0 4px 20px rgba(44,110,138,0.60); }
 
 .sectie-rap .wiz-sectie-icon { background: rgba(100,75,30,0.88); box-shadow: 0 4px 20px rgba(100,75,30,0.60); }
+
+/* ══════════════════════════════════════════
+   LOGIN PAGINA
+══════════════════════════════════════════ */
+.login-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 24px 16px;
+}
+.login-kaart {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  padding: 32px 28px 28px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  text-align: center;
+}
+.login-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 18px;
+  object-fit: cover;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.login-kaart h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.login-sub { color: var(--zacht); font-size: 0.9rem; margin-bottom: 24px; }
+.login-fout { color: var(--rood); font-size: 0.85rem; margin-top: 8px; min-height: 20px; }
+.login-btn { width: 100%; justify-content: center; margin-top: 16px; }
+
+/* Afmeld-knop op startpagina */
+.uitlog-btn {
+  background: none;
+  border: 1.5px solid var(--rand);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--zacht);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+@media (hover: hover) { .uitlog-btn:hover { border-color: var(--rood); color: var(--rood); } }

@@ -6,6 +6,22 @@
 
 'use strict';
 
+/* ══════════════════════════════════════════
+   FIREBASE CONFIG & INIT
+══════════════════════════════════════════ */
+var _fbConfig = {
+  apiKey: "AIzaSyDt6GX4DLd_7q7HgnkQU0IHuHk9tWiGxH8",
+  authDomain: "buurtwerk-1b254.firebaseapp.com",
+  projectId: "buurtwerk-1b254",
+  storageBucket: "buurtwerk-1b254.firebasestorage.app",
+  messagingSenderId: "202662610346",
+  appId: "1:202662610346:web:a5f620dee6960c1e03d7d3",
+  measurementId: "G-6WE2VPG30D"
+};
+firebase.initializeApp(_fbConfig);
+var _fs   = firebase.firestore();
+var _auth = firebase.auth();
+
 /* ── HELPERS ── */
 function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -31,37 +47,96 @@ function parseBedrag(s) {
 }
 
 /* ══════════════════════════════════════════
-   DATA  (localStorage)
+   DATA  (Firestore + in-memory cache)
 ══════════════════════════════════════════ */
 var DB = {
-  laad: function(sleutel) {
-    try { return JSON.parse(localStorage.getItem(sleutel) || '[]'); }
-    catch(e) { return []; }
-  },
-  sla: function(sleutel, data) {
-    localStorage.setItem(sleutel, JSON.stringify(data));
+  _personen:    [],
+  _individueel: [],
+  _collectief:  [],
+  _unsubs:      [],
+
+  // Getters — lezen uit cache
+  get personen()    { return this._personen; },
+  get individueel() { return this._individueel; },
+  get collectief()  { return this._collectief; },
+
+  // Start realtime-listeners naar Firestore
+  startListeners: function() {
+    DB._unsubs.forEach(function(u) { u(); });
+    DB._unsubs = [];
+    DB._unsubs.push(
+      _fs.collection('personen').onSnapshot(function(snap) {
+        DB._personen = snap.docs.map(function(d) { return d.data(); });
+        App._herlaadHuidigePagina();
+      }, function(e) { console.error('personen listener:', e); })
+    );
+    DB._unsubs.push(
+      _fs.collection('individueel').onSnapshot(function(snap) {
+        DB._individueel = snap.docs.map(function(d) { return d.data(); });
+        App._herlaadHuidigePagina();
+      }, function(e) { console.error('individueel listener:', e); })
+    );
+    DB._unsubs.push(
+      _fs.collection('collectief').onSnapshot(function(snap) {
+        DB._collectief = snap.docs.map(function(d) { return d.data(); });
+        App._herlaadHuidigePagina();
+      }, function(e) { console.error('collectief listener:', e); })
+    );
   },
 
-  // Getters
-  get personen()    { return this.laad('bw_personen'); },
-  get individueel() { return this.laad('bw_individueel'); },
-  get collectief()  { return this.laad('bw_collectief'); },
+  // Stop listeners en leeg cache bij uitloggen
+  stopListeners: function() {
+    DB._unsubs.forEach(function(u) { u(); });
+    DB._unsubs = [];
+    DB._personen = [];
+    DB._individueel = [];
+    DB._collectief = [];
+  },
 
-  // Setters
-  slaPerOp:  function(d) { this.sla('bw_personen',    d); },
-  slaIndOp:  function(d) { this.sla('bw_individueel', d); },
-  slaColOp:  function(d) { this.sla('bw_collectief',  d); },
+  // Detecteer wijzigingen en schrijf naar Firestore
+  _syncLijst: function(colNaam, oudeLijst, nieuweLijst) {
+    nieuweLijst.forEach(function(record) {
+      var oud = oudeLijst.find(function(r) { return r.id === record.id; });
+      if (!oud || JSON.stringify(oud) !== JSON.stringify(record)) {
+        _fs.collection(colNaam).doc(record.id).set(record)
+          .catch(function(e) { App.toast('Sync fout: ' + e.message); });
+      }
+    });
+    oudeLijst.forEach(function(r) {
+      if (!nieuweLijst.find(function(p) { return p.id === r.id; })) {
+        _fs.collection(colNaam).doc(r.id).delete()
+          .catch(function(e) { console.error('delete fout:', e); });
+      }
+    });
+  },
+
+  // Setters — update cache + Firestore
+  slaPerOp: function(lijst) {
+    var oud = this._personen.slice();
+    this._personen = lijst;
+    DB._syncLijst('personen', oud, lijst);
+  },
+  slaIndOp: function(lijst) {
+    var oud = this._individueel.slice();
+    this._individueel = lijst;
+    DB._syncLijst('individueel', oud, lijst);
+  },
+  slaColOp: function(lijst) {
+    var oud = this._collectief.slice();
+    this._collectief = lijst;
+    DB._syncLijst('collectief', oud, lijst);
+  },
 
   // Volgnummer
   volgNummer: function() {
-    var p = this.personen;
+    var p = this._personen;
     if (!p.length) return 1;
     return Math.max.apply(null, p.map(function(x) { return x.volgnummer || 0; })) + 1;
   },
 
   // Unieke actienamen (collectief hoofdrecords)
   actieNamen: function() {
-    return this.collectief
+    return this._collectief
       .filter(function(r) { return !r.module && r.status === 'actief'; })
       .map(function(r) { return r.naamVanDeActie; })
       .filter(function(v, i, a) { return a.indexOf(v) === i; })
@@ -1424,11 +1499,20 @@ var App = {
   wisAlles: function() {
     if (!confirm('Weet u zeker dat u alle data wilt wissen?')) return;
     if (!confirm('Dit kan niet ongedaan worden gemaakt. Wilt u echt alles verwijderen?')) return;
-    ['bw_personen','bw_individueel','bw_collectief'].forEach(function(k) {
-      localStorage.removeItem(k);
+    App.toast('Bezig met wissen…');
+    var cols = ['personen', 'individueel', 'collectief'];
+    Promise.all(cols.map(function(col) {
+      return _fs.collection(col).get().then(function(snap) {
+        var batch = _fs.batch();
+        snap.docs.forEach(function(d) { batch.delete(d.ref); });
+        return batch.commit();
+      });
+    })).then(function() {
+      App.toast('Alle data gewist.', false);
+      App.nav('pg-start');
+    }).catch(function(e) {
+      App.toast('Fout bij wissen: ' + e.message);
     });
-    App.toast('Alle data gewist.', false);
-    App.nav('pg-start');
   },
 
   /* ══════════════════════════════════════
@@ -2408,6 +2492,23 @@ var App = {
   },
 
   /* ══════════════════════════════════════
+     HERLAAD HUIDIGE PAGINA NA DATA-UPDATE
+  ══════════════════════════════════════ */
+  _herlaadHuidigePagina: function() {
+    var p = State.huidigePagina;
+    if (p === 'pg-start')              App.renderStart();
+    else if (p === 'pg-individueel-start') App.renderIndStart();
+    else if (p === 'pg-collectief-start')  App.renderColStart();
+    else if (p === 'pg-collectief-module') App.vulActieKeuze();
+    else if (p === 'pg-rapport-personen')  App.renderPersonenRap();
+    else if (p === 'pg-rapport-individueel') App.renderIndRap();
+    else if (p === 'pg-rapport-collectief')  App.renderColRap();
+    else if (p === 'pg-archief')           App.renderArchief();
+    else if (p === 'pg-jaarplan-mod')      App.renderJaarplan();
+    else if (p === 'pg-dashboard')         App.renderDashboard();
+  },
+
+  /* ══════════════════════════════════════
      INIT
   ══════════════════════════════════════ */
   init: function() {
@@ -2437,9 +2538,59 @@ var App = {
       fnEl.addEventListener('input', function() { App._clearDubbeleNaam(); });
     }
 
-    App.renderStart();
   }
 };
+
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+var Auth = {
+  inloggen: function() {
+    var email = (document.getElementById('login-email') || {}).value.trim();
+    var ww    = (document.getElementById('login-ww')    || {}).value;
+    var foutEl = document.getElementById('login-fout');
+    if (foutEl) foutEl.textContent = '';
+    if (!email || !ww) {
+      if (foutEl) foutEl.textContent = 'Vul e-mail en wachtwoord in.';
+      return;
+    }
+    _auth.signInWithEmailAndPassword(email, ww).catch(function() {
+      var f = document.getElementById('login-fout');
+      if (f) f.textContent = 'Aanmelden mislukt. Controleer uw gegevens.';
+    });
+  },
+
+  uitloggen: function() {
+    DB.stopListeners();
+    _auth.signOut();
+  }
+};
+
+// Auth state listener
+_auth.onAuthStateChanged(function(user) {
+  if (user) {
+    // Ingelogd — toon app
+    document.getElementById('pg-login').classList.remove('actief');
+    document.getElementById('bottom-nav').style.display = '';
+    DB.startListeners();
+    App.nav('pg-start');
+    // Wis loginformulier
+    var e = document.getElementById('login-email');
+    var w = document.getElementById('login-ww');
+    if (e) e.value = '';
+    if (w) w.value = '';
+  } else {
+    // Uitgelogd — toon loginpagina
+    DB.stopListeners();
+    document.querySelectorAll('.pagina').forEach(function(p) {
+      p.classList.remove('actief');
+    });
+    document.getElementById('pg-login').classList.add('actief');
+    document.getElementById('bottom-nav').style.display = 'none';
+    var f = document.getElementById('login-fout');
+    if (f) f.textContent = '';
+  }
+});
 
 /* ── Start ── */
 document.addEventListener('DOMContentLoaded', function() {

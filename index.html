@@ -18,6 +18,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -29,14 +33,40 @@
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════════
+     LOGIN PAGINA
+══════════════════════════════════════════ -->
+<div class="pagina actief" id="pg-login">
+  <div class="login-wrap">
+    <div class="login-kaart">
+      <img src="logo app/logo app.jpg" alt="Buurtwerk Venning" class="login-logo">
+      <h1>Buurtwerk Venning</h1>
+      <p class="login-sub">Registratie &amp; opvolging</p>
+
+      <div class="vraag" style="text-align:left">
+        <div class="vraag-label">E-mail</div>
+        <input type="email" id="login-email" placeholder="uw@email.be" autocomplete="email">
+      </div>
+      <div class="vraag" style="text-align:left">
+        <div class="vraag-label">Wachtwoord</div>
+        <input type="password" id="login-ww" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') Auth.inloggen()">
+      </div>
+      <div id="login-fout" class="login-fout"></div>
+      <button class="btn-volgende login-btn" onclick="Auth.inloggen()">Aanmelden →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      1. STARTPAGINA
 ══════════════════════════════════════════ -->
-<div class="pagina actief" id="pg-start">
+<div class="pagina" id="pg-start">
   <div class="start-wrap">
     <div class="start-header">
       <img src="logo app/logo app.jpg" alt="Buurtwerk Venning" class="start-logo">
       <h1>Buurtwerk Venning</h1>
       <p>Registratie &amp; opvolging</p>
+      <button class="uitlog-btn" onclick="Auth.uitloggen()">↩ Afmelden</button>
     </div>
 
     <div class="start-keuzes">
@@ -1392,7 +1422,7 @@
   </div>
 </div>
 
-<nav class="bottom-nav" id="bottom-nav">
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="bn-item actief" data-page="pg-start" onclick="App.nav('pg-start')">
     <i data-lucide="home"></i>
     <span>Home</span>

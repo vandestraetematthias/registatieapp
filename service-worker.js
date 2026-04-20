@@ -3,7 +3,7 @@
    Cache-first strategie voor offline gebruik
 ══════════════════════════════════════════ */
 
-var CACHE_NAAM = 'buurtwerk-v1';
+var CACHE_NAAM = 'buurtwerk-v2';
 var CACHE_BESTANDEN = [
   './',
   './index.html',
@@ -44,7 +44,10 @@ self.addEventListener('fetch', function(event) {
   // Externe CDN-verzoeken: altijd via netwerk proberen
   if (url.indexOf('fonts.googleapis') !== -1 ||
       url.indexOf('unpkg.com') !== -1 ||
-      url.indexOf('cdnjs.cloudflare.com') !== -1) {
+      url.indexOf('cdnjs.cloudflare.com') !== -1 ||
+      url.indexOf('gstatic.com') !== -1 ||
+      url.indexOf('firebaseio.com') !== -1 ||
+      url.indexOf('googleapis.com') !== -1) {
     event.respondWith(
       fetch(event.request).catch(function() {
         return caches.match(event.request);
