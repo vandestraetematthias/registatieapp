@@ -124,8 +124,14 @@ var DB = {
     if (schrijfOps.length) {
       App.toast('Opslaan\u2026', false, true);
       Promise.all(schrijfOps)
-        .then(function() { App.toast('Opgeslagen', true); })
-        .catch(function(e) { App.toast('Sync fout: ' + e.message); });
+        .then(function() {
+          App.toast('Opgeslagen', true);
+          alert('Verbinding met Cloud geslaagd!');
+        })
+        .catch(function(e) {
+          App.toast('Sync fout: ' + e.message);
+          alert('Fout bij opslaan in Cloud:\n' + e.message);
+        });
     }
   },
 
@@ -544,7 +550,7 @@ var App = {
       aangemaakt:    nu(),
       status:        'actief'
     };
-    var lijst2 = DB.personen;
+    var lijst2 = DB.personen.slice();
     lijst2.push(record);
     DB.slaPerOp(lijst2);
     App.succes('✅', 'Persoon opgeslagen!',
