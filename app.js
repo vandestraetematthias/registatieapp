@@ -54,31 +54,43 @@ var DB = {
   _individueel: [],
   _collectief:  [],
   _unsubs:      [],
+  _uid:         null,
+  _laadGereed:  0,
+
+  // Geeft de Firestore-collectie voor de ingelogde gebruiker terug
+  _col: function(naam) {
+    return _fs.collection('users/' + DB._uid + '/' + naam);
+  },
 
   // Getters — lezen uit cache
   get personen()    { return this._personen; },
   get individueel() { return this._individueel; },
   get collectief()  { return this._collectief; },
 
-  // Start realtime-listeners naar Firestore
+  // Start realtime-listeners naar Firestore (gebruiker-gekoppeld)
   startListeners: function() {
     DB._unsubs.forEach(function(u) { u(); });
     DB._unsubs = [];
+    DB._laadGereed = 0;
+    App.toast('Data laden\u2026', false, true);
     DB._unsubs.push(
-      _fs.collection('personen').onSnapshot(function(snap) {
+      DB._col('personen').onSnapshot(function(snap) {
         DB._personen = snap.docs.map(function(d) { return d.data(); });
+        if (DB._laadGereed < 3) { DB._laadGereed++; if (DB._laadGereed === 3) App.toast('Data geladen', true); }
         App._herlaadHuidigePagina();
       }, function(e) { console.error('personen listener:', e); })
     );
     DB._unsubs.push(
-      _fs.collection('individueel').onSnapshot(function(snap) {
+      DB._col('individueel').onSnapshot(function(snap) {
         DB._individueel = snap.docs.map(function(d) { return d.data(); });
+        if (DB._laadGereed < 3) { DB._laadGereed++; if (DB._laadGereed === 3) App.toast('Data geladen', true); }
         App._herlaadHuidigePagina();
       }, function(e) { console.error('individueel listener:', e); })
     );
     DB._unsubs.push(
-      _fs.collection('collectief').onSnapshot(function(snap) {
+      DB._col('collectief').onSnapshot(function(snap) {
         DB._collectief = snap.docs.map(function(d) { return d.data(); });
+        if (DB._laadGereed < 3) { DB._laadGereed++; if (DB._laadGereed === 3) App.toast('Data geladen', true); }
         App._herlaadHuidigePagina();
       }, function(e) { console.error('collectief listener:', e); })
     );
@@ -91,23 +103,30 @@ var DB = {
     DB._personen = [];
     DB._individueel = [];
     DB._collectief = [];
+    DB._uid = null;
+    DB._laadGereed = 0;
   },
 
-  // Detecteer wijzigingen en schrijf naar Firestore
+  // Detecteer wijzigingen en schrijf naar Firestore (users/{uid}/{colNaam})
   _syncLijst: function(colNaam, oudeLijst, nieuweLijst) {
+    var schrijfOps = [];
     nieuweLijst.forEach(function(record) {
       var oud = oudeLijst.find(function(r) { return r.id === record.id; });
       if (!oud || JSON.stringify(oud) !== JSON.stringify(record)) {
-        _fs.collection(colNaam).doc(record.id).set(record)
-          .catch(function(e) { App.toast('Sync fout: ' + e.message); });
+        schrijfOps.push(DB._col(colNaam).doc(record.id).set(record));
       }
     });
     oudeLijst.forEach(function(r) {
       if (!nieuweLijst.find(function(p) { return p.id === r.id; })) {
-        _fs.collection(colNaam).doc(r.id).delete()
-          .catch(function(e) { console.error('delete fout:', e); });
+        schrijfOps.push(DB._col(colNaam).doc(r.id).delete());
       }
     });
+    if (schrijfOps.length) {
+      App.toast('Opslaan\u2026', false, true);
+      Promise.all(schrijfOps)
+        .then(function() { App.toast('Opgeslagen', true); })
+        .catch(function(e) { App.toast('Sync fout: ' + e.message); });
+    }
   },
 
   // Setters — update cache + Firestore
@@ -251,14 +270,16 @@ var App = {
     if (totaal) totaal.value = bewoners + vrijw;
   },
 
-  toast: function(bericht, ok) {
+  toast: function(bericht, ok, permanent) {
     var t = document.getElementById('toast');
     t.textContent = bericht;
     t.className = 'toast toon' + (ok ? ' ok' : '');
     clearTimeout(App._toastTimer);
-    App._toastTimer = setTimeout(function() {
-      t.classList.remove('toon');
-    }, 3000);
+    if (!permanent) {
+      App._toastTimer = setTimeout(function() {
+        t.classList.remove('toon');
+      }, 3000);
+    }
   },
 
   succes: function(icon, titel, tekst, btn1Lbl, btn1Fn, btn2Lbl, btn2Fn) {
@@ -2598,6 +2619,7 @@ _auth.onAuthStateChanged(function(user) {
     // Ingelogd — toon app
     document.getElementById('pg-login').classList.remove('actief');
     document.getElementById('bottom-nav').style.display = '';
+    DB._uid = user.uid;
     DB.startListeners();
     App.nav('pg-start');
     // Wis loginformulier
