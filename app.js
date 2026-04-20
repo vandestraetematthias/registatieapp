@@ -2560,6 +2560,32 @@ var Auth = {
     });
   },
 
+  registreren: function() {
+    var email  = (document.getElementById('login-email') || {}).value.trim();
+    var ww     = (document.getElementById('login-ww')    || {}).value;
+    var foutEl = document.getElementById('login-fout');
+    if (foutEl) foutEl.textContent = '';
+    if (!email || !ww) {
+      if (foutEl) foutEl.textContent = 'Vul e-mail en wachtwoord in.';
+      return;
+    }
+    if (ww.length < 6) {
+      if (foutEl) foutEl.textContent = 'Wachtwoord moet minstens 6 tekens bevatten.';
+      return;
+    }
+    _auth.createUserWithEmailAndPassword(email, ww).catch(function(err) {
+      var f = document.getElementById('login-fout');
+      if (!f) return;
+      if (err.code === 'auth/email-already-in-use') {
+        f.textContent = 'Dit e-mailadres is al in gebruik.';
+      } else if (err.code === 'auth/invalid-email') {
+        f.textContent = 'Ongeldig e-mailadres.';
+      } else {
+        f.textContent = 'Registratie mislukt. Probeer opnieuw.';
+      }
+    });
+  },
+
   uitloggen: function() {
     DB.stopListeners();
     _auth.signOut();
