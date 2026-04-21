@@ -126,11 +126,10 @@ var DB = {
       Promise.all(schrijfOps)
         .then(function() {
           App.toast('Opgeslagen', true);
-          alert('Verbinding met Cloud geslaagd!');
         })
         .catch(function(e) {
+          console.error('Firestore sync fout voor ' + colNaam + ':', e);
           App.toast('Sync fout: ' + e.message);
-          alert('Fout bij opslaan in Cloud:\n' + e.message);
         });
     }
   },
@@ -335,26 +334,62 @@ var App = {
 
   renderIndStart: function() {
     var per = DB.personen.filter(function(p) { return p.status === 'actief'; });
-    // Sort newest first
+    var ind = DB.individueel.filter(function(a) { return a.status === 'actief'; });
+    var perMap = {};
+    per.forEach(function(p) { perMap[p.volgnummer] = p; });
     per.sort(function(a, b) { return (b.aangemaakt || '') > (a.aangemaakt || '') ? 1 : -1; });
+    ind.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
+
+    // Combineer en sorteer op datum
+    var alle = [];
+    per.slice(0, 5).forEach(function(p) {
+      alle.push({ datum: p.aangemaakt || '', soort: 'persoon', item: p });
+    });
+    ind.slice(0, 5).forEach(function(a) {
+      alle.push({ datum: a.datum || '', soort: 'actie', item: a });
+    });
+    alle.sort(function(a, b) { return b.datum > a.datum ? 1 : -1; });
+
     var html = '';
-    per.slice(0, 8).forEach(function(p) {
-      html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
-        '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(p.voornaam + ' ' + p.familienaam) + '</div>' +
-        '<div class="mini-kaart-meta">' + App.esc(p.gemeente || '') + ' — nr. ' + p.volgnummer + (p.gekend ? ' — ' + p.gekend : '') + '</div></div>' +
-        '<button class="mini-kaart-btn" onclick="App.bekijkPersoon(\'' + p.id + '\')">Bekijk/Bewerk</button>' +
-        '</div>';
+    alle.slice(0, 8).forEach(function(entry) {
+      if (entry.soort === 'persoon') {
+        var p = entry.item;
+        html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
+          '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(p.voornaam + ' ' + p.familienaam) + '</div>' +
+          '<div class="mini-kaart-meta">Nr. ' + p.volgnummer + (p.gemeente ? ' — ' + App.esc(p.gemeente) : '') + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+          '<span class="mini-badge badge-groen">Persoon</span>' +
+          '<button class="mini-kaart-btn" onclick="App.bekijkPersoon(\'' + p.id + '\')">Bewerk</button>' +
+          '</div></div>';
+      } else {
+        var a = entry.item;
+        var p2 = perMap[a.persoonNummer];
+        var naam = p2 ? p2.voornaam + ' ' + p2.familienaam : 'Persoon #' + a.persoonNummer;
+        html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
+          '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(naam) + '</div>' +
+          '<div class="mini-kaart-meta">' + App.esc(a.maand || '') + ' ' + (a.jaar || '') + ' — ' + App.esc((a.methodiek || []).join(', ') || '—') + '</div></div>' +
+          '<span class="mini-badge badge-blauw">Actie</span>' +
+          '</div>';
+      }
     });
     var el = document.getElementById('ind-recente-personen');
-    if (el) el.innerHTML = html || '<div style="color:var(--zacht);font-size:0.9rem">Nog geen personen.</div>';
+    if (el) el.innerHTML = html || '<div style="color:var(--zacht);font-size:0.9rem">Nog geen registraties.</div>';
   },
 
   renderColStart: function() {
     var col = DB.collectief.filter(function(c) { return !c.module && c.status === 'actief'; });
+    col.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
     var html = '';
     col.slice(0, 5).forEach(function(c) {
-      html += '<div class="mini-kaart"><div class="mini-kaart-naam">' + App.esc(c.naamVanDeActie) + '</div>' +
-        '<div class="mini-kaart-meta">' + c.maand + ' ' + c.jaar + ' — ' + c.aantalBewoners + ' bewoners</div></div>';
+      html += '<div class="mini-kaart">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+        '<div><div class="mini-kaart-naam">' + App.esc(c.naamVanDeActie) + '</div>' +
+        '<div class="mini-kaart-meta">' + c.maand + ' ' + c.jaar + ' — ' + c.aantalBewoners + ' bewoners</div></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
+        '<button onclick="App.nav(\'pg-rapport-collectief\')" style="background:var(--blauw);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bekijk</button>' +
+        '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Archiveer</button>' +
+        '</div></div>';
     });
     var el = document.getElementById('col-recente');
     if (el) el.innerHTML = html || '<div style="color:var(--zacht);font-size:0.9rem">Nog geen collectieve acties.</div>';
@@ -506,7 +541,7 @@ var App = {
           p.huisvesting   = App.getKeuzes('per-woon');
           p.woonsituatie  = App.getEnkele('per-woonsituatie');
           p.eersteContact = App.getEnkele('per-eerste');
-          p.type          = App.getEnkele('per-type');
+          p.type          = App.getKeuzes('per-type');
           p.gekendBij     = App.getKeuzes('per-gekend-bij');
           p.notitie       = document.getElementById('per-notitie').value.trim();
           p.gewijzigd     = nu();
@@ -544,7 +579,7 @@ var App = {
       huisvesting:   App.getKeuzes('per-woon'),
       woonsituatie:  App.getEnkele('per-woonsituatie'),
       eersteContact: App.getEnkele('per-eerste'),
-      type:          App.getEnkele('per-type'),
+      type:          App.getKeuzes('per-type'),
       gekendBij:     App.getKeuzes('per-gekend-bij'),
       notitie:       document.getElementById('per-notitie').value.trim(),
       aangemaakt:    nu(),
@@ -1233,7 +1268,6 @@ var App = {
       if (r.voornaam) {
         label = r.voornaam + ' ' + r.familienaam;
       } else if (r.persoonNummer) {
-        // Individuele actie: zoek persoon op
         var p = allePerMap[r.persoonNummer];
         label = (p ? p.voornaam + ' ' + p.familienaam : 'Persoon #' + r.persoonNummer) + ' (individuele actie, ' + (r.maand || '') + ')';
       } else if (r.naamVanDeActie) {
@@ -1242,60 +1276,164 @@ var App = {
         label = 'Record ' + r.id.substr(0,8);
       }
       var type = r.voornaam ? 'personen' : r.persoonNummer ? 'individueel' : 'collectief';
-      return '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
+      var bewerkBtn = (type === 'personen') ? '<button onclick="App.bekijkPersoon(\'' + r.id + '\')" style="background:var(--blauw);color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:0.82rem;font-weight:700">Wijzigen</button>' : '';
+      return '<div class="mini-kaart" style="flex-direction:column;gap:10px">' +
         '<div><div class="mini-kaart-naam">' + App.esc(label) + '</div>' +
-        '<div class="mini-kaart-meta">' + App.esc(type) + ' — ' + App.esc((r.gearchiveerdOp || '').substr(0,10)) + '</div></div>' +
-        '<button onclick="App.herstelRecord(\'' + r.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:0.82rem;font-weight:700">Herstellen</button>' +
-        '</div>';
+        '<div class="mini-kaart-meta">' + App.esc(type) + ' — gearchiveerd op ' + App.esc((r.gearchiveerdOp || '').substr(0,10)) + '</div></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        bewerkBtn +
+        '<button onclick="App.herstelRecord(\'' + r.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:0.82rem;font-weight:700">Terugplaatsen</button>' +
+        '<button onclick="App.wisRecord(\'' + r.id + '\')" style="background:var(--rood);color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:0.82rem;font-weight:700">Definitief wissen</button>' +
+        '</div></div>';
     }).join('');
     div.innerHTML = html;
   },
 
   archiveerRecord: function(id, type) {
     if (!confirm('Dit record archiveren?')) return;
-    var sleutel = type === 'personen' ? 'bw_personen' : type === 'individueel' ? 'bw_individueel' : 'bw_collectief';
-    var lijst = DB.laad(sleutel);
-    lijst = lijst.map(function(r) {
-      if (r.id === id) { r.status = 'gearchiveerd'; r.gearchiveerdOp = nu(); }
-      return r;
-    });
-    DB.sla(sleutel, lijst);
-    App.toast('Record gearchiveerd.', true);
-    // Re-render huidige pagina
-    if (type === 'personen')    App.renderPersonenRap();
-    if (type === 'individueel') App.renderIndRap();
-    if (type === 'collectief')  App.renderColRap();
+    try {
+      DB._col(type).doc(id).update({ status: 'gearchiveerd', gearchiveerdOp: nu() })
+        .then(function() {
+          App.toast('Record gearchiveerd.', true);
+        })
+        .catch(function(e) {
+          console.error('archiveer ' + type + ':', e);
+          App.toast('Fout bij archiveren: ' + e.message);
+        });
+    } catch(e) {
+      console.error('archiveer ' + type + ':', e);
+      App.toast('Fout bij archiveren: ' + e.message);
+    }
   },
 
   herstelRecord: function(id) {
-    ['bw_personen','bw_individueel','bw_collectief'].forEach(function(sleutel) {
-      var lijst = DB.laad(sleutel).map(function(r) {
-        if (r.id === id) { r.status = 'actief'; delete r.gearchiveerdOp; }
-        return r;
-      });
-      DB.sla(sleutel, lijst);
+    var gevonden = null;
+    var zoekLijst = [
+      { col: 'personen', data: DB._personen },
+      { col: 'individueel', data: DB._individueel },
+      { col: 'collectief', data: DB._collectief }
+    ];
+    zoekLijst.forEach(function(item) {
+      if (!gevonden && item.data.find(function(r) { return r.id === id; })) {
+        gevonden = item.col;
+      }
     });
-    App.toast('Record hersteld.', true);
-    App.renderArchief();
+    if (!gevonden) { App.toast('Record niet gevonden.'); return; }
+    try {
+      DB._col(gevonden).doc(id).update({ status: 'actief', gearchiveerdOp: firebase.firestore.FieldValue.delete() })
+        .then(function() {
+          App.toast('Record teruggeplaatst.', true);
+          App.renderArchief();
+        })
+        .catch(function(e) {
+          console.error('herstel ' + gevonden + ':', e);
+          App.toast('Fout bij terugplaatsen: ' + e.message);
+        });
+    } catch(e) {
+      console.error('herstelRecord:', e);
+      App.toast('Fout bij terugplaatsen: ' + e.message);
+    }
+  },
+
+  wisRecord: function(id) {
+    if (!confirm('Dit record definitief wissen? Dit kan niet ongedaan worden gemaakt.')) return;
+    var gevonden = null;
+    var zoekLijst = [
+      { col: 'personen', data: DB._personen },
+      { col: 'individueel', data: DB._individueel },
+      { col: 'collectief', data: DB._collectief }
+    ];
+    zoekLijst.forEach(function(item) {
+      if (!gevonden && item.data.find(function(r) { return r.id === id; })) {
+        gevonden = item.col;
+      }
+    });
+    if (!gevonden) { App.toast('Record niet gevonden.'); return; }
+    try {
+      DB._col(gevonden).doc(id).delete()
+        .then(function() {
+          App.toast('Record definitief gewist.', true);
+          App.renderArchief();
+        })
+        .catch(function(e) {
+          console.error('wisRecord ' + gevonden + ':', e);
+          App.toast('Fout bij wissen: ' + e.message);
+        });
+    } catch(e) {
+      console.error('wisRecord:', e);
+      App.toast('Fout bij wissen: ' + e.message);
+    }
   },
 
   /* ══════════════════════════════════════
      EXPORT
   ══════════════════════════════════════ */
-  exportCSV: function(type) {
+  exportCSVMetFilter: function(type) {
+    var vandaag = new Date().toISOString().substr(0, 10);
+    var van = prompt('Van datum (JJJJ-MM-DD, leeg = alles):', '');
+    var tot = prompt('Tot datum (JJJJ-MM-DD, leeg = vandaag):', vandaag);
+    App.exportCSV(type, van || null, tot || null);
+  },
+
+  exportBackup: function() {
+    var types = ['personen', 'individueel', 'collectief'];
+    var lijsten = [DB._personen, DB._individueel, DB._collectief];
+    var heeftData = lijsten.some(function(l) { return l.length > 0; });
+    if (!heeftData) { App.toast('Geen data om te exporteren.'); return; }
+    types.forEach(function(type) { App.exportCSV(type); });
+    App.toast('Back-up geëxporteerd.', true);
+    try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e) {}
+  },
+
+  _checkWeeklijksBackup: function() {
+    try {
+      var laastStr = localStorage.getItem('bw_laatste_backup');
+      if (!laastStr) {
+        setTimeout(function() {
+          if (confirm('Wilt u een back-up maken van uw data?')) App.exportBackup();
+          else try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e2) {}
+        }, 2500);
+        return;
+      }
+      var verschilDagen = (new Date() - new Date(laastStr)) / (1000 * 60 * 60 * 24);
+      if (verschilDagen >= 7) {
+        setTimeout(function() {
+          if (confirm('Het is meer dan een week geleden dat u een back-up maakte. Wilt u nu een back-up maken?')) {
+            App.exportBackup();
+          } else {
+            try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e2) {}
+          }
+        }, 2500);
+      }
+    } catch(e) {}
+  },
+
+  exportCSV: function(type, vanDatum, totDatum) {
     var data, bestandsnaam, keys;
     if (type === 'personen') {
-      data = DB.personen.filter(function(p) { return p.status === 'actief'; });
+      data = DB.personen.slice();
       bestandsnaam = 'personen_export.csv';
       keys = null; // gebruik Object.keys
     } else if (type === 'individueel') {
-      data = DB.individueel.filter(function(i) { return i.status === 'actief'; });
+      data = DB.individueel.slice();
       bestandsnaam = 'individueel_export.csv';
       keys = ['id','persoonNummer','maand','jaar','vindplaats','levensdomein','methodiek','extraInfo','toeleiding','tijd','datum','status'];
     } else {
-      data = DB.collectief.filter(function(c) { return c.status === 'actief'; });
+      data = DB.collectief.slice();
       bestandsnaam = 'collectief_export.csv';
       keys = ['id','module','volgnummer','maand','jaar','naamVanDeActie','cluster','thema','typeActie','buurt','totaal','aantalBewoners','waarvanNieuweBewoners','aantalVrijwilligers','naamVrijwilligers','naamPartner','datum','status','duur'];
+    }
+    // Datum-filter
+    if (vanDatum || totDatum) {
+      data = data.filter(function(r) {
+        var d = (r.aangemaakt || r.datum || '').substr(0, 10);
+        if (!d) return true;
+        if (vanDatum && d < vanDatum) return false;
+        if (totDatum && d > totDatum) return false;
+        return true;
+      });
+      var suffix = (vanDatum ? vanDatum : '') + (totDatum ? '_' + totDatum : '');
+      bestandsnaam = bestandsnaam.replace('.csv', '_' + suffix + '.csv');
     }
     if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
     if (!keys) keys = Object.keys(data[0]);
@@ -1325,67 +1463,128 @@ var App = {
     App.toast('CSV geëxporteerd.', true);
   },
 
-  exportPDF: function() {
+  exportBuurtwerkPDF: function() {
     var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || (typeof jsPDF !== 'undefined' ? jsPDF : null);
     if (!jsPDFLib) { App.toast('jsPDF niet beschikbaar.'); return; }
 
-    var per = DB.personen.filter(function(p) { return p.status === 'actief'; });
-    var ind = DB.individueel.filter(function(i) { return i.status === 'actief'; });
-    var col = DB.collectief.filter(function(c) { return !c.module && c.status === 'actief'; });
+    // Alle records (incl. gearchiveerd, excl. definitief gewist = alles in cache)
+    var per = DB.personen;
+    var ind = DB.individueel;
+    var col = DB.collectief.filter(function(c) { return !c.module; });
+
+    // Unieke vrijwilligers ontdubbeld op naam
+    var vrijwMap = {};
+    DB.collectief.forEach(function(r) {
+      (r.naamVrijwilligers || []).forEach(function(n) {
+        if (n && n.trim()) vrijwMap[n.trim().toLowerCase()] = true;
+      });
+    });
+    var aantalUniekeVrijw = Object.keys(vrijwMap).length;
+
+    var totUren = 0;
+    ind.forEach(function(r) { totUren += App._tijdNaarUren(r.tijd); });
+    var totBereik = 0, totNieuw = 0;
+    col.forEach(function(r) {
+      totBereik += (r.aantalBewoners || 0);
+      totNieuw  += (r.waarvanNieuweBewoners || 0);
+    });
 
     var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
     var y = 40;
 
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(18);
-    doc.text('Buurtwerk Venning — Rapport', 40, y); y += 30;
-
+    // Titelblok
+    doc.setFillColor(45, 106, 79);
+    doc.rect(0, 0, 595, 50, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text('Buurtwerk Venning \u2014 Buurtwerk rapport PDF', 40, 30);
     doc.setFontSize(10);
-    doc.setFont('helvetica','normal');
-    doc.text('Gegenereerd op: ' + new Date().toLocaleString('nl-BE'), 40, y); y += 30;
+    doc.text('Gegenereerd op: ' + new Date().toLocaleString('nl-BE'), 40, 44);
+    doc.setTextColor(0, 0, 0);
+    y = 70;
 
-    // Personen
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(13);
-    doc.text('Personen (' + per.length + ')', 40, y); y += 20;
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    per.forEach(function(p) {
-      if (y > 750) { doc.addPage(); y = 40; }
-      doc.text('  ' + p.volgnummer + '. ' + p.voornaam + ' ' + p.familienaam + (p.gemeente ? ' — ' + p.gemeente : ''), 40, y);
+    function sectie(tekst) {
+      if (y > 700) { doc.addPage(); y = 40; }
+      doc.setFillColor(64, 145, 108);
+      doc.rect(40, y - 2, 515, 14, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text(tekst, 46, y + 8);
+      doc.setTextColor(0, 0, 0);
+      y += 22;
+    }
+    function regel(label, waarde) {
+      if (y > 740) { doc.addPage(); y = 40; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.text(label + ':', 46, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      doc.text(String(waarde), 220, y);
       y += 14;
-    });
-    y += 10;
+    }
+    function telVeld(records, veld) {
+      var t = {};
+      records.forEach(function(r) {
+        (r[veld] || []).forEach(function(w) { if (w) t[w] = (t[w] || 0) + 1; });
+      });
+      return t;
+    }
 
-    // Individuele acties
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(13);
-    if (y > 700) { doc.addPage(); y = 40; }
-    doc.text('Individuele acties (' + ind.length + ')', 40, y); y += 20;
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    ind.forEach(function(a) {
-      if (y > 750) { doc.addPage(); y = 40; }
-      doc.text('  ' + (a.datum || '').substr(0,10) + ' — ' + a.maand + ' — persoon #' + a.persoonNummer + ' — ' + (a.tijd || '?'), 40, y);
-      y += 14;
-    });
-    y += 10;
+    sectie('OVERZICHT');
+    regel('Totaal geregistreerde personen', per.length);
+    regel('Individuele acties (totaal)', ind.length);
+    regel('Collectieve acties (totaal)', col.length);
+    regel('Unieke vrijwilligers (alle acties)', aantalUniekeVrijw);
+    y += 6;
 
-    // Collectieve acties
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(13);
-    if (y > 700) { doc.addPage(); y = 40; }
-    doc.text('Collectieve acties (' + col.length + ')', 40, y); y += 20;
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    col.forEach(function(c) {
-      if (y > 750) { doc.addPage(); y = 40; }
-      doc.text('  ' + c.naamVanDeActie + ' — ' + c.maand + ' ' + c.jaar + ' — ' + c.aantalBewoners + ' bewoners', 40, y);
-      y += 14;
-    });
+    sectie('INDIVIDUEEL');
+    regel('Totaal acties', ind.length);
+    regel('Totaal uren', (Math.round(totUren * 10) / 10) + 'u');
+    var methT = telVeld(ind, 'methodiek');
+    var methLijst = Object.keys(methT).sort(function(a,b) { return methT[b] - methT[a]; });
+    if (methLijst.length) {
+      y += 4;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Methodiek:', 46, y); y += 13;
+      doc.setFont('helvetica', 'normal');
+      methLijst.forEach(function(m) {
+        if (y > 740) { doc.addPage(); y = 40; }
+        doc.text('  ' + m + ': ' + methT[m] + ' keer', 46, y); y += 11;
+      });
+    }
+    var toelT = telVeld(ind, 'toeleiding');
+    var toelLijst = Object.keys(toelT).sort(function(a,b) { return toelT[b] - toelT[a]; });
+    if (toelLijst.length) {
+      y += 4;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Toeleiding:', 46, y); y += 13;
+      doc.setFont('helvetica', 'normal');
+      toelLijst.forEach(function(m) {
+        if (y > 740) { doc.addPage(); y = 40; }
+        doc.text('  ' + m + ': ' + toelT[m] + ' keer', 46, y); y += 11;
+      });
+    }
+    y += 6;
 
-    doc.save('buurtwerk_rapport.pdf');
-    App.toast('PDF gedownload.', true);
+    sectie('COLLECTIEF');
+    regel('Totaal acties', col.length);
+    regel('Totaal bewoners bereikt', totBereik);
+    regel('Waarvan nieuwe bewoners', totNieuw);
+    regel('Unieke vrijwilligers', aantalUniekeVrijw);
+    var themaT = {};
+    col.forEach(function(r) {
+      (r.thema || []).forEach(function(t) { if (t) themaT[t] = (themaT[t] || 0) + (r.aantalBewoners || 0); });
+    });
+    var themaLijst = Object.keys(themaT).sort(function(a,b) { return themaT[b] - themaT[a]; });
+    if (themaLijst.length) {
+      y += 4;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Thema (bewoners bereik):', 46, y); y += 13;
+      doc.setFont('helvetica', 'normal');
+      themaLijst.forEach(function(t) {
+        if (y > 740) { doc.addPage(); y = 40; }
+        doc.text('  ' + t + ': ' + themaT[t] + ' bewoners', 46, y); y += 11;
+      });
+    }
+
+    doc.save('buurtwerk_rapport_' + new Date().getFullYear() + '.pdf');
+    App.toast('Buurtwerk rapport PDF gedownload.', true);
   },
 
   /* ══════════════════════════════════════
@@ -1425,8 +1624,7 @@ var App = {
     else if (headers.indexOf('persoonNummer') !== -1) type = 'individueel';
     else if (headers.indexOf('voornaam') !== -1) type = 'personen';
 
-    var sleutel = type === 'personen' ? 'bw_personen' : type === 'individueel' ? 'bw_individueel' : 'bw_collectief';
-    var bestaande = DB.laad(sleutel);
+    var bestaande = type === 'personen' ? DB._personen.slice() : type === 'individueel' ? DB._individueel.slice() : DB._collectief.slice();
     var gemerged = bestaande.slice();
     var nieuwCount = 0;
     var bijgewerktCount = 0;
@@ -1497,8 +1695,15 @@ var App = {
     var bericht = samenvatting.join(', ') + ' (' + type + ')';
     if (!confirm(bericht + ' importeren?')) return;
 
-    DB.sla(sleutel, gemerged);
-    App.toast(bericht + ' geïmporteerd.', true);
+    try {
+      if (type === 'personen') DB.slaPerOp(gemerged);
+      else if (type === 'individueel') DB.slaIndOp(gemerged);
+      else DB.slaColOp(gemerged);
+      App.toast(bericht + ' geïmporteerd.', true);
+    } catch(e) {
+      console.error('CSV import fout:', e);
+      App.toast('Fout bij importeren: ' + e.message);
+    }
   },
 
   _csvRegel: function(regel, scheider) {
@@ -1529,7 +1734,7 @@ var App = {
     App.toast('Bezig met wissen…');
     var cols = ['personen', 'individueel', 'collectief'];
     Promise.all(cols.map(function(col) {
-      return _fs.collection(col).get().then(function(snap) {
+      return DB._col(col).get().then(function(snap) {
         var batch = _fs.batch();
         snap.docs.forEach(function(d) { batch.delete(d.ref); });
         return batch.commit();
@@ -1538,6 +1743,7 @@ var App = {
       App.toast('Alle data gewist.', false);
       App.nav('pg-start');
     }).catch(function(e) {
+      console.error('wisAlles:', e);
       App.toast('Fout bij wissen: ' + e.message);
     });
   },
@@ -1563,7 +1769,7 @@ var App = {
     App._setKeuzes('per-woon',        p.huisvesting  || []);
     App._setKeuzes('per-woonsituatie',[p.woonsituatie || '']);
     App._setKeuzes('per-eerste',      [p.eersteContact || '']);
-    App._setKeuzes('per-type',        [p.type || '']);
+    App._setKeuzes('per-type',        Array.isArray(p.type) ? p.type : (p.type ? [p.type] : []));
     App._setKeuzes('per-gekend-bij',  p.gekendBij    || []);
     // Pas header en terug-knop aan
     var wh = document.querySelector('#pg-persoon-wiz .wiz-header h1');
@@ -1847,15 +2053,14 @@ var App = {
     var maandEl = document.getElementById('dash-maand-filter');
     var jaarFilter  = jaarEl  ? jaarEl.value  : '';
     var maandFilter = maandEl ? maandEl.value : '';
-    var per = DB.personen.filter(function(p) { return p.status === 'actief'; });
+    // Inclusief gearchiveerde records — tellen mee voor statistieken
+    var per = DB.personen;
     var ind = DB.individueel.filter(function(r) {
-      if (r.status !== 'actief') return false;
       if (jaarFilter  && String(r.jaar) !== jaarFilter)  return false;
       if (maandFilter && r.maand !== maandFilter)         return false;
       return true;
     });
     var col = DB.collectief.filter(function(r) {
-      if (r.status !== 'actief') return false;
       if (r.module) return false;
       if (jaarFilter  && String(r.jaar) !== jaarFilter)  return false;
       if (maandFilter && r.maand !== maandFilter)         return false;
@@ -1864,7 +2069,7 @@ var App = {
     var colNamen = {};
     col.forEach(function(r) { colNamen[r.naamVanDeActie] = true; });
     var colAlle = DB.collectief.filter(function(r) {
-      if (r.status !== 'actief') return false;
+      if (false) return false; // alle statussen meenemen
       if (jaarFilter || maandFilter) {
         if (!r.module) {
           if (jaarFilter  && String(r.jaar) !== jaarFilter)  return false;
@@ -2628,6 +2833,7 @@ _auth.onAuthStateChanged(function(user) {
     DB._uid = user.uid;
     DB.startListeners();
     App.nav('pg-start');
+    App._checkWeeklijksBackup();
     // Wis loginformulier
     var e = document.getElementById('login-email');
     var w = document.getElementById('login-ww');

@@ -134,7 +134,7 @@
       <button onclick="App.nav('pg-start')">← Terug</button>
     </div>
 
-    <div class="start-sectie-titel" style="margin-top:32px">Recente personen</div>
+    <div class="start-sectie-titel" style="margin-top:32px">Recente personen en acties</div>
     <div id="ind-recente-personen"></div>
   </div>
 </div>
@@ -148,6 +148,7 @@
       <button onclick="App.nav('pg-individueel-start')">← Individueel</button>
     </div>
     <div class="wiz-header">
+      <div class="wiz-sectie-icon"><i data-lucide="zap"></i></div>
       <h1>Persoon registreren</h1>
       <p>Vul de gegevens in van de nieuwe persoon</p>
     </div>
@@ -222,7 +223,7 @@
       <div class="vraag">
         <div class="vraag-label">Inkomen</div>
         <div class="keuzes" id="per-inkomen">
-          <div class="keuze" onclick="App.toggle(this)">niet gekend</div>
+          <div class="keuze" onclick="App.toggle(this)">Niet gekend</div>
           <div class="keuze" onclick="App.toggle(this)">Leefloon</div>
           <div class="keuze" onclick="App.toggle(this)">Geen inkomen</div>
           <div class="keuze" onclick="App.toggle(this)">Invaliditeit</div>
@@ -245,17 +246,17 @@
           <div class="keuze" onclick="App.toggle(this)">Housing First</div>
           <div class="keuze" onclick="App.toggle(this)">Kracht.Wonen</div>
           <div class="keuze" onclick="App.toggle(this)">RCK</div>
-          <div class="keuze" onclick="App.toggle(this)">niet gekend</div>
+          <div class="keuze" onclick="App.toggle(this)">Niet gekend</div>
         </div>
       </div>
 
       <div class="vraag">
         <div class="vraag-label">Woonsituatie</div>
         <div class="keuzes" id="per-woonsituatie">
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">alleenstaand</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">samen</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">gezin</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">alleenstaand met kinderen</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">Alleenstaand</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">Samen</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">Gezin</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-woonsituatie')">Alleenstaand met kinderen</div>
         </div>
       </div>
 
@@ -273,21 +274,21 @@
       <div class="vraag">
         <div class="vraag-label">Eerste contact</div>
         <div class="keuzes" id="per-eerste">
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">vindplaatsgericht</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via netwerk gast</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via collega's</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">zelfaanmelding</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">via externe organisatie</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">geen idee meer</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Vindplaatsgericht</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Via netwerk gast</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Via collega's</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Zelfaanmelding</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Via externe organisatie</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'per-eerste')">Geen idee meer</div>
         </div>
       </div>
 
       <div class="vraag">
-        <div class="vraag-label">Type</div>
+        <div class="vraag-label">Type (meerdere mogelijk)</div>
         <div class="keuzes" id="per-type">
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">sleutelfiguur</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">hulpvrager</div>
-          <div class="keuze" onclick="App.enkeleKeuze(this,'per-type')">vrijwilliger</div>
+          <div class="keuze" onclick="App.toggle(this)">Sleutelfiguur</div>
+          <div class="keuze" onclick="App.toggle(this)">Hulpvrager</div>
+          <div class="keuze" onclick="App.toggle(this)">Vrijwilliger</div>
         </div>
       </div>
 
@@ -445,10 +446,13 @@
       <div class="vraag">
         <div class="vraag-label">Actie</div>
         <div class="keuzes" id="ia-methodiek">
-          <div class="keuze" onclick="App.toggle(this)">informeren</div>
-          <div class="keuze" onclick="App.toggle(this)">toeleiden</div>
-          <div class="keuze" onclick="App.toggle(this)">praktische begeleiding</div>
-          <div class="keuze" onclick="App.toggle(this)">probleemoplossend werken</div>
+          <div class="keuze" onclick="App.toggle(this)">Informeren</div>
+          <div class="keuze" onclick="App.toggle(this)">Toeleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Praktische begeleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Probleemoplossend werken</div>
+          <div class="keuze" onclick="App.toggle(this)">Begeleiding</div>
+          <div class="keuze" onclick="App.toggle(this)">Actief luisteren</div>
+          <div class="keuze" onclick="App.toggle(this)">Bemiddeling</div>
         </div>
       </div>
 
@@ -465,15 +469,17 @@
           <div class="keuze" onclick="App.toggle(this)">Justitie</div>
           <div class="keuze" onclick="App.toggle(this)">Ziekenhuis</div>
           <div class="keuze" onclick="App.toggle(this)">VDAB</div>
-          <div class="keuze" onclick="App.toggle(this)">sociaal-artistiek project</div>
+          <div class="keuze" onclick="App.toggle(this)">Sociaal-artistiek project</div>
           <div class="keuze" onclick="App.toggle(this)">MSOC</div>
           <div class="keuze" onclick="App.toggle(this)">Huisarts/Psycholoog</div>
           <div class="keuze" onclick="App.toggle(this)">Advocaat</div>
           <div class="keuze" onclick="App.toggle(this)">Stadsdiensten</div>
-          <div class="keuze" onclick="App.toggle(this)">aanbod vrije tijd</div>
+          <div class="keuze" onclick="App.toggle(this)">Aanbod vrije tijd</div>
           <div class="keuze" onclick="App.toggle(this)">Housing First</div>
           <div class="keuze" onclick="App.toggle(this)">Kracht.Wonen</div>
           <div class="keuze" onclick="App.toggle(this)">RCK</div>
+          <div class="keuze" onclick="App.toggle(this)">Huurdersbond</div>
+          <div class="keuze" onclick="App.toggle(this)">Andere</div>
         </div>
       </div>
 
@@ -1070,14 +1076,20 @@
         <button onclick="App.exportCSV('personen')">📥 Personen CSV</button>
         <button onclick="App.exportCSV('individueel')">📥 Individueel CSV</button>
         <button onclick="App.exportCSV('collectief')">📥 Collectief CSV</button>
-        <button onclick="App.exportPDF()">📄 PDF rapport</button>
+        <button onclick="App.exportBuurtwerkPDF()">📄 Buurtwerk rapport PDF</button>
         <button onclick="App.exporteerJaarplanPDF()">📋 Jaarplan PDF</button>
+      </div>
+      <div class="actie-rij" style="margin-top:8px">
+        <button onclick="App.exportCSVMetFilter('personen')">📅 Personen CSV (datum filter)</button>
+        <button onclick="App.exportCSVMetFilter('individueel')">📅 Individueel CSV (datum filter)</button>
+        <button onclick="App.exportCSVMetFilter('collectief')">📅 Collectief CSV (datum filter)</button>
       </div>
 
       <hr class="divider">
 
       <div class="kaart-titel" style="margin-bottom:12px">Beheer</div>
       <div class="actie-rij">
+        <button onclick="App.exportBackup()">💾 Back-up (alle CSV's)</button>
         <button class="oranje" onclick="App.importCSVDialog()">📤 CSV importeren</button>
         <button class="rood" onclick="App.wisAlles()">⚠️ Alle data wissen</button>
       </div>
