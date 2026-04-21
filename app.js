@@ -122,10 +122,9 @@ var DB = {
       }
     });
     if (schrijfOps.length) {
-      App.toast('Opslaan\u2026', false, true);
       Promise.all(schrijfOps)
         .then(function() {
-          App.toast('Opgeslagen', true);
+          App.toast('Gegevens bijgewerkt', true);
         })
         .catch(function(e) {
           console.error('Firestore sync fout voor ' + colNaam + ':', e);
@@ -687,7 +686,7 @@ var App = {
       datum:         nu(),
       status:        'actief'
     };
-    var lijst = DB.individueel;
+    var lijst = DB.individueel.slice();
     lijst.push(record);
     DB.slaIndOp(lijst);
     var p = State.gekozenPersoon;
@@ -806,7 +805,7 @@ var App = {
       datum:                 nu(),
       status:                'actief'
     };
-    var lijst = DB.collectief;
+    var lijst = DB.collectief.slice();
     lijst.push(record);
     DB.slaColOp(lijst);
     App.succes('✅', 'Collectieve actie opgeslagen!',
@@ -1022,7 +1021,7 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief;
+    var lijst = DB.collectief.slice();
     lijst.push(record);
     DB.slaColOp(lijst);
     App.succes('🔧', 'Logistiek opgeslagen!', State.huidigActie,
@@ -1045,7 +1044,7 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief;
+    var lijst = DB.collectief.slice();
     lijst.push(record);
     DB.slaColOp(lijst);
     App.succes('🗣', 'Overleg opgeslagen!', State.huidigActie,
@@ -1075,7 +1074,7 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief;
+    var lijst = DB.collectief.slice();
     lijst.push(record);
     DB.slaColOp(lijst);
     App.succes('🎉', 'Activiteit opgeslagen!', State.huidigActie,
@@ -1382,30 +1381,6 @@ var App = {
     if (!heeftData) { App.toast('Geen data om te exporteren.'); return; }
     types.forEach(function(type) { App.exportCSV(type); });
     App.toast('Back-up geëxporteerd.', true);
-    try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e) {}
-  },
-
-  _checkWeeklijksBackup: function() {
-    try {
-      var laastStr = localStorage.getItem('bw_laatste_backup');
-      if (!laastStr) {
-        setTimeout(function() {
-          if (confirm('Wilt u een back-up maken van uw data?')) App.exportBackup();
-          else try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e2) {}
-        }, 2500);
-        return;
-      }
-      var verschilDagen = (new Date() - new Date(laastStr)) / (1000 * 60 * 60 * 24);
-      if (verschilDagen >= 7) {
-        setTimeout(function() {
-          if (confirm('Het is meer dan een week geleden dat u een back-up maakte. Wilt u nu een back-up maken?')) {
-            App.exportBackup();
-          } else {
-            try { localStorage.setItem('bw_laatste_backup', new Date().toISOString()); } catch(e2) {}
-          }
-        }, 2500);
-      }
-    } catch(e) {}
   },
 
   exportCSV: function(type, vanDatum, totDatum) {
@@ -2833,7 +2808,6 @@ _auth.onAuthStateChanged(function(user) {
     DB._uid = user.uid;
     DB.startListeners();
     App.nav('pg-start');
-    App._checkWeeklijksBackup();
     // Wis loginformulier
     var e = document.getElementById('login-email');
     var w = document.getElementById('login-ww');
