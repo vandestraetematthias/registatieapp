@@ -180,7 +180,10 @@ var State = {
   // Tijdelijke uitgaven/inkomsten
   logUitgaven: [],
   actUitgaven: [],
-  actInkomsten: []
+  actInkomsten: [],
+  // Bewerkmodus ID's
+  _bewerktIaId: null,
+  _bewerktCaId: null
 };
 
 /* ══════════════════════════════════════════
@@ -367,8 +370,10 @@ var App = {
         html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
           '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(naam) + '</div>' +
           '<div class="mini-kaart-meta">' + App.esc(a.maand || '') + ' ' + (a.jaar || '') + ' — ' + App.esc((a.methodiek || []).join(', ') || '—') + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
           '<span class="mini-badge badge-blauw">Actie</span>' +
-          '</div>';
+          '<button class="mini-kaart-btn" onclick="App.laadIaBewerk(\'' + a.id + '\')">Bewerk</button>' +
+          '</div></div>';
       }
     });
     var el = document.getElementById('ind-recente-personen');
@@ -386,6 +391,7 @@ var App = {
         '<div class="mini-kaart-meta">' + c.maand + ' ' + c.jaar + ' — ' + c.aantalBewoners + ' bewoners</div></div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
+        '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>' +
         '<button onclick="App.nav(\'pg-rapport-collectief\')" style="background:var(--blauw);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bekijk</button>' +
         '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Archiveer</button>' +
         '</div></div>';
@@ -598,18 +604,29 @@ var App = {
      INDIVIDUELE ACTIE WIZARD
   ══════════════════════════════════════ */
   resetIa: function() {
+    var isEdit = !!State._bewerktIaId;
     State.iaStap = 1;
-    State.gekozenPersoon = null;
-    document.getElementById('ia-zoek').value = '';
-    document.getElementById('ia-zoek-resultaten').innerHTML = '';
-    document.getElementById('ia-gekozen-persoon').style.display = 'none';
-    ['ia-maand','ia-vindplaats','ia-tijd','ia-leven','ia-methodiek','ia-toeleiding'].forEach(function(id) {
-      App._resetKeuzes(id);
-    });
-    var jaarEl = document.getElementById('ia-jaar');
-    if (jaarEl) jaarEl.value = new Date().getFullYear();
-    var el = document.getElementById('ia-extra');
-    if (el) el.value = '';
+    if (!isEdit) {
+      State._bewerktIaId = null;
+      State.gekozenPersoon = null;
+      document.getElementById('ia-zoek').value = '';
+      document.getElementById('ia-zoek-resultaten').innerHTML = '';
+      document.getElementById('ia-gekozen-persoon').style.display = 'none';
+      ['ia-maand','ia-vindplaats','ia-tijd','ia-leven','ia-methodiek','ia-toeleiding'].forEach(function(id) {
+        App._resetKeuzes(id);
+      });
+      var jaarEl = document.getElementById('ia-jaar');
+      if (jaarEl) jaarEl.value = new Date().getFullYear();
+      var el = document.getElementById('ia-extra');
+      if (el) el.value = '';
+      var wh = document.querySelector('#pg-ind-actie-wiz .wiz-header h1');
+      if (wh) wh.textContent = 'Individuele actie';
+      var terugBtn = document.querySelector('#pg-ind-actie-wiz .terug-link button');
+      if (terugBtn) {
+        terugBtn.textContent = '← Individueel';
+        terugBtn.onclick = function() { App.nav('pg-individueel-start'); };
+      }
+    }
     App.iaStap(1);
   },
 
@@ -672,6 +689,34 @@ var App = {
     if (!maand) { App.toast('Selecteer een maand.'); return; }
     var jaarInput = document.getElementById('ia-jaar');
     var jaar = jaarInput ? (parseInt(jaarInput.value) || huidigJaar()) : huidigJaar();
+    var editId = State._bewerktIaId;
+    if (editId) {
+      var lijst = DB.individueel.slice();
+      var idx = -1;
+      for (var i = 0; i < lijst.length; i++) { if (lijst[i].id === editId) { idx = i; break; } }
+      if (idx !== -1) {
+        lijst[idx] = Object.assign({}, lijst[idx], {
+          persoonNummer: State.gekozenPersoon.volgnummer,
+          maand:         maand,
+          jaar:          jaar,
+          vindplaats:    App.getKeuzes('ia-vindplaats'),
+          levensdomein:  App.getKeuzes('ia-leven'),
+          methodiek:     App.getKeuzes('ia-methodiek'),
+          extraInfo:     document.getElementById('ia-extra').value.trim(),
+          toeleiding:    App.getKeuzes('ia-toeleiding'),
+          tijd:          App.getEnkele('ia-tijd')
+        });
+      }
+      DB.slaIndOp(lijst);
+      State._bewerktIaId = null;
+      var p = State.gekozenPersoon;
+      App.succes('✅', 'Actie bijgewerkt!',
+        'Actie voor ' + p.voornaam + ' ' + p.familienaam + ' — ' + maand,
+        '🏠 Naar start', function() { App.nav('pg-start'); },
+        '⚡ Andere actie', function() { App.nav('pg-ind-actie-wiz'); }
+      );
+      return;
+    }
     var record = {
       id:            uuid(),
       persoonNummer: State.gekozenPersoon.volgnummer,
@@ -686,12 +731,12 @@ var App = {
       datum:         nu(),
       status:        'actief'
     };
-    var lijst = DB.individueel.slice();
-    lijst.push(record);
-    DB.slaIndOp(lijst);
-    var p = State.gekozenPersoon;
+    var lijst2 = DB.individueel.slice();
+    lijst2.push(record);
+    DB.slaIndOp(lijst2);
+    var p2 = State.gekozenPersoon;
     App.succes('✅', 'Actie opgeslagen!',
-      'Actie voor ' + p.voornaam + ' ' + p.familienaam + ' — ' + maand,
+      'Actie voor ' + p2.voornaam + ' ' + p2.familienaam + ' — ' + maand,
       '🏠 Naar start', function() { App.nav('pg-start'); },
       '⚡ Nog een actie', function() { App.nav('pg-ind-actie-wiz'); }
     );
@@ -705,24 +750,35 @@ var App = {
   },
 
   resetCa: function() {
+    var isEdit = !!State._bewerktCaId;
     State.caStap = 1;
-    ['ca-maand','ca-type','ca-duur','ca-cluster','ca-thema'].forEach(function(id) {
-      App._resetKeuzes(id);
-    });
-    var naam = document.getElementById('ca-naam');
-    if (naam) naam.value = '';
-    var jaar = document.getElementById('ca-jaar');
-    if (jaar) jaar.value = new Date().getFullYear();
-    var buurt = document.getElementById('ca-buurt');
-    if (buurt) buurt.value = 'centrum 2: venning';
-    document.getElementById('ca-bewoners').value = 0;
-    document.getElementById('ca-nieuw').value = 0;
-    document.getElementById('ca-vrijw').value = 0;
-    document.getElementById('ca-vrijw-namen').innerHTML = '';
-    var totaal = document.getElementById('ca-totaal');
-    if (totaal) totaal.value = 0;
-    var partner = document.getElementById('ca-partner');
-    if (partner) partner.value = '';
+    if (!isEdit) {
+      State._bewerktCaId = null;
+      ['ca-maand','ca-type','ca-duur','ca-cluster','ca-thema'].forEach(function(id) {
+        App._resetKeuzes(id);
+      });
+      var naam = document.getElementById('ca-naam');
+      if (naam) naam.value = '';
+      var jaar = document.getElementById('ca-jaar');
+      if (jaar) jaar.value = new Date().getFullYear();
+      var buurt = document.getElementById('ca-buurt');
+      if (buurt) buurt.value = 'centrum 2: venning';
+      document.getElementById('ca-bewoners').value = 0;
+      document.getElementById('ca-nieuw').value = 0;
+      document.getElementById('ca-vrijw').value = 0;
+      document.getElementById('ca-vrijw-namen').innerHTML = '';
+      var totaal = document.getElementById('ca-totaal');
+      if (totaal) totaal.value = 0;
+      var partner = document.getElementById('ca-partner');
+      if (partner) partner.value = '';
+      var wh = document.querySelector('#pg-col-actie-wiz .wiz-header h1');
+      if (wh) wh.textContent = 'Collectieve actie';
+      var terugBtn = document.querySelector('#pg-col-actie-wiz .terug-link button');
+      if (terugBtn) {
+        terugBtn.textContent = '← Collectief';
+        terugBtn.onclick = function() { App.nav('pg-collectief-start'); };
+      }
+    }
     App.caStap(1);
     App.renderCaNaamSuggesties();
   },
@@ -785,6 +841,41 @@ var App = {
     var jaarInput = document.getElementById('ca-jaar');
     var jaar = jaarInput ? (parseInt(jaarInput.value) || huidigJaar()) : huidigJaar();
     var aantalBewoners = parseInt(document.getElementById('ca-bewoners').value) || 0;
+    var editId = State._bewerktCaId;
+    if (editId) {
+      var lijst = DB.collectief.slice();
+      var idx = -1;
+      for (var j = 0; j < lijst.length; j++) { if (lijst[j].id === editId) { idx = j; break; } }
+      if (idx !== -1) {
+        lijst[idx] = Object.assign({}, lijst[idx], {
+          maand:                 maand,
+          jaar:                  jaar,
+          naamVanDeActie:        naamVanDeActie,
+          cluster:               App.getKeuzes('ca-cluster'),
+          thema:                 App.getKeuzes('ca-thema'),
+          typeActie:             App.getKeuzes('ca-type'),
+          buurt:                 (document.getElementById('ca-buurt') || {}).value || 'centrum 2: venning',
+          duur:                  App.getEnkele('ca-duur'),
+          aantalBewoners:        aantalBewoners,
+          waarvanNieuweBewoners: parseInt(document.getElementById('ca-nieuw').value) || 0,
+          aantalVrijwilligers:   n,
+          totaal:                aantalBewoners + n,
+          naamVrijwilligers:     namen,
+          naamPartner:           document.getElementById('ca-partner').value.trim()
+        });
+      }
+      DB.slaColOp(lijst);
+      State._bewerktCaId = null;
+      App.succes('✅', 'Collectieve actie bijgewerkt!',
+        naamVanDeActie + ' — ' + maand,
+        '🏠 Naar start', function() { App.nav('pg-start'); },
+        '🔗 Module toevoegen', function() {
+          State.huidigActie = naamVanDeActie;
+          App.nav('pg-collectief-module');
+        }
+      );
+      return;
+    }
     var record = {
       id:                    uuid(),
       module:                null,
@@ -805,9 +896,9 @@ var App = {
       datum:                 nu(),
       status:                'actief'
     };
-    var lijst = DB.collectief.slice();
-    lijst.push(record);
-    DB.slaColOp(lijst);
+    var lijst2 = DB.collectief.slice();
+    lijst2.push(record);
+    DB.slaColOp(lijst2);
     App.succes('✅', 'Collectieve actie opgeslagen!',
       naamVanDeActie + ' — ' + maand,
       '🏠 Naar start', function() { App.nav('pg-start'); },
@@ -1177,7 +1268,10 @@ var App = {
         '<td>' + App.esc((a.vindplaats || []).join(', ') || '—') + '</td>' +
         '<td>' + App.esc(a.tijd || '—') + '</td>' +
         '<td>' + App.esc((a.methodiek || []).join(', ') || '—') + '</td>' +
-        '<td><button onclick="App.archiveerRecord(\'' + a.id + '\',\'individueel\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button></td>' +
+        '<td style="white-space:nowrap">' +
+        '<button onclick="App.laadIaBewerk(\'' + a.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
+        '<button onclick="App.archiveerRecord(\'' + a.id + '\',\'individueel\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
     document.getElementById('ri-tbody').innerHTML = html || '<tr><td colspan="7" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
@@ -1246,7 +1340,10 @@ var App = {
         '<td>' + (c.aantalBewoners || 0) + '</td>' +
         '<td>' + (c.aantalVrijwilligers || 0) + '</td>' +
         '<td>' + App.esc((c.typeActie || []).join(', ') || '—') + '</td>' +
-        '<td><button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button></td>' +
+        '<td style="white-space:nowrap">' +
+        '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
+        '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
     document.getElementById('rc-tbody').innerHTML = html || '<tr><td colspan="6" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
@@ -1368,10 +1465,11 @@ var App = {
      EXPORT
   ══════════════════════════════════════ */
   exportCSVMetFilter: function(type) {
-    var vandaag = new Date().toISOString().substr(0, 10);
-    var van = prompt('Van datum (JJJJ-MM-DD, leeg = alles):', '');
-    var tot = prompt('Tot datum (JJJJ-MM-DD, leeg = vandaag):', vandaag);
-    App.exportCSV(type, van || null, tot || null);
+    var vanEl = document.getElementById('csv-van-datum');
+    var totEl = document.getElementById('csv-tot-datum');
+    var van = vanEl && vanEl.value ? vanEl.value : null;
+    var tot = totEl && totEl.value ? totEl.value : null;
+    App.exportCSV(type, van, tot);
   },
 
   exportBackup: function() {
@@ -1759,6 +1857,88 @@ var App = {
   },
 
   /* ══════════════════════════════════════
+     BEWERK INDIVIDUELE ACTIE
+  ══════════════════════════════════════ */
+  laadIaBewerk: function(id) {
+    var a = DB.individueel.find(function(x) { return x.id === id; });
+    if (!a) return;
+    State._bewerktIaId = id;
+    App.nav('pg-ind-actie-wiz');
+    // Laad persoon
+    var p = DB.personen.find(function(x) { return x.volgnummer === a.persoonNummer; });
+    if (p) {
+      State.gekozenPersoon = p;
+      document.getElementById('ia-zoek').value = p.voornaam + ' ' + p.familienaam;
+      var gp = document.getElementById('ia-gekozen-persoon');
+      gp.textContent = '\u2713 ' + p.voornaam + ' ' + p.familienaam + ' (nr. ' + p.volgnummer + ')';
+      gp.style.display = 'block';
+    }
+    // Laad keuzes
+    App._setKeuzes('ia-maand', [a.maand || '']);
+    var jaarEl = document.getElementById('ia-jaar');
+    if (jaarEl) jaarEl.value = a.jaar || huidigJaar();
+    App._setKeuzes('ia-vindplaats', a.vindplaats || []);
+    App._setKeuzes('ia-leven',      a.levensdomein || []);
+    App._setKeuzes('ia-methodiek',  a.methodiek || []);
+    var extraEl = document.getElementById('ia-extra');
+    if (extraEl) extraEl.value = a.extraInfo || '';
+    App._setKeuzes('ia-toeleiding', a.toeleiding || []);
+    App._setKeuzes('ia-tijd',       [a.tijd || '']);
+    // Pas header aan
+    var wh = document.querySelector('#pg-ind-actie-wiz .wiz-header h1');
+    if (wh) wh.textContent = '\u270F\uFE0F Actie bewerken';
+    var terugBtn = document.querySelector('#pg-ind-actie-wiz .terug-link button');
+    if (terugBtn) {
+      terugBtn.textContent = '\u2190 Rapporten';
+      terugBtn.onclick = function() { State._bewerktIaId = null; App.nav('pg-rapport-individueel'); };
+    }
+  },
+
+  /* ══════════════════════════════════════
+     BEWERK COLLECTIEVE ACTIE
+  ══════════════════════════════════════ */
+  laadCaBewerk: function(id) {
+    var c = DB.collectief.find(function(x) { return x.id === id; });
+    if (!c) return;
+    State._bewerktCaId = id;
+    App.nav('pg-col-actie-wiz');
+    // Laad basisvelden
+    var naamEl = document.getElementById('ca-naam');
+    if (naamEl) naamEl.value = c.naamVanDeActie || '';
+    App._setKeuzes('ca-maand', [c.maand || '']);
+    var jaarEl = document.getElementById('ca-jaar');
+    if (jaarEl) jaarEl.value = c.jaar || huidigJaar();
+    // Bereik
+    document.getElementById('ca-bewoners').value = c.aantalBewoners || 0;
+    document.getElementById('ca-nieuw').value    = c.waarvanNieuweBewoners || 0;
+    document.getElementById('ca-vrijw').value    = c.aantalVrijwilligers || 0;
+    document.getElementById('ca-totaal').value   = c.totaal || 0;
+    App.updateVrijwNames();
+    var vrijwNamen = c.naamVrijwilligers || [];
+    for (var i = 0; i < vrijwNamen.length; i++) {
+      var vEl = document.getElementById('ca-vw-' + (i + 1));
+      if (vEl) vEl.value = vrijwNamen[i];
+    }
+    var partnerEl = document.getElementById('ca-partner');
+    if (partnerEl) partnerEl.value = c.naamPartner || '';
+    // Details
+    App._setKeuzes('ca-cluster', c.cluster || []);
+    App._setKeuzes('ca-thema',   c.thema || []);
+    App._setKeuzes('ca-type',    c.typeActie || []);
+    var buurtEl = document.getElementById('ca-buurt');
+    if (buurtEl) buurtEl.value = c.buurt || 'centrum 2: venning';
+    App._setKeuzes('ca-duur', [c.duur || '']);
+    // Pas header aan
+    var wh = document.querySelector('#pg-col-actie-wiz .wiz-header h1');
+    if (wh) wh.textContent = '\u270F\uFE0F Actie bewerken';
+    var terugBtn = document.querySelector('#pg-col-actie-wiz .terug-link button');
+    if (terugBtn) {
+      terugBtn.textContent = '\u2190 Rapporten';
+      terugBtn.onclick = function() { State._bewerktCaId = null; App.nav('pg-rapport-collectief'); };
+    }
+  },
+
+  /* ══════════════════════════════════════
      JAARPLAN MODULE
   ══════════════════════════════════════ */
   _berekenFiche: function(naam) {
@@ -1931,7 +2111,7 @@ var App = {
     sectieKop('BEREIK');
     veld('Totaal bewoners',          f.totBewoners);
     veld('Waarvan nieuwe bewoners',  f.totNieuw);
-    veld('Unieke vrijwilligers',     f.uniekeVrijw.length + (f.uniekeVrijw.length ? ' (' + f.uniekeVrijw.join(', ') + ')' : ''));
+    veld('Unieke vrijwilligers',     f.uniekeVrijw.length);
     veld('Totaal bereikte personen', f.totBewoners + f.uniekeVrijw.length);
     lijn();
 

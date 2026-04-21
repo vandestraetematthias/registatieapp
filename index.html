@@ -148,7 +148,7 @@
       <button onclick="App.nav('pg-individueel-start')">← Individueel</button>
     </div>
     <div class="wiz-header">
-      <div class="wiz-sectie-icon"><i data-lucide="zap"></i></div>
+      <div class="wiz-sectie-icon"><i data-lucide="user-plus"></i></div>
       <h1>Persoon registreren</h1>
       <p>Vul de gegevens in van de nieuwe persoon</p>
     </div>
@@ -492,6 +492,8 @@
           <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">1 uur</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">1u30</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">2 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">3 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ia-tijd')">4 uur</div>
         </div>
       </div>
 
@@ -725,6 +727,10 @@
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">2 uur</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">3 uur</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">4 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">5 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">6 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">7 uur</div>
+          <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">8 uur</div>
         </div>
       </div>
 
@@ -1079,10 +1085,22 @@
         <button onclick="App.exportBuurtwerkPDF()">📄 Buurtwerk rapport PDF</button>
         <button onclick="App.exporteerJaarplanPDF()">📋 Jaarplan PDF</button>
       </div>
-      <div class="actie-rij" style="margin-top:8px">
-        <button onclick="App.exportCSVMetFilter('personen')">📅 Personen CSV (datum filter)</button>
-        <button onclick="App.exportCSVMetFilter('individueel')">📅 Individueel CSV (datum filter)</button>
-        <button onclick="App.exportCSVMetFilter('collectief')">📅 Collectief CSV (datum filter)</button>
+      <div style="margin-top:12px">
+        <div class="twee-kolommen" style="max-width:400px;gap:12px">
+          <div class="vraag">
+            <div class="vraag-label"><i data-lucide="calendar-days" style="width:14px;height:14px;vertical-align:middle"></i> Van datum</div>
+            <input type="date" id="csv-van-datum">
+          </div>
+          <div class="vraag">
+            <div class="vraag-label"><i data-lucide="calendar-days" style="width:14px;height:14px;vertical-align:middle"></i> Tot datum</div>
+            <input type="date" id="csv-tot-datum">
+          </div>
+        </div>
+        <div class="actie-rij" style="margin-top:8px">
+          <button onclick="App.exportCSVMetFilter('personen')">📅 Personen CSV (datum filter)</button>
+          <button onclick="App.exportCSVMetFilter('individueel')">📅 Individueel CSV (datum filter)</button>
+          <button onclick="App.exportCSVMetFilter('collectief')">📅 Collectief CSV (datum filter)</button>
+        </div>
       </div>
 
       <hr class="divider">
