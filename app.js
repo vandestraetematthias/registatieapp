@@ -316,14 +316,15 @@ var App = {
     var alle = [];
     ind.forEach(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
-      alle.push({ datum: a.datum, label: p ? p.voornaam + ' ' + p.familienaam : 'Persoon #' + a.persoonNummer, meta: a.maand + ' — ' + (a.tijd || '?'), badge: 'badge-groen', badgeTxt: 'Individueel', pagina: 'pg-rapport-individueel' });
+      var init = p ? (p.voornaam.charAt(0).toUpperCase() + '.' + p.familienaam.charAt(0).toUpperCase() + '.') : 'P#' + a.persoonNummer;
+      alle.push({ datum: a.datum, label: init, meta: a.maand + ' — ' + (a.tijd || '?'), badge: 'badge-groen', badgeTxt: 'Individueel', pagina: 'pg-rapport-individueel' });
     });
     col.forEach(function(a) {
       alle.push({ datum: a.datum, label: a.naamVanDeActie, meta: a.maand + ' — ' + a.aantalBewoners + ' bewoners', badge: 'badge-blauw', badgeTxt: 'Collectief', pagina: 'pg-rapport-collectief' });
     });
     alle.sort(function(a, b) { return b.datum < a.datum ? -1 : 1; });
     var html = '';
-    alle.slice(0, 6).forEach(function(item) {
+    alle.forEach(function(item) {
       var klik = item.pagina ? 'onclick="App.nav(\'' + item.pagina + '\')" style="cursor:pointer"' : '';
       html += '<div class="mini-kaart" ' + klik + '>' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
@@ -1194,22 +1195,21 @@ var App = {
       if (!q) return true;
       return (p.voornaam + ' ' + p.familienaam).toLowerCase().indexOf(q) !== -1;
     });
+    per.sort(function(a, b) { return (a.familienaam || '').localeCompare(b.familienaam || '', 'nl'); });
     document.getElementById('rp-teller').textContent = per.length + ' personen';
     var html = per.map(function(p) {
+      var init = (p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.';
       return '<tr>' +
         '<td>' + p.volgnummer + '</td>' +
-        '<td>' + App.esc(p.voornaam) + '</td>' +
-        '<td>' + App.esc(p.familienaam) + '</td>' +
-        '<td>' + App.esc(p.gemeente || '—') + '</td>' +
+        '<td>' + App.esc(init) + '</td>' +
         '<td>' + App.esc((p.inkomen || []).join(', ') || '—') + '</td>' +
-        '<td>' + App.esc(p.gekend || '—') + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.bekijkPersoon(\'' + p.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
         '<button onclick="App.archiveerRecord(\'' + p.id + '\',\'personen\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
         '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('rp-tbody').innerHTML = html || '<tr><td colspan="7" style="color:var(--zacht);text-align:center">Geen personen.</td></tr>';
+    document.getElementById('rp-tbody').innerHTML = html || '<tr><td colspan="4" style="color:var(--zacht);text-align:center">Geen personen.</td></tr>';
   },
 
   /* ── Filter-helpers rapport-individueel ── */
@@ -1271,20 +1271,17 @@ var App = {
     }
     var html = ind.map(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
+      var init = p ? ((p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.') : 'P#' + a.persoonNummer;
       return '<tr>' +
-        '<td>' + App.esc((a.datum || '').substr(0, 10)) + '</td>' +
         '<td>' + App.esc(a.maand || '') + '</td>' +
-        '<td>' + App.esc(p ? p.voornaam + ' ' + p.familienaam : '#' + a.persoonNummer) + '</td>' +
-        '<td>' + App.esc((a.vindplaats || []).join(', ') || '—') + '</td>' +
-        '<td>' + App.esc(a.tijd || '—') + '</td>' +
-        '<td>' + App.esc((a.methodiek || []).join(', ') || '—') + '</td>' +
+        '<td>' + App.esc(init) + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.laadIaBewerk(\'' + a.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
         '<button onclick="App.archiveerRecord(\'' + a.id + '\',\'individueel\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
         '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('ri-tbody').innerHTML = html || '<tr><td colspan="7" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
+    document.getElementById('ri-tbody').innerHTML = html || '<tr><td colspan="3" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
   },
 
   /* ── Filter-helpers rapport-collectief ── */
@@ -1344,11 +1341,11 @@ var App = {
       teller.textContent = label;
     }
     var html = col.map(function(c) {
+      var totaal = (c.aantalBewoners || 0) + (c.aantalVrijwilligers || 0);
       return '<tr>' +
         '<td>' + App.esc(c.naamVanDeActie) + '</td>' +
         '<td>' + App.esc(c.maand || '') + '</td>' +
-        '<td>' + (c.aantalBewoners || 0) + '</td>' +
-        '<td>' + (c.aantalVrijwilligers || 0) + '</td>' +
+        '<td>' + totaal + '</td>' +
         '<td>' + App.esc((c.typeActie || []).join(', ') || '—') + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
@@ -1356,7 +1353,7 @@ var App = {
         '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('rc-tbody').innerHTML = html || '<tr><td colspan="6" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
+    document.getElementById('rc-tbody').innerHTML = html || '<tr><td colspan="5" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
   },
 
   renderArchief: function() {
@@ -2011,6 +2008,30 @@ var App = {
   /* ══════════════════════════════════════
      JAARPLAN MODULE
   ══════════════════════════════════════ */
+  _participatiegraad: function(participaties) {
+    var niveauMap = {
+      'Kijken': 1, 'Deelnemen': 1,
+      'Feedback geven': 2, 'Helpen': 2,
+      'Advies geven': 3, 'Meedenken': 3,
+      'Mee organiseren': 4,
+      'Trekken': 5
+    };
+    var labelKort = { 1: 'Zeer laag', 2: 'Laag', 3: 'Gemiddeld', 4: 'Hoog', 5: 'Zeer hoog' };
+    var labelLang = {
+      1: 'Zeer laag (Aanwezig zijn)',
+      2: 'Laag (Reageren of hand-en-spandiensten)',
+      3: 'Gemiddeld (Input leveren)',
+      4: 'Hoog (Samen doen)',
+      5: 'Zeer hoog (De kar trekken / Eigenaarschap)'
+    };
+    var niveaus = participaties.map(function(p) { return niveauMap[p] || 0; }).filter(Boolean);
+    if (!niveaus.length) return '—';
+    var min = Math.min.apply(null, niveaus);
+    var max = Math.max.apply(null, niveaus);
+    if (min === max) return labelLang[min];
+    return 'Van ' + labelKort[min] + ' tot ' + labelKort[max];
+  },
+
   _berekenFiche: function(naam) {
     var col = DB.collectief.filter(function(r) { return r.naamVanDeActie === naam && r.status === 'actief'; });
     var hoofdRecords  = col.filter(function(r) { return !r.module; });
@@ -2055,11 +2076,13 @@ var App = {
       }
     });
 
-    // Rollen / doelen
+    // Rollen / doelen / participatie
     var rollen  = [];
     var doelen  = [];
+    var participaties = [];
     hoofdRecords.forEach(function(r) { (r.cluster || []).forEach(function(c) { if (rollen.indexOf(c) === -1) rollen.push(c); }); });
     actRecords.forEach(function(r)   { (r.doel    || []).forEach(function(d) { if (doelen.indexOf(d)  === -1) doelen.push(d);  }); });
+    actRecords.forEach(function(r)   { (r.participatie || []).forEach(function(p) { if (participaties.indexOf(p) === -1) participaties.push(p); }); });
 
     // Notities
     var notities = col.filter(function(r) { return r.notitie; }).map(function(r) {
@@ -2085,6 +2108,7 @@ var App = {
       signalen:       alleSignalen,
       rollen:         rollen,
       doelen:         doelen,
+      participaties:  participaties,
       notities:       notities,
       ids:            col.map(function(r) { return r.id; })
     };
@@ -2192,7 +2216,7 @@ var App = {
     lijn();
 
     sectieKop('INHOUD');
-    veld('Rollen (cluster)', f.rollen.join(', ')  || '—');
+    veld('Participatiegraad', App._participatiegraad(f.participaties));
     veld('Doelen',           f.doelen.join(', ')  || '—');
     veld('Signalen',         f.signalen.join(', ')|| '—');
     lijn();
@@ -2457,7 +2481,7 @@ var App = {
     var html = '<div class="dash-bar-lijst">';
     lijst.forEach(function(it, i) {
       var p = d.per.find(function(x) { return x.volgnummer === it.nr; });
-      var naam = p ? (p.voornaam + ' ' + p.familienaam) : 'Persoon #' + it.nr;
+      var naam = p ? ((p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.') : 'P#' + it.nr;
       var pct = Math.round((it.uren / max) * 100);
       var uren = Math.round(it.uren * 10) / 10;
       html += '<div class="dash-bi dash-bi-r">' +
@@ -2592,31 +2616,28 @@ var App = {
     var vrijwData = {};
     d.col.forEach(function(r) {
       (r.naamVrijwilligers || []).forEach(function(naam) {
-        if (!naam) return;
-        if (!vrijwData[naam]) vrijwData[naam] = { acties: 0, projecten: {} };
-        vrijwData[naam].acties++;
-        vrijwData[naam].projecten[r.naamVanDeActie] = true;
+        if (!naam || !naam.trim()) return;
+        var delen = naam.trim().split(/\s+/);
+        var init = delen.map(function(w) { return w.charAt(0).toUpperCase(); }).slice(0, 2).join('');
+        var sleutel = init.toUpperCase();
+        if (!vrijwData[sleutel]) vrijwData[sleutel] = { initialen: init, acties: 0 };
+        vrijwData[sleutel].acties++;
       });
     });
     var lijst = [];
-    for (var naam in vrijwData) {
-      if (vrijwData.hasOwnProperty(naam)) {
-        lijst.push({ naam: naam, acties: vrijwData[naam].acties, projecten: Object.keys(vrijwData[naam].projecten) });
-      }
+    for (var k in vrijwData) {
+      if (vrijwData.hasOwnProperty(k)) lijst.push(vrijwData[k]);
     }
     lijst.sort(function(a, b) { return b.acties - a.acties; });
     if (!lijst.length) { el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
     var maxActies = lijst[0].acties || 1;
-    var html = '<table class="dash-vt"><thead><tr><th>Vrijwilliger</th><th>Inzet</th><th>Acties</th><th>Projecten</th></tr></thead><tbody>';
+    var html = '<table class="dash-vt"><thead><tr><th>Initialen</th><th>Inzet</th><th>Totaal</th></tr></thead><tbody>';
     lijst.forEach(function(v) {
-      var delen = v.naam.split(' ');
-      var initialen = delen.map(function(d) { return d.charAt(0).toUpperCase(); }).slice(0, 2).join('');
       var pct = Math.round((v.acties / maxActies) * 100);
       html += '<tr>' +
-        '<td><span class="dash-vav">' + App.esc(initialen) + '</span>' + App.esc(v.naam) + '</td>' +
+        '<td><span class="dash-vav">' + App.esc(v.initialen) + '</span></td>' +
         '<td style="min-width:80px"><div class="dash-bt" style="height:8px;overflow:hidden"><div class="dash-bf fill-groen" style="width:' + pct + '%"></div></div></td>' +
-        '<td>' + v.acties + '</td>' +
-        '<td style="font-size:0.68rem;color:var(--zacht)">' + App.esc(v.projecten.join(', ')) + '</td>' +
+        '<td>' + v.acties + ' x</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
@@ -2716,13 +2737,12 @@ var App = {
     el.innerHTML = html;
   },
 
-  _dashPartners: function(d) {
+  _dashLocaties: function(d) {
     var teller = {};
     d.col.forEach(function(r) {
-      var partner = r.naamPartner;
-      if (!partner) return;
-      if (!teller[partner]) teller[partner] = 0;
-      teller[partner] += (r.aantalBewoners || 0);
+      var buurt = r.buurt || 'Onbekend';
+      if (!teller[buurt]) teller[buurt] = 0;
+      teller[buurt]++;
     });
     var sorted = [];
     for (var k in teller) {
@@ -2751,7 +2771,7 @@ var App = {
     App._dashInstroom(d);
     App._dashVrijwilligers(d);
     App._dashFinancieel(d);
-    App._dashPartners(d);
+    App._dashLocaties(d);
   },
 
   exportDashboardPDF: function() {

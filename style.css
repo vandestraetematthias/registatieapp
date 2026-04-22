@@ -617,12 +617,12 @@ textarea { resize: vertical; min-height: 80px; }
 .tabel-wrapper { overflow-x: auto; overflow-y: auto; height: 100%; border-radius: 10px; border: 1px solid rgba(0,0,0,0.07); }
 table { width: 100%; border-collapse: collapse; background: white; font-size: 0.85rem; }
 th {
-  background: var(--groen); color: white; padding: 8px 12px;
+  background: var(--groen); color: white; padding: 5px 8px;
   font-weight: 700; font-size: 0.75rem; text-transform: uppercase;
   letter-spacing: 0.04em; text-align: left; white-space: nowrap;
   position: sticky; top: 0; z-index: 2;
 }
-td { padding: 8px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: top; }
+td { padding: 5px 8px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: top; }
 tr:last-child td { border-bottom: none; }
 tr:nth-child(even) td { background: #fafaf9; }
 
