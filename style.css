@@ -460,6 +460,12 @@ input:focus, textarea:focus, select:focus {
 }
 textarea { resize: vertical; min-height: 80px; }
 
+/* Automatische hoofdletters (visueel) voor naam-velden */
+#per-voornaam, #per-familienaam,
+#pd-voornaam, #pd-familienaam {
+  text-transform: capitalize;
+}
+
 .twee-kolommen { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 /* Teller */

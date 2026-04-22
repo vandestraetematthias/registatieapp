@@ -201,7 +201,8 @@ var App = {
       doel.classList.add('actief');
       // Scroll de interne wrap terug naar boven bij paginawissel
       var wrap = doel.querySelector('.wizard-wrap, .start-wrap, .dash-wrap');
-      if (wrap) wrap.scrollTop = 0;
+      if (wrap) wrap.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       State.huidigePagina = pagina;
     }
     // Bottom navbar actieve tab bijwerken
@@ -521,6 +522,9 @@ var App = {
         if (i === n) ind.classList.add('actief');
       }
     });
+    var ww = document.querySelector('#pg-persoon-wiz .wizard-wrap');
+    if (ww) ww.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   slaPerOp: function() {
@@ -646,6 +650,9 @@ var App = {
         if (i === n) ind.classList.add('actief');
       }
     });
+    var ww = document.querySelector('#pg-ind-actie-wiz .wizard-wrap');
+    if (ww) ww.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   zoekPersoon: function() {
@@ -814,6 +821,9 @@ var App = {
         if (i === n) ind.classList.add('actief');
       }
     });
+    var ww = document.querySelector('#pg-col-actie-wiz .wizard-wrap');
+    if (ww) ww.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   updateVrijwNames: function() {
@@ -2958,6 +2968,44 @@ var App = {
   /* ══════════════════════════════════════
      INIT
   ══════════════════════════════════════ */
+  /* ── Hulpfuncties voor automatische hoofdletters ── */
+  _cap: function(s) {
+    if (!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  },
+
+  _capWords: function(s) {
+    if (!s) return s;
+    return s.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  },
+
+  _initAutoCapitalize: function() {
+    // Voornaam/familienaam: elke beginletter van elk woord
+    ['per-voornaam','per-familienaam','pd-voornaam','pd-familienaam'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('blur', function() {
+        if (this.value) this.value = App._capWords(this.value);
+      });
+    });
+    // Overige tekstvelden: eerste letter van de volledige invoer
+    ['per-adres','per-gemeente','per-notitie',
+     'pd-adres','pd-gemeente',
+     'ca-naam','ca-partner','ca-buurt','act-locatie-vrij',
+     'ia-extra','log-notitie','ov-notitie'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('blur', function() {
+        if (this.value) this.value = App._cap(this.value);
+      });
+    });
+    // Dynamisch aangemaakte vrijwilliger-naamvelden via event-delegatie
+    document.addEventListener('blur', function(e) {
+      var el = e.target;
+      if (el && el.tagName === 'INPUT' && el.type === 'text' && el.id && /^ca-vw-\d+$/.test(el.id)) {
+        if (el.value) el.value = App._capWords(el.value);
+      }
+    }, true);
+  },
+
   init: function() {
     // Zet vandaag als standaard datum in datum-velden
     var vandaag = new Date().toISOString().substr(0, 10);
@@ -2965,6 +3013,8 @@ var App = {
       var el = document.getElementById(id);
       if (el) el.value = vandaag;
     });
+
+    App._initAutoCapitalize();
 
     // Duplikaat-check: waarschuwingsdiv aanmaken onder familienaam-veld
     var vnEl = document.getElementById('per-voornaam');
