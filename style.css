@@ -831,7 +831,8 @@ tr:nth-child(even) td { background: #fafaf9; }
 .dash-g2          { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px }
 .dash-g3          { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px }
 .dash-kaart       { background:var(--glas); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); border:1px solid var(--glas-rand); border-radius:14px; padding:14px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,0.1) }
-.dash-kaart-full  { background:var(--glas); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); border:1px solid var(--glas-rand); border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 6px 24px rgba(0,0,0,0.1) }
+.dash-kaart-full  { background:var(--glas); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); border:1px solid var(--glas-rand); border-radius:14px; padding:14px; margin-bottom:10px; box-shadow:0 6px 24px rgba(0,0,0,0.1); width:100%; box-sizing:border-box }
+#dash-partners, #dash-buurttype { width:100%; box-sizing:border-box }
 .dash-kt          { font-size:0.85rem; font-weight:700; margin-bottom:2px }
 .dash-ks          { font-size:0.7rem; color:var(--zacht); margin-bottom:10px; line-height:1.4 }
 .dash-divider     { height:1px; background:var(--rand); margin:10px 0 }

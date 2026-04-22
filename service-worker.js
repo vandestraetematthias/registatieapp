@@ -3,7 +3,7 @@
    Cache-first strategie voor offline gebruik
 ══════════════════════════════════════════ */
 
-var CACHE_NAAM = 'buurtwerk-v3';
+var CACHE_NAAM = 'buurtwerk-v2.1';
 var CACHE_BESTANDEN = [
   './',
   './index.html',
