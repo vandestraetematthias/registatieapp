@@ -1482,58 +1482,118 @@ var App = {
   },
 
   exportCSV: function(type, vanDatum, totDatum) {
-    var data, bestandsnaam, keys;
-    if (type === 'personen') {
-      data = DB.personen.slice();
-      bestandsnaam = 'personen_export.csv';
-      keys = null; // gebruik Object.keys
-    } else if (type === 'individueel') {
-      data = DB.individueel.slice();
-      bestandsnaam = 'individueel_export.csv';
-      keys = ['id','persoonNummer','maand','jaar','vindplaats','levensdomein','methodiek','extraInfo','toeleiding','tijd','datum','status'];
-    } else {
-      data = DB.collectief.slice();
-      bestandsnaam = 'collectief_export.csv';
-      keys = ['id','module','volgnummer','maand','jaar','naamVanDeActie','cluster','thema','typeActie','buurt','totaal','aantalBewoners','waarvanNieuweBewoners','aantalVrijwilligers','naamVrijwilligers','naamPartner','datum','status','duur'];
-    }
-    // Datum-filter
-    if (vanDatum || totDatum) {
-      data = data.filter(function(r) {
-        var d = (r.aangemaakt || r.datum || '').substr(0, 10);
+    function datumFilter(arr, veld) {
+      if (!vanDatum && !totDatum) return arr;
+      return arr.filter(function(r) {
+        var d = (r[veld] || '').substr(0, 10);
         if (!d) return true;
         if (vanDatum && d < vanDatum) return false;
         if (totDatum && d > totDatum) return false;
         return true;
       });
-      var suffix = (vanDatum ? vanDatum : '') + (totDatum ? '_' + totDatum : '');
-      bestandsnaam = bestandsnaam.replace('.csv', '_' + suffix + '.csv');
     }
-    if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
-    if (!keys) keys = Object.keys(data[0]);
-    // Verwijder eventuele dubbele kolommen
-    keys = keys.filter(function(k, i, a) { return a.indexOf(k) === i; });
-    var csv = keys.join(';') + '\n';
-    data.forEach(function(r) {
-      csv += keys.map(function(k) {
-        var v = r[k];
-        if (Array.isArray(v)) v = v.join(' | ');
-        if (v === null || v === undefined) v = '';
-        return '"' + String(v).replace(/"/g, '""') + '"';
-      }).join(';') + '\n';
-    });
-    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    var url  = URL.createObjectURL(blob);
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      var win = window.open(url, '_blank');
-      if (!win) App.toast('Sta pop-ups toe om te exporteren.');
+    function csvVal(v) {
+      if (Array.isArray(v)) v = v.join(' | ');
+      if (v === null || v === undefined) v = '';
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    }
+    function maakSuffix() {
+      if (!vanDatum && !totDatum) return '';
+      return '_' + (vanDatum || '') + (totDatum ? '_' + totDatum : '');
+    }
+    function download(csvTekst, naam) {
+      if (!csvTekst) { App.toast('Geen data om te exporteren.'); return; }
+      var blob = new Blob(['\ufeff' + csvTekst], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS) {
+        var win = window.open(url, '_blank');
+        if (!win) App.toast('Sta pop-ups toe om te exporteren.');
+      } else {
+        var a = document.createElement('a');
+        a.href = url; a.download = naam;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+      App.toast('CSV geëxporteerd.', true);
+    }
+
+    var data, bestandsnaam, csv, keys;
+
+    if (type === 'personen') {
+      data = datumFilter(DB.personen.slice(), 'aangemaakt');
+      if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
+      bestandsnaam = 'personen_export' + maakSuffix() + '.csv';
+      var perHeaders = ['volgnummer','voornaam','familienaam','leeftijd','inkomen','huisvesting','woonsituatie','eersteContact','type','MW','SHW','Woonzorg','Brugfiguur','adres','notitie','id'];
+      csv = perHeaders.join(';') + '\n';
+      data.forEach(function(p) {
+        var adres = [p.adres, p.postcode, p.gemeente].filter(Boolean).join(', ');
+        var gekend = Array.isArray(p.gekendBij) ? p.gekendBij : (p.gekendBij ? [p.gekendBij] : []);
+        var rij = [
+          p.volgnummer,
+          p.voornaam,
+          p.familienaam,
+          p.leeftijd || '',
+          Array.isArray(p.inkomen) ? p.inkomen.join(' | ') : (p.inkomen || ''),
+          Array.isArray(p.huisvesting) ? p.huisvesting.join(' | ') : (p.huisvesting || ''),
+          p.woonsituatie || '',
+          p.eersteContact || '',
+          Array.isArray(p.type) ? p.type.join(' | ') : (p.type || ''),
+          gekend.indexOf('MW') !== -1 ? 'x' : '-',
+          gekend.indexOf('SHW') !== -1 ? 'x' : '-',
+          gekend.indexOf('Woonzorg') !== -1 ? 'x' : '-',
+          gekend.indexOf('Brugfiguur') !== -1 ? 'x' : '-',
+          adres,
+          p.notitie || '',
+          p.id || ''
+        ];
+        csv += rij.map(csvVal).join(';') + '\n';
+      });
+      download(csv, bestandsnaam);
+
+    } else if (type === 'individueel') {
+      data = datumFilter(DB.individueel.slice(), 'datum');
+      if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
+      bestandsnaam = 'individueel_export' + maakSuffix() + '.csv';
+      keys = ['persoonNummer','maand','jaar','levensdomein','vindplaats','methodiek','extraInfo','toeleiding','tijd','id','datum','status'];
+      csv = keys.join(';') + '\n';
+      data.forEach(function(r) {
+        csv += keys.map(function(k) { return csvVal(r[k]); }).join(';') + '\n';
+      });
+      download(csv, bestandsnaam);
+
     } else {
-      var a = document.createElement('a');
-      a.href = url; a.download = bestandsnaam;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      // collectief: alleen afzonderlijke acties (geen modules)
+      data = DB.collectief.filter(function(r) { return !r.module; });
+      data = datumFilter(data, 'datum');
+      if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
+      bestandsnaam = 'collectief_export' + maakSuffix() + '.csv';
+      var colHeaders = ['volgnummer','maand','jaar','naamvandeactie','cluster','thema','typeactie','buurt','totaal','aantalbewoners','waarvanNieuwebewoners','aantalvrijwilligers','naampartners','duur','id','datum','status'];
+      csv = colHeaders.join(';') + '\n';
+      data.forEach(function(r, i) {
+        var rij = [
+          i + 1,
+          r.maand || '',
+          r.jaar || '',
+          r.naamVanDeActie || '',
+          r.cluster || '',
+          r.thema || '',
+          r.typeActie || '',
+          r.buurt || '',
+          r.totaal || '',
+          r.aantalBewoners || '',
+          r.waarvanNieuweBewoners || '',
+          r.aantalVrijwilligers || '',
+          Array.isArray(r.naamPartner) ? r.naamPartner.join(' | ') : (r.naamPartner || ''),
+          r.duur || '',
+          r.id || '',
+          r.datum || '',
+          r.status || ''
+        ];
+        csv += rij.map(csvVal).join(';') + '\n';
+      });
+      download(csv, bestandsnaam);
     }
-    setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-    App.toast('CSV geëxporteerd.', true);
   },
 
   exportBuurtwerkPDF: function() {
