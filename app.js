@@ -2076,12 +2076,14 @@ var App = {
       }
     });
 
-    // Rollen / doelen / participatie
+    // Rollen / doelen / participatie / impact
     var rollen  = [];
     var doelen  = [];
+    var impact  = [];
     var participaties = [];
     hoofdRecords.forEach(function(r) { (r.cluster || []).forEach(function(c) { if (rollen.indexOf(c) === -1) rollen.push(c); }); });
     actRecords.forEach(function(r)   { (r.doel    || []).forEach(function(d) { if (doelen.indexOf(d)  === -1) doelen.push(d);  }); });
+    actRecords.forEach(function(r)   { (r.impact  || []).forEach(function(i) { if (impact.indexOf(i)  === -1) impact.push(i);  }); });
     actRecords.forEach(function(r)   { (r.participatie || []).forEach(function(p) { if (participaties.indexOf(p) === -1) participaties.push(p); }); });
 
     // Notities
@@ -2108,6 +2110,7 @@ var App = {
       signalen:       alleSignalen,
       rollen:         rollen,
       doelen:         doelen,
+      impact:         impact,
       participaties:  participaties,
       notities:       notities,
       ids:            col.map(function(r) { return r.id; })
@@ -2217,7 +2220,22 @@ var App = {
 
     sectieKop('INHOUD');
     veld('Participatiegraad', App._participatiegraad(f.participaties));
-    veld('Doelen',           f.doelen.join(', ')  || '—');
+    // Doelen met bijbehorende onderdoelen (impact)
+    var doelImpactMap = {
+      'Sociale doelen':              ['Nieuwe contacten gelegd','Sterkere buurtbanden','Meer vertrouwen tussen bewoners','Verminderd isolement'],
+      'Individuele doelen':          ['Verhoogd zelfvertrouwen','Vaker initiatief nemen','Verbeterd mentaal en sociaal welzijn'],
+      'Ontwikkelingsgerichte doelen':['Taal','Digitaal','Vaardigheden'],
+      'Activerende doelen':          ['Mee organiseren','Stijgende deelname aan activiteiten','Doorstroom opleiding of werk','Vrijwilligersengagement'],
+      'Organisatorische doelen':     ['Nieuwe doelgroepen','Verhoogde zichtbaarheid','Vertrouwen bevorderen in werking/organisatie','Signalen','Preventie']
+    };
+    if (f.doelen.length) {
+      f.doelen.forEach(function(d) {
+        var sub = (doelImpactMap[d] || []).filter(function(i) { return f.impact.indexOf(i) !== -1; });
+        veld(d, sub.length ? sub.join(', ') : '—');
+      });
+    } else {
+      veld('Doelen', '—');
+    }
     veld('Signalen',         f.signalen.join(', ')|| '—');
     lijn();
 
@@ -2617,9 +2635,13 @@ var App = {
     d.col.forEach(function(r) {
       (r.naamVrijwilligers || []).forEach(function(naam) {
         if (!naam || !naam.trim()) return;
-        var delen = naam.trim().split(/\s+/);
-        var init = delen.map(function(w) { return w.charAt(0).toUpperCase(); }).slice(0, 2).join('');
+        var delen = naam.trim().split(/\s+/).filter(Boolean);
+        // Voornaam-initiaal = eerste woord, Familienaam-initiaal = tweede woord (of '?' als ontbreekt)
+        var initV = (delen[0] || '').charAt(0).toUpperCase();
+        var initF = (delen[1] || '').charAt(0).toUpperCase();
+        var init = initV + (initF || '');
         var sleutel = init.toUpperCase();
+        if (!sleutel) return;
         if (!vrijwData[sleutel]) vrijwData[sleutel] = { initialen: init, acties: 0 };
         vrijwData[sleutel].acties++;
       });
@@ -2738,18 +2760,39 @@ var App = {
   },
 
   _dashLocaties: function(d) {
+    var volgorde = ['Buurthuis','Parking Karting','Gentsesteenweg','Vaart','Loodwitstraat','Stasegemsesteenweg','Juweliersplein','Zandbergstraat','Andere locatie'];
     var teller = {};
-    d.col.forEach(function(r) {
-      var buurt = r.buurt || 'Onbekend';
-      if (!teller[buurt]) teller[buurt] = 0;
-      teller[buurt]++;
+    // Gebruik Activiteit-modules voor locatiedata
+    d.colAlle.filter(function(r) { return r.module === 'Activiteit'; }).forEach(function(r) {
+      var loc = (r.locatie || '').trim();
+      var label = volgorde.indexOf(loc) !== -1 ? loc : 'Andere locatie';
+      if (!teller[label]) teller[label] = 0;
+      teller[label]++;
     });
-    var sorted = [];
-    for (var k in teller) {
-      if (teller.hasOwnProperty(k)) sorted.push({ label: k, value: teller[k] });
-    }
-    sorted.sort(function(a, b) { return b.value - a.value; });
+    var sorted = volgorde.filter(function(l) { return teller[l]; }).map(function(l) { return { label: l, value: teller[l] }; });
     App._renderBars('dash-partners', sorted, 'fill-blauw', false);
+  },
+
+  _dashBuurtType: function(d) {
+    var el = document.getElementById('dash-buurttype');
+    if (!el) return;
+    var actMods = d.colAlle.filter(function(r) { return r.module === 'Activiteit'; });
+    var teller = { 'Buurtactiviteit': 0, 'Buurtwerk': 0 };
+    actMods.forEach(function(r) { if (r.type && teller.hasOwnProperty(r.type)) teller[r.type]++; });
+    var totaal = teller['Buurtactiviteit'] + teller['Buurtwerk'];
+    if (!totaal) { el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
+    var pctAct = Math.round((teller['Buurtactiviteit'] / totaal) * 100);
+    var pctBw  = 100 - pctAct;
+    el.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
+        '<div style="flex:1"><div style="font-size:0.75rem;font-weight:700;color:var(--groen);margin-bottom:3px">Buurtactiviteit</div>' +
+          '<div style="background:var(--groen);height:18px;border-radius:4px;width:' + pctAct + '%;min-width:2px"></div>' +
+          '<div style="font-size:0.8rem;margin-top:2px">' + teller['Buurtactiviteit'] + ' (' + pctAct + '%)</div></div>' +
+        '<div style="flex:1"><div style="font-size:0.75rem;font-weight:700;color:var(--blauw);margin-bottom:3px">Buurtwerk</div>' +
+          '<div style="background:var(--blauw);height:18px;border-radius:4px;width:' + pctBw + '%;min-width:2px"></div>' +
+          '<div style="font-size:0.8rem;margin-top:2px">' + teller['Buurtwerk'] + ' (' + pctBw + '%)</div></div>' +
+      '</div>' +
+      '<div style="font-size:0.75rem;color:var(--zacht)">Totaal ' + totaal + ' activiteiten geregistreerd</div>';
   },
 
   renderDashboard: function() {
@@ -2772,6 +2815,7 @@ var App = {
     App._dashVrijwilligers(d);
     App._dashFinancieel(d);
     App._dashLocaties(d);
+    App._dashBuurtType(d);
   },
 
   exportDashboardPDF: function() {
