@@ -2635,12 +2635,10 @@ var App = {
     d.col.forEach(function(r) {
       (r.naamVrijwilligers || []).forEach(function(naam) {
         if (!naam || !naam.trim()) return;
-        var delen = naam.trim().split(/\s+/).filter(Boolean);
-        // Voornaam-initiaal = eerste woord, Familienaam-initiaal = tweede woord (of '?' als ontbreekt)
-        var initV = (delen[0] || '').charAt(0).toUpperCase();
-        var initF = (delen[1] || '').charAt(0).toUpperCase();
-        var init = initV + (initF || '');
-        var sleutel = init.toUpperCase();
+        // Eerste letter van elk woord → volledige initialen, case-insensitive groepering
+        var init = naam.trim().split(/\s+/).filter(Boolean)
+          .map(function(w) { return w.charAt(0).toUpperCase(); }).join('');
+        var sleutel = init; // al uppercase
         if (!sleutel) return;
         if (!vrijwData[sleutel]) vrijwData[sleutel] = { initialen: init, acties: 0 };
         vrijwData[sleutel].acties++;
