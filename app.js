@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.7.0';
+var APP_VERSION = '2.9.2';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -255,6 +255,7 @@ var App = {
     if (pagina === 'pg-start')             App.renderStart();
     if (pagina === 'pg-individueel-start') App.renderIndStart();
     if (pagina === 'pg-collectief-start')  App.renderColStart();
+    if (pagina === 'pg-jaarplan')          App.renderFotoOverzicht();
     if (pagina === 'pg-collectief-module') App.vulActieKeuze();
     if (pagina === 'pg-rapport-personen')  App.renderPersonenRap();
     if (pagina === 'pg-rapport-individueel') { App._vulIndFilter(); App.renderIndRap(); }
@@ -1112,7 +1113,7 @@ var App = {
         var ikTot = ((item.aantal || 1) * (item.bedragPerStuk || 0)).toFixed(2);
         html += '<div class="kostlijn ik">' +
           '<div><div class="col-lbl">Beschrijving</div><input type="text" value="' + App.esc(item.beschrijving) + '" oninput="App._kostIkUpdate(' + i + ',\'beschrijving\',this.value)"></div>' +
-          '<div><div class="col-lbl">Aantal</div><input type="number" min="0" step="1" placeholder="St." value="' + (item.aantal || 1) + '" oninput="App._kostIkUpdate(' + i + ',\'aantal\',this.value)"></div>' +
+          '<div><div class="col-lbl">Aantal</div><input type="number" min="0" max="99" step="1" placeholder="St." value="' + (item.aantal || 1) + '" oninput="App._kostIkUpdate(' + i + ',\'aantal\',this.value)"></div>' +
           '<div><div class="col-lbl">Per stuk €</div><input type="number" step="0.01" min="0" value="' + (item.bedragPerStuk || 0) + '" oninput="App._kostIkUpdate(' + i + ',\'bedragPerStuk\',this.value)"></div>' +
           '<div><div class="col-lbl">Totaal €</div><input type="number" id="ik-tot-' + i + '" readonly value="' + ikTot + '" style="background:var(--bg);cursor:default"></div>' +
           '<button class="del-btn" onclick="App._kostDel(\'' + prefix + '\',' + i + ')">✕</button></div>';
@@ -3127,6 +3128,62 @@ _collectProjectFotos: function(naam) {
       '<div style="font-size:0.75rem;color:var(--zacht)">Totaal ' + totaal + ' activiteiten geregistreerd</div>';
   },
 
+  wisFoto: function(id, uitIdx) {
+    if (!confirm('Foto definitief wissen?')) return;
+    var lijst = DB.collectief.slice();
+    var rec = lijst.find(function(r) { return r.id === id; });
+    if (!rec) { App.toast('Record niet gevonden.'); return; }
+    if (uitIdx !== null && uitIdx !== undefined) {
+      if (rec.uitgaven && rec.uitgaven[uitIdx]) rec.uitgaven[uitIdx].bonUrl = null;
+    } else {
+      rec.fotoUrl = null;
+    }
+    DB.slaColOp(lijst);
+    App.toast('Foto gewist.', true);
+    App.renderFotoOverzicht();
+    App._dashMedia();
+  },
+
+  renderFotoOverzicht: function() {
+    var el = document.getElementById('rap-foto-overzicht');
+    if (!el) return;
+    var items = [];
+    DB.collectief.forEach(function(r) {
+      if (r.fotoUrl) {
+        items.push({ id: r.id, url: r.fotoUrl, type: 'Sfeerfoto', project: r.naamVanDeActie || '', module: r.module || 'Actie', datum: (r.datum || '').substr(0,10), uitIdx: null });
+      }
+      (r.uitgaven || []).forEach(function(u, i) {
+        if (u.bonUrl) {
+          items.push({ id: r.id, url: u.bonUrl, type: 'Bewijs', project: r.naamVanDeActie || '', module: (u.beschrijving || 'Bewijs') + ' — ' + geldbedrag(u.bedrag), datum: (r.datum || '').substr(0,10), uitIdx: i });
+        }
+      });
+    });
+    if (!items.length) {
+      el.innerHTML = '<div style="color:var(--zacht);font-size:0.9rem">Nog geen foto\'s opgeslagen.</div>';
+      return;
+    }
+    var html = '<div style="font-size:0.82rem;color:var(--zacht);margin-bottom:10px">' + items.length + ' foto\'s gevonden</div>';
+    items.forEach(function(f) {
+      var badgeCss = f.type === 'Sfeerfoto'
+        ? 'background:var(--groen-licht);color:var(--groen)'
+        : 'background:var(--oranje-licht);color:var(--oranje)';
+      var uitArg = f.uitIdx !== null ? f.uitIdx : 'null';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px;border:1px solid var(--rand)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:700;font-size:0.88rem;word-break:break-word">' + App.esc(f.project) + '</div>' +
+          '<div style="font-size:0.75rem;color:var(--zacht);margin:2px 0">' + App.esc(f.module) + (f.datum ? ' — ' + f.datum : '') + '</div>' +
+          '<span style="font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:10px;' + badgeCss + '">' + f.type + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0">' +
+          '<button onclick="App.openLightbox(\'' + App.esc(f.url) + '\')" style="background:var(--blauw);color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:0.8rem">👁️</button>' +
+          '<button onclick="App.wisFoto(\'' + App.esc(f.id) + '\',' + uitArg + ')" style="background:var(--rood);color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:0.8rem">🗑️</button>' +
+          '<button onclick="App.archiveerRecord(\'' + App.esc(f.id) + '\',\'collectief\')" style="background:var(--oranje);color:#fff;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-size:0.8rem">📁</button>' +
+        '</div>' +
+      '</div>';
+    });
+    el.innerHTML = html;
+  },
+
   exportFotoUrls: function() {
     if (typeof XLSX === 'undefined') { App.toast('XLSX niet beschikbaar.'); return; }
     var rijen = [['Type', 'Project/Actie', 'Datum', 'Omschrijving', 'URL']];
@@ -3149,8 +3206,23 @@ _collectProjectFotos: function(naam) {
     App.toast((rijen.length - 1) + ' foto-URL\'s geëxporteerd.', true);
   },
 
+  _downloadUrl: function(url, naam) {
+    return fetch(url).then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.blob();
+    }).then(function(blob) {
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl; a.download = naam;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 3000);
+    }).catch(function() {
+      // Fallback: open in nieuw tabblad
+      window.open(url, '_blank');
+    });
+  },
+
   downloadFotoArchief: function() {
-    // Sfeerfoto's downloaden: [Projectnaam] - [Naam Module/Actie].jpg
     var items = [];
     DB.collectief.forEach(function(r) {
       if (r.fotoUrl) {
@@ -3161,44 +3233,39 @@ _collectProjectFotos: function(naam) {
     });
     if (!items.length) { App.toast('Geen sfeerfoto\'s gevonden.'); return; }
     App.toast('Foto\'s worden gedownload (' + items.length + ')…');
-    items.forEach(function(item, i) {
-      setTimeout(function() {
-        App._fetchImageDataUrl(item.url).then(function(res) {
-          if (!res) return;
-          var a = document.createElement('a');
-          a.href = res.dataUrl;
-          a.download = item.naam;
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        });
-      }, i * 400);
-    });
+    var idx = 0;
+    function volgende() {
+      if (idx >= items.length) { App.toast('Download klaar.', true); return; }
+      var item = items[idx++];
+      App._downloadUrl(item.url, item.naam).then(function() {
+        setTimeout(volgende, 600);
+      });
+    }
+    volgende();
   },
 
   downloadBewijsjes: function() {
-    // Bewijsjes downloaden: [Projectnaam] - [Beschrijving] - [Volgnummer].jpg
     var items = [];
     DB.collectief.forEach(function(r) {
       var project = (r.naamVanDeActie || 'Project').replace(/[/\\?%*:|"<>]/g, '-');
-      (r.uitgaven || []).forEach(function(u, idx) {
+      (r.uitgaven || []).forEach(function(u, i) {
         if (u.bonUrl) {
           var omschr = (u.beschrijving || u.leverancier || 'Bewijs').replace(/[/\\?%*:|"<>]/g, '-');
-          items.push({ url: u.bonUrl, naam: project + ' - ' + omschr + ' - ' + (idx + 1) + '.jpg' });
+          items.push({ url: u.bonUrl, naam: project + ' - ' + omschr + ' - ' + (i + 1) + '.jpg' });
         }
       });
     });
     if (!items.length) { App.toast('Geen bewijsjes gevonden.'); return; }
     App.toast('Bewijsjes worden gedownload (' + items.length + ')…');
-    items.forEach(function(item, i) {
-      setTimeout(function() {
-        App._fetchImageDataUrl(item.url).then(function(res) {
-          if (!res) return;
-          var a = document.createElement('a');
-          a.href = res.dataUrl;
-          a.download = item.naam;
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        });
-      }, i * 400);
-    });
+    var idx = 0;
+    function volgende() {
+      if (idx >= items.length) { App.toast('Download klaar.', true); return; }
+      var item = items[idx++];
+      App._downloadUrl(item.url, item.naam).then(function() {
+        setTimeout(volgende, 600);
+      });
+    }
+    volgende();
   },
 
   _dashMedia: function() {
@@ -3216,11 +3283,14 @@ _collectProjectFotos: function(naam) {
     var html = '<div style="font-size:0.85rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' sfeerfoto\'s gevonden</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
     fotos.forEach(function(f) {
-      html += '<div onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(f.url) + '" style="background:var(--bg);border-radius:8px;padding:10px;min-width:110px;max-width:150px;cursor:pointer;border:1px solid #e5e7eb">' +
-        '<div style="font-size:0.68rem;font-weight:700;color:var(--groen);text-transform:uppercase">' + App.esc(f.type) + '</div>' +
-        '<div style="font-size:0.72rem;font-weight:600;color:var(--donker);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(f.naam) + '">' + App.esc(f.naam) + '</div>' +
-        '<div style="font-size:0.68rem;color:var(--zacht);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(f.label) + '</div>' +
-        '<div style="margin-top:6px;font-size:1.4rem;text-align:center">🖼️</div>' +
+      html += '<div style="background:var(--bg);border-radius:8px;padding:10px;min-width:110px;max-width:150px;border:1px solid #e5e7eb;display:flex;flex-direction:column;gap:4px">' +
+        '<div onclick="App.openLightbox(\'' + App.esc(f.url) + '\')" style="cursor:pointer">' +
+          '<div style="font-size:0.68rem;font-weight:700;color:var(--groen);text-transform:uppercase">' + App.esc(f.type) + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:600;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(f.naam) + '">' + App.esc(f.naam) + '</div>' +
+          '<div style="font-size:0.68rem;color:var(--zacht);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(f.label) + '</div>' +
+          '<div style="font-size:1.4rem;text-align:center;margin-top:4px">🖼️</div>' +
+        '</div>' +
+        '<button onclick="App.wisFoto(\'' + App.esc(f.id) + '\',null)" style="background:var(--rood);color:#fff;border:none;border-radius:5px;padding:3px;cursor:pointer;font-size:0.7rem;width:100%">🗑️ Wis</button>' +
         '</div>';
     });
     html += '</div>';

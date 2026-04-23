@@ -495,8 +495,8 @@ textarea { resize: vertical; min-height: 80px; }
   padding: 12px; background: var(--bg); border-radius: 10px;
   border: 1.5px solid var(--rand); margin-bottom: 8px; position: relative;
 }
-.kostlijn.ug { grid-template-columns: 80px 1fr 90px auto 28px; }
-.kostlijn.ik { grid-template-columns: 1fr 45px 90px 80px 28px; }
+.kostlijn.ug { grid-template-columns: 80px 1fr 95px auto 28px; }
+.kostlijn.ik { grid-template-columns: 1fr 40px 95px 80px 28px; }
 .kostlijn input { background: white; }
 .del-btn {
   background: none; border: none; color: #ccc; cursor: pointer;
@@ -669,9 +669,10 @@ tr:nth-child(even) td { background: #fafaf9; }
   .wizard-wrap  { padding: 10px 12px 0; }
   .twee-kolommen { grid-template-columns: 1fr; }
   .fin-totaal   { grid-template-columns: 1fr; }
-  .kostlijn.ug  { grid-template-columns: 1fr 90px 28px; }
+  .kostlijn.ug  { grid-template-columns: 1fr 95px 28px; }
+  .kostlijn.ug > div:nth-child(2) { grid-column: 1 / -1; } /* Leverancier: volle breedte */
   .kostlijn.ug > div:nth-child(4) { grid-column: 1 / -1; } /* Bon: volle breedte */
-  .kostlijn.ik  { grid-template-columns: 1fr 45px 90px 80px 28px; }
+  .kostlijn.ik  { grid-template-columns: 1fr 40px 95px 80px 28px; }
   .stap-naam    { display: none; }
   .stap-cirkel  { width: 32px; height: 32px; font-size: 0.75rem; }
   .navigatie    { flex-wrap: wrap; gap: 10px; }
