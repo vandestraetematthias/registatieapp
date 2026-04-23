@@ -214,7 +214,8 @@ var State = {
   actFotoUrl: null,
   // Bewerkmodus ID's
   _bewerktIaId: null,
-  _bewerktCaId: null
+  _bewerktCaId: null,
+  _bewerktModuleId: null
 };
 
 /* ══════════════════════════════════════════
@@ -429,17 +430,27 @@ var App = {
   },
 
   renderColStart: function() {
-    var col = DB.collectief.filter(function(c) { return !c.module && c.status === 'actief'; });
-    col.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
+    var badgeKleur = { '': 'badge-groen', 'Logistiek': 'badge-blauw', 'Overleg': 'badge-paars', 'Activiteit': 'badge-oranje' };
+    var alle = DB.collectief.filter(function(c) { return c.status === 'actief'; });
+    alle.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
     var html = '';
-    col.slice(0, 5).forEach(function(c) {
+    alle.slice(0, 8).forEach(function(c) {
+      var type = c.module || '';
+      var badge = badgeKleur[type] || 'badge-groen';
+      var typeLabel = type || 'Actie';
+      var meta = (c.maand || '') + ' ' + (c.jaar || '');
+      if (!c.module) meta += ' — ' + (c.aantalBewoners || 0) + ' bewoners';
+      else meta += ' — ' + App.esc(c.naamVanDeActie || '');
       html += '<div class="mini-kaart">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
-        '<div><div class="mini-kaart-naam">' + App.esc(c.naamVanDeActie) + '</div>' +
-        '<div class="mini-kaart-meta">' + c.maand + ' ' + c.jaar + ' — ' + c.aantalBewoners + ' bewoners</div></div>' +
+        '<div><div class="mini-kaart-naam">' + App.esc(c.module ? (typeLabel + ': ' + c.naamVanDeActie) : c.naamVanDeActie) + '</div>' +
+        '<div class="mini-kaart-meta">' + meta + '</div></div>' +
+        '<span class="mini-badge ' + badge + '">' + typeLabel + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
-        '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>' +
+        (c.module
+          ? '<button onclick="App.laadModuleBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>'
+          : '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>') +
         '<button onclick="App.nav(\'pg-rapport-collectief\')" style="background:var(--blauw);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bekijk</button>' +
         '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Archiveer</button>' +
         '</div></div>';
@@ -1046,7 +1057,11 @@ var App = {
   _uploadModuleFoto: function(prefix, input) {
     var file = input.files[0];
     if (!file) return;
-    App.toast('Foto uploaden…');
+    var preview = document.getElementById(prefix + '-foto-preview');
+    if (preview) {
+      preview.style.display = 'inline-flex';
+      preview.innerHTML = '<span style="color:var(--oranje);font-weight:600;font-size:0.82rem">⏳ Foto verkleinen en uploaden…</span>';
+    }
     verkleenFoto(file, function(blob) {
       var nu2 = new Date();
       var datumTijd = nu2.toISOString().substr(0, 16).replace(/[-T:]/g, '');
@@ -1054,18 +1069,22 @@ var App = {
       var bestandsnaam = modulenaam + '_' + datumTijd + '.jpg';
       var ref = _storage.ref('bewijzen/collectief/' + bestandsnaam);
       ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
+        if (preview) preview.innerHTML = '<span style="color:var(--oranje);font-weight:600;font-size:0.82rem">⏳ Bezig met opslaan…</span>';
         return ref.getDownloadURL();
       }).then(function(url) {
         if (prefix === 'log') State.logFotoUrl = url;
         else if (prefix === 'ov') State.ovFotoUrl = url;
         else State.actFotoUrl = url;
-        var preview = document.getElementById(prefix + '-foto-preview');
         if (preview) {
           preview.style.display = 'inline-flex';
-          preview.innerHTML = '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(url) + '" style="color:var(--groen);font-weight:700;cursor:pointer">🖼️ Foto opgeslagen — bekijk</span>';
+          preview.innerHTML = '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(url) + '" style="color:var(--groen);font-weight:700;cursor:pointer">✅ Foto opgeslagen — bekijk</span>';
         }
         App.toast('Foto opgeslagen.', true);
       }).catch(function(err) {
+        if (preview) {
+          preview.style.display = 'inline-flex';
+          preview.innerHTML = '<span style="color:var(--rood);font-size:0.82rem">❌ Upload mislukt</span>';
+        }
         App.toast('Upload mislukt: ' + (err.message || err));
       });
     });
@@ -1135,7 +1154,24 @@ var App = {
     if (!file) return;
     var lijst = App._getLijst(prefix);
     if (!lijst[idx]) return;
-    App.toast('Foto verkleinen en uploaden…');
+    // Toon upload-status in de bon-cel van de rij
+    var containerId = App._getContainerId(prefix);
+    var row = document.getElementById(containerId) && document.getElementById(containerId).children[idx];
+    var statusEl = null;
+    if (row) {
+      statusEl = row.querySelector('.bon-status');
+      if (!statusEl) {
+        statusEl = document.createElement('span');
+        statusEl.className = 'bon-status';
+        statusEl.style.cssText = 'font-size:0.78rem;font-weight:600;margin-left:4px';
+        var bonCol = row.querySelector('div:last-of-type');
+        if (bonCol) bonCol.appendChild(statusEl);
+      }
+      statusEl.style.color = 'var(--oranje)';
+      statusEl.textContent = '⏳ Uploaden…';
+    } else {
+      App.toast('⏳ Bezig met uploaden…');
+    }
     verkleenFoto(file, function(blob) {
       var datum = new Date().toISOString().substr(0, 10).replace(/-/g, '');
       var bedrag = String(Math.round((lijst[idx].bedrag || 0) * 100));
@@ -1143,12 +1179,14 @@ var App = {
       var bestandsnaam = datum + '_' + bedrag + '_' + willekeurig + '.jpg';
       var ref = _storage.ref('bewijzen/uitgaven/' + bestandsnaam);
       ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
+        if (statusEl) statusEl.textContent = '⏳ Opslaan…';
         return ref.getDownloadURL();
       }).then(function(url) {
         lijst[idx].bonUrl = url;
-        App.toast('Bonnetje opgeslagen.', true);
-        App.renderKostLijst(App._getContainerId(prefix), lijst, prefix);
+        App.toast('✅ Bonnetje opgeslagen.', true);
+        App.renderKostLijst(containerId, lijst, prefix);
       }).catch(function(err) {
+        if (statusEl) { statusEl.style.color = 'var(--rood)'; statusEl.textContent = '❌ Mislukt'; }
         App.toast('Upload mislukt: ' + (err.message || err));
       });
     });
@@ -1224,8 +1262,9 @@ var App = {
   /* ── Opslaan Logistiek ── */
   slaLogOp: function() {
     if (!State.huidigActie) { App.toast('Geen actie geselecteerd.'); return; }
+    var editId = State._bewerktModuleId;
     var record = {
-      id:             uuid(),
+      id:             editId || uuid(),
       module:         'Logistiek',
       naamVanDeActie: State.huidigActie,
       datum:          document.getElementById('log-datum').value,
@@ -1238,8 +1277,10 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief.slice();
-    lijst.push(record);
+    State._bewerktModuleId = null;
+    var lijst = editId
+      ? DB.collectief.map(function(r) { return r.id === editId ? record : r; })
+      : DB.collectief.concat([record]);
     DB.slaColOp(lijst);
     App.succes('🔧', 'Logistiek opgeslagen!', State.huidigActie,
       '🏠 Naar start', function() { App.nav('pg-start'); },
@@ -1250,8 +1291,9 @@ var App = {
   /* ── Opslaan Overleg ── */
   slaOvOp: function() {
     if (!State.huidigActie) { App.toast('Geen actie geselecteerd.'); return; }
+    var editId = State._bewerktModuleId;
     var record = {
-      id:             uuid(),
+      id:             editId || uuid(),
       module:         'Overleg',
       naamVanDeActie: State.huidigActie,
       datum:          document.getElementById('ov-datum').value,
@@ -1262,8 +1304,10 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief.slice();
-    lijst.push(record);
+    State._bewerktModuleId = null;
+    var lijst = editId
+      ? DB.collectief.map(function(r) { return r.id === editId ? record : r; })
+      : DB.collectief.concat([record]);
     DB.slaColOp(lijst);
     App.succes('🗣', 'Overleg opgeslagen!', State.huidigActie,
       '🏠 Naar start', function() { App.nav('pg-start'); },
@@ -1274,9 +1318,10 @@ var App = {
   /* ── Opslaan Activiteit ── */
   slaActOp: function() {
     if (!State.huidigActie) { App.toast('Geen actie geselecteerd.'); return; }
+    var editId = State._bewerktModuleId;
     var locatie = App.getEnkele('act-locatie') || document.getElementById('act-locatie-vrij').value.trim();
     var record = {
-      id:             uuid(),
+      id:             editId || uuid(),
       module:         'Activiteit',
       naamVanDeActie: State.huidigActie,
       locatie:        locatie,
@@ -1293,8 +1338,10 @@ var App = {
       aangemaakt:     nu(),
       status:         'actief'
     };
-    var lijst = DB.collectief.slice();
-    lijst.push(record);
+    State._bewerktModuleId = null;
+    var lijst = editId
+      ? DB.collectief.map(function(r) { return r.id === editId ? record : r; })
+      : DB.collectief.concat([record]);
     DB.slaColOp(lijst);
     App.succes('🎉', 'Activiteit opgeslagen!', State.huidigActie,
       '🏠 Naar start', function() { App.nav('pg-start'); },
@@ -1612,10 +1659,11 @@ var App = {
     var heeftData = lijsten.some(function(l) { return l.length > 0; });
     if (!heeftData) { App.toast('Geen data om te exporteren.'); return; }
     types.forEach(function(type) { App.exportCSV(type); });
-    App.toast('Back-up geëxporteerd.', true);
+    App.toast('Back-up (Excel) geëxporteerd.', true);
   },
 
   exportCSV: function(type, vanDatum, totDatum) {
+    if (typeof XLSX === 'undefined') { App.toast('XLSX niet beschikbaar.'); return; }
     function datumFilter(arr, veld) {
       if (!vanDatum && !totDatum) return arr;
       return arr.filter(function(r) {
@@ -1626,107 +1674,68 @@ var App = {
         return true;
       });
     }
-    function csvVal(v) {
-      if (Array.isArray(v)) v = v.join(' | ');
-      if (v === null || v === undefined) v = '';
-      return '"' + String(v).replace(/"/g, '""') + '"';
-    }
     function maakSuffix() {
       if (!vanDatum && !totDatum) return '';
       return '_' + (vanDatum || '') + (totDatum ? '_' + totDatum : '');
     }
-    function download(csvTekst, naam) {
-      if (!csvTekst) { App.toast('Geen data om te exporteren.'); return; }
-      var blob = new Blob(['\ufeff' + csvTekst], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      if (isIOS) {
-        var win = window.open(url, '_blank');
-        if (!win) App.toast('Sta pop-ups toe om te exporteren.');
-      } else {
-        var a = document.createElement('a');
-        a.href = url; a.download = naam;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
-      setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-      App.toast('CSV geëxporteerd.', true);
+    function arrStr(v) {
+      if (Array.isArray(v)) return v.join(' | ');
+      return v === null || v === undefined ? '' : String(v);
+    }
+    function downloadXLSX(rijen, headers, bestandsnaam) {
+      var ws = XLSX.utils.aoa_to_sheet([headers].concat(rijen));
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      XLSX.writeFile(wb, bestandsnaam);
+      App.toast('Excel geëxporteerd.', true);
     }
 
-    var data, bestandsnaam, csv, keys;
+    var data;
 
     if (type === 'personen') {
       data = datumFilter(DB.personen.slice(), 'aangemaakt');
       if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
-      bestandsnaam = 'personen_export' + maakSuffix() + '.csv';
-      var perHeaders = ['volgnummer','voornaam','familienaam','leeftijd','inkomen','huisvesting','woonsituatie','eersteContact','type','MW','SHW','Woonzorg','Brugfiguur','adres','notitie','id'];
-      csv = perHeaders.join(';') + '\n';
-      data.forEach(function(p) {
+      var perHeaders = ['Volgnummer','Voornaam','Familienaam','Leeftijd','Inkomen','Huisvesting','Woonsituatie','Eerste contact','Type','MW','SHW','Woonzorg','Brugfiguur','Adres','Notitie','ID'];
+      var rijen = data.map(function(p) {
         var adres = [p.adres, p.postcode, p.gemeente].filter(Boolean).join(', ');
         var gekend = Array.isArray(p.gekendBij) ? p.gekendBij : (p.gekendBij ? [p.gekendBij] : []);
-        var rij = [
-          p.volgnummer,
-          p.voornaam,
-          p.familienaam,
-          p.leeftijd || '',
-          Array.isArray(p.inkomen) ? p.inkomen.join(' | ') : (p.inkomen || ''),
-          Array.isArray(p.huisvesting) ? p.huisvesting.join(' | ') : (p.huisvesting || ''),
-          p.woonsituatie || '',
-          p.eersteContact || '',
-          Array.isArray(p.type) ? p.type.join(' | ') : (p.type || ''),
+        return [
+          p.volgnummer, p.voornaam, p.familienaam, p.leeftijd || '',
+          arrStr(p.inkomen), arrStr(p.huisvesting), p.woonsituatie || '',
+          p.eersteContact || '', arrStr(p.type),
           gekend.indexOf('MW') !== -1 ? 'x' : '-',
           gekend.indexOf('SHW') !== -1 ? 'x' : '-',
           gekend.indexOf('Woonzorg') !== -1 ? 'x' : '-',
           gekend.indexOf('Brugfiguur') !== -1 ? 'x' : '-',
-          adres,
-          p.notitie || '',
-          p.id || ''
+          adres, p.notitie || '', p.id || ''
         ];
-        csv += rij.map(csvVal).join(';') + '\n';
       });
-      download(csv, bestandsnaam);
+      downloadXLSX(rijen, perHeaders, 'personen_export' + maakSuffix() + '.xlsx');
 
     } else if (type === 'individueel') {
       data = datumFilter(DB.individueel.slice(), 'datum');
       if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
-      bestandsnaam = 'individueel_export' + maakSuffix() + '.csv';
-      keys = ['persoonNummer','maand','jaar','levensdomein','vindplaats','methodiek','extraInfo','toeleiding','tijd','id','datum','status'];
-      csv = keys.join(';') + '\n';
-      data.forEach(function(r) {
-        csv += keys.map(function(k) { return csvVal(r[k]); }).join(';') + '\n';
-      });
-      download(csv, bestandsnaam);
+      var indHeaders = ['Persoon nr','Maand','Jaar','Levensdomein','Vindplaats','Methodiek','Extra info','Toeleiding','Tijd','ID','Datum','Status'];
+      var keys = ['persoonNummer','maand','jaar','levensdomein','vindplaats','methodiek','extraInfo','toeleiding','tijd','id','datum','status'];
+      var rijen = data.map(function(r) { return keys.map(function(k) { return arrStr(r[k]); }); });
+      downloadXLSX(rijen, indHeaders, 'individueel_export' + maakSuffix() + '.xlsx');
 
     } else {
-      // collectief: alleen afzonderlijke acties (geen modules)
       data = DB.collectief.filter(function(r) { return !r.module; });
       data = datumFilter(data, 'datum');
       if (!data.length) { App.toast('Geen data om te exporteren.'); return; }
-      bestandsnaam = 'collectief_export' + maakSuffix() + '.csv';
-      var colHeaders = ['volgnummer','maand','jaar','naamvandeactie','cluster','thema','typeactie','buurt','totaal','aantalbewoners','waarvanNieuwebewoners','aantalvrijwilligers','naampartners','duur','id','datum','status'];
-      csv = colHeaders.join(';') + '\n';
-      data.forEach(function(r, i) {
-        var rij = [
-          i + 1,
-          r.maand || '',
-          r.jaar || '',
-          r.naamVanDeActie || '',
-          r.cluster || '',
-          r.thema || '',
-          r.typeActie || '',
-          r.buurt || '',
-          r.totaal || '',
-          r.aantalBewoners || '',
-          r.waarvanNieuweBewoners || '',
+      var colHeaders = ['Volgnummer','Maand','Jaar','Naam van de actie','Cluster','Thema','Type actie','Buurt','Totaal','Aantal bewoners','Waarvan nieuwe bewoners','Aantal vrijwilligers','Naam partners','Duur','ID','Datum','Status'];
+      var rijen = data.map(function(r, i) {
+        return [
+          i + 1, r.maand || '', r.jaar || '', r.naamVanDeActie || '',
+          arrStr(r.cluster), r.thema || '', r.typeActie || '', r.buurt || '',
+          r.totaal || '', r.aantalBewoners || '', r.waarvanNieuweBewoners || '',
           r.aantalVrijwilligers || '',
           Array.isArray(r.naamPartner) ? r.naamPartner.join(' | ') : (r.naamPartner || ''),
-          r.duur || '',
-          r.id || '',
-          r.datum || '',
-          r.status || ''
+          r.duur || '', r.id || '', r.datum || '', r.status || ''
         ];
-        csv += rij.map(csvVal).join(';') + '\n';
       });
-      download(csv, bestandsnaam);
+      downloadXLSX(rijen, colHeaders, 'collectief_export' + maakSuffix() + '.xlsx');
     }
   },
 
@@ -2162,6 +2171,69 @@ var App = {
     if (terugBtn) {
       terugBtn.textContent = '\u2190 Rapporten';
       terugBtn.onclick = function() { State._bewerktCaId = null; App.nav('pg-rapport-collectief'); };
+    }
+  },
+
+  laadModuleBewerk: function(id) {
+    var c = DB.collectief.find(function(x) { return x.id === id; });
+    if (!c || !c.module) return;
+    State._bewerktModuleId = id;
+    State.huidigActie = c.naamVanDeActie;
+    var vandaag = (c.datum || new Date().toISOString().substr(0, 10));
+    if (c.module === 'Logistiek') {
+      App._resetKeuzes('log-type');
+      App._resetKeuzes('log-signalen');
+      App._resetKeuzes('log-sig-types');
+      document.getElementById('log-datum').value = vandaag;
+      document.getElementById('log-notitie').value = c.notitie || '';
+      document.getElementById('log-actienaam-lbl').textContent = c.naamVanDeActie;
+      State.logUitgaven = (c.uitgaven || []).map(function(u) { return Object.assign({}, u); });
+      State.logFotoUrl = c.fotoUrl || null;
+      App.renderKostLijst('log-uitgaven-lijst', State.logUitgaven, 'log');
+      App._setKeuzes('log-type', c.uitlegType || []);
+      if (c.signalen) App._setKeuzes('log-signalen', ['Ja']);
+      App._setKeuzes('log-sig-types', c.signaalTypes || []);
+      var sigEl = document.getElementById('log-signaal-types');
+      if (sigEl) sigEl.style.display = c.signalen ? 'block' : 'none';
+      App.nav('pg-mod-logistiek');
+    } else if (c.module === 'Overleg') {
+      App._resetKeuzes('ov-signalen');
+      App._resetKeuzes('ov-sig-types');
+      document.getElementById('ov-datum').value = vandaag;
+      document.getElementById('ov-notitie').value = c.notitie || '';
+      document.getElementById('ov-actienaam-lbl').textContent = c.naamVanDeActie;
+      State.ovFotoUrl = c.fotoUrl || null;
+      if (c.signalen) App._setKeuzes('ov-signalen', ['Ja']);
+      App._setKeuzes('ov-sig-types', c.signaalTypes || []);
+      var sigEl2 = document.getElementById('ov-signaal-types');
+      if (sigEl2) sigEl2.style.display = c.signalen ? 'block' : 'none';
+      App.nav('pg-mod-overleg');
+    } else if (c.module === 'Activiteit') {
+      App._resetKeuzes('act-locatie');
+      App._resetKeuzes('act-type');
+      App._resetKeuzes('act-participatie');
+      App._resetKeuzes('act-doel');
+      App._resetKeuzes('act-signalen');
+      App._resetKeuzes('act-sig-types');
+      document.getElementById('act-locatie-vrij').value = c.locatie || '';
+      document.getElementById('act-notitie').value = c.notitie || '';
+      document.getElementById('act-actienaam-lbl').textContent = c.naamVanDeActie;
+      State.actUitgaven = (c.uitgaven || []).map(function(u) { return Object.assign({}, u); });
+      State.actInkomsten = (c.inkomsten || []).map(function(u) { return Object.assign({}, u); });
+      State.actFotoUrl = c.fotoUrl || null;
+      App.renderKostLijst('act-uitgaven-lijst', State.actUitgaven, 'act-ug');
+      App.renderKostLijst('act-inkomsten-lijst', State.actInkomsten, 'act-ik');
+      App._setKeuzes('act-locatie', c.locatie ? [c.locatie] : []);
+      App._setKeuzes('act-type', c.type ? [c.type] : []);
+      App._setKeuzes('act-participatie', c.participatie || []);
+      App._setKeuzes('act-doel', c.doel || []);
+      App._setKeuzes('act-impact', c.impact || []);
+      if (c.signalen) App._setKeuzes('act-signalen', ['Ja']);
+      App._setKeuzes('act-sig-types', c.signaalTypes || []);
+      var sigEl3 = document.getElementById('act-signaal-types');
+      if (sigEl3) sigEl3.style.display = c.signalen ? 'block' : 'none';
+      App.updateFinTotaal();
+      App.nav('pg-mod-activiteit');
     }
   },
 
@@ -2741,6 +2813,40 @@ _collectProjectFotos: function(naam) {
     el.innerHTML = html;
   },
 
+  _dashTop20Acties: function(d) {
+    var el = document.getElementById('dash-top20-acties');
+    if (!el) return;
+    if (!d.ind.length) { el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
+    var perActies = {};
+    d.ind.forEach(function(r) {
+      var nr = r.persoonNummer;
+      if (!perActies[nr]) perActies[nr] = 0;
+      perActies[nr]++;
+    });
+    var lijst = [];
+    for (var nr in perActies) {
+      if (perActies.hasOwnProperty(nr)) lijst.push({ nr: parseInt(nr), acties: perActies[nr] });
+    }
+    lijst.sort(function(a, b) { return b.acties - a.acties; });
+    lijst = lijst.slice(0, 20);
+    var max = lijst.length ? lijst[0].acties : 1;
+    if (max === 0) max = 1;
+    var html = '<div class="dash-bar-lijst">';
+    lijst.forEach(function(it, i) {
+      var p = d.per.find(function(x) { return x.volgnummer === it.nr; });
+      var naam = p ? ((p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.') : 'P#' + it.nr;
+      var pct = Math.round((it.acties / max) * 100);
+      html += '<div class="dash-bi dash-bi-r">' +
+        '<span class="dash-br">' + (i + 1) + '.</span>' +
+        '<span class="dash-bl">' + App.esc(naam) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf fill-blauw" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + it.acties + 'x</span>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  },
+
   _dashLevensdomeinen: function(d) {
     var el = document.getElementById('dash-levensdomeinen');
     if (!el) return;
@@ -3043,21 +3149,71 @@ _collectProjectFotos: function(naam) {
     App.toast((rijen.length - 1) + ' foto-URL\'s geëxporteerd.', true);
   },
 
+  downloadFotoArchief: function() {
+    // Sfeerfoto's downloaden: [Projectnaam] - [Naam Module/Actie].jpg
+    var items = [];
+    DB.collectief.forEach(function(r) {
+      if (r.fotoUrl) {
+        var project = (r.naamVanDeActie || 'Project').replace(/[/\\?%*:|"<>]/g, '-');
+        var module  = (r.module || 'Actie').replace(/[/\\?%*:|"<>]/g, '-');
+        items.push({ url: r.fotoUrl, naam: project + ' - ' + module + '.jpg' });
+      }
+    });
+    if (!items.length) { App.toast('Geen sfeerfoto\'s gevonden.'); return; }
+    App.toast('Foto\'s worden gedownload (' + items.length + ')…');
+    items.forEach(function(item, i) {
+      setTimeout(function() {
+        App._fetchImageDataUrl(item.url).then(function(res) {
+          if (!res) return;
+          var a = document.createElement('a');
+          a.href = res.dataUrl;
+          a.download = item.naam;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        });
+      }, i * 400);
+    });
+  },
+
+  downloadBewijsjes: function() {
+    // Bewijsjes downloaden: [Projectnaam] - [Beschrijving] - [Volgnummer].jpg
+    var items = [];
+    DB.collectief.forEach(function(r) {
+      var project = (r.naamVanDeActie || 'Project').replace(/[/\\?%*:|"<>]/g, '-');
+      (r.uitgaven || []).forEach(function(u, idx) {
+        if (u.bonUrl) {
+          var omschr = (u.beschrijving || u.leverancier || 'Bewijs').replace(/[/\\?%*:|"<>]/g, '-');
+          items.push({ url: u.bonUrl, naam: project + ' - ' + omschr + ' - ' + (idx + 1) + '.jpg' });
+        }
+      });
+    });
+    if (!items.length) { App.toast('Geen bewijsjes gevonden.'); return; }
+    App.toast('Bewijsjes worden gedownload (' + items.length + ')…');
+    items.forEach(function(item, i) {
+      setTimeout(function() {
+        App._fetchImageDataUrl(item.url).then(function(res) {
+          if (!res) return;
+          var a = document.createElement('a');
+          a.href = res.dataUrl;
+          a.download = item.naam;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        });
+      }, i * 400);
+    });
+  },
+
   _dashMedia: function() {
     var el = document.getElementById('dash-media');
     if (!el) return;
+    // Enkel sfeerfoto's tonen (geen bewijsjes/bonnen)
     var fotos = [];
     DB.collectief.forEach(function(r) {
       if (r.fotoUrl) fotos.push({ type: r.module || 'Actie', naam: r.naamVanDeActie || '', url: r.fotoUrl, label: (r.datum || '').substr(0,10) });
-      (r.uitgaven || []).forEach(function(u) {
-        if (u.bonUrl) fotos.push({ type: 'Bewijs', naam: r.naamVanDeActie || '', url: u.bonUrl, label: (u.beschrijving || '') + ' \u2014 ' + geldbedrag(u.bedrag) });
-      });
     });
     if (!fotos.length) {
-      el.innerHTML = '<div style="color:var(--zacht);font-size:0.9rem">Nog geen foto\'s geüpload.</div>';
+      el.innerHTML = '<div style="color:var(--zacht);font-size:0.9rem">Nog geen sfeerfoto\'s geüpload.</div>';
       return;
     }
-    var html = '<div style="font-size:0.85rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' foto\'s gevonden</div>';
+    var html = '<div style="font-size:0.85rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' sfeerfoto\'s gevonden</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
     fotos.forEach(function(f) {
       html += '<div onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(f.url) + '" style="background:var(--bg);border-radius:8px;padding:10px;min-width:110px;max-width:150px;cursor:pointer;border:1px solid #e5e7eb">' +
@@ -3079,6 +3235,7 @@ _collectProjectFotos: function(naam) {
     var d = App._dashData();
     App._dashKPI(d);
     App._dashTop20(d);
+    App._dashTop20Acties(d);
     App._dashLevensdomeinen(d);
     App._dashVindplaatsen(d);
     App._dashToeleiding(d);
@@ -3176,6 +3333,25 @@ _collectProjectFotos: function(naam) {
       var p = d.per.find(function(x) { return x.volgnummer === it.nr; });
       var naam = p ? (p.voornaam + ' ' + p.familienaam) : 'Persoon #' + it.nr;
       regel((i + 1) + '. ' + naam, (Math.round(it.uren * 10) / 10) + ' uur');
+    });
+    y += 6;
+
+    // Top 20 meeste acties
+    sectie('TOP 20 PERSONEN (MEESTE ACTIES)');
+    var perActies = {};
+    d.ind.forEach(function(r) {
+      if (!perActies[r.persoonNummer]) perActies[r.persoonNummer] = 0;
+      perActies[r.persoonNummer]++;
+    });
+    var top20Acties = [];
+    for (var nr2 in perActies) {
+      if (perActies.hasOwnProperty(nr2)) top20Acties.push({ nr: parseInt(nr2), acties: perActies[nr2] });
+    }
+    top20Acties.sort(function(a, b) { return b.acties - a.acties; });
+    top20Acties.slice(0, 20).forEach(function(it, i) {
+      var p = d.per.find(function(x) { return x.volgnummer === it.nr; });
+      var naam = p ? (p.voornaam + ' ' + p.familienaam) : 'Persoon #' + it.nr;
+      regel((i + 1) + '. ' + naam, it.acties + ' acties');
     });
     y += 6;
 

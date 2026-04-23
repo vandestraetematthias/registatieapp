@@ -17,10 +17,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.7">
+<link rel="stylesheet" href="style.css?v=2.8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -1131,9 +1131,9 @@
           </div>
         </div>
         <div class="actie-rij" style="margin-top:8px">
-          <button onclick="App.exportCSVMetFilter('personen')">📅 Personen CSV (datum filter)</button>
-          <button onclick="App.exportCSVMetFilter('individueel')">📅 Individueel CSV (datum filter)</button>
-          <button onclick="App.exportCSVMetFilter('collectief')">📅 Collectief CSV (datum filter)</button>
+          <button onclick="App.exportCSVMetFilter('personen')">📅 Personen Excel (datum filter)</button>
+          <button onclick="App.exportCSVMetFilter('individueel')">📅 Individueel Excel (datum filter)</button>
+          <button onclick="App.exportCSVMetFilter('collectief')">📅 Collectief Excel (datum filter)</button>
         </div>
       </div>
 
@@ -1141,7 +1141,7 @@
 
       <div class="kaart-titel" style="margin-bottom:12px">Beheer</div>
       <div class="actie-rij">
-        <button onclick="App.exportBackup()">💾 Back-up (alle CSV's)</button>
+        <button onclick="App.exportBackup()">💾 Back-up (alle Excel's)</button>
         <button class="oranje" onclick="App.importCSVDialog()">📤 CSV importeren</button>
         <button class="rood" onclick="App.wisAlles()">⚠️ Alle data wissen</button>
       </div>
@@ -1400,10 +1400,17 @@
 
     <div class="dash-sec-kop"><span class="dash-badge groen-badge">👤 Individueel</span></div>
 
-    <div class="dash-kaart-full">
-      <div class="dash-kt">Top 20 personen</div>
-      <div class="dash-ks">Meeste uren individuele begeleiding</div>
-      <div id="dash-top20"></div>
+    <div class="dash-g2">
+      <div class="dash-kaart">
+        <div class="dash-kt">Top 20 — Meeste uren</div>
+        <div class="dash-ks">Uren individuele begeleiding</div>
+        <div id="dash-top20"></div>
+      </div>
+      <div class="dash-kaart">
+        <div class="dash-kt">Top 20 — Meeste acties</div>
+        <div class="dash-ks">Aantal geregistreerde acties</div>
+        <div id="dash-top20-acties"></div>
+      </div>
     </div>
 
     <div class="dash-g2">
@@ -1496,9 +1503,11 @@
 
     <div class="dash-kaart-full">
       <div class="dash-kt">Foto-overzicht</div>
-      <div class="dash-ks">Alle gekoppelde foto's en bewijzen</div>
-      <div style="margin:12px 0">
+      <div class="dash-ks">Sfeerfoto's per project en module</div>
+      <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-volgende" onclick="App.exportFotoUrls()" style="font-size:0.85rem;padding:8px 16px">📊 Export foto-URL's naar Excel</button>
+        <button class="btn-volgende" onclick="App.downloadFotoArchief()" style="font-size:0.85rem;padding:8px 16px">🖼️ Download Foto-archief</button>
+        <button class="btn-volgende" onclick="App.downloadBewijsjes()" style="font-size:0.85rem;padding:8px 16px">🧾 Download Bewijsjes</button>
       </div>
       <div id="dash-media"></div>
     </div>
@@ -1533,40 +1542,57 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.7"></script>
+<script src="app.js?v=2.8"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.7.0';
+    var CURRENT_VERSION = '2.8.0';
     var stored = localStorage.getItem('app_version');
-    if (stored && stored !== CURRENT_VERSION) {
+    if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
       if ('caches' in window) {
         caches.keys().then(function(names) {
           names.forEach(function(name) { caches.delete(name); });
-        }).then(function() { window.location.reload(true); });
-      } else {
+          if (stored) window.location.reload(true);
+        });
+      } else if (stored) {
         window.location.reload(true);
       }
-    } else {
-      localStorage.setItem('app_version', CURRENT_VERSION);
     }
   })();
 
-  // Service Worker registratie
+  // Service Worker registratie — geforceerde update via SKIP_WAITING patroon
   if ('serviceWorker' in navigator) {
+    // Herlaad zodra nieuwe SW de controle overneemt
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload(true);
+    });
+
     navigator.serviceWorker.register('./service-worker.js').then(function(reg) {
+      function activeerNieuweSW(reg) {
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }
+
+      // Nieuwe SW gevonden tijdens installatie
       reg.addEventListener('updatefound', function() {
-        var nouweWorker = reg.installing;
-        nouweWorker.addEventListener('statechange', function() {
-          if (nouweWorker.state === 'activated') {
-            window.location.reload(true);
+        var nieuweWorker = reg.installing;
+        nieuweWorker.addEventListener('statechange', function() {
+          if (nieuweWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            activeerNieuweSW(reg);
           }
         });
       });
+
+      // Al een wachtende SW bij het laden (bijv. na background update)
+      activeerNieuweSW(reg);
+
+      // Forceer periodieke update-check
+      reg.update();
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v1.1</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.8.0</footer>
 </body>
 </html>

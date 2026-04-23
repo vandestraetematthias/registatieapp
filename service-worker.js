@@ -3,7 +3,7 @@
    Cache-first strategie voor offline gebruik
 ══════════════════════════════════════════ */
 
-var CACHE_NAAM = 'buurtwerk-v2.7';
+var CACHE_NAAM = 'buurtwerk-v2.8';
 var CACHE_BESTANDEN = [
   './',
   './index.html',
@@ -37,6 +37,13 @@ self.addEventListener('activate', function(event) {
     })
   );
   self.clients.claim();
+});
+
+// Ontvang SKIP_WAITING bericht van client om onmiddellijk te activeren
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch: cache-first voor lokale bestanden, network-first voor externe CDN
