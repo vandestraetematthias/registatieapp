@@ -8,13 +8,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Buurtwerk">
 <meta name="theme-color" content="#4a7c59">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Expires" content="0">
 <title>Buurtwerk Venning</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.1">
+<link rel="stylesheet" href="style.css?v=2.2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1350,7 +1353,7 @@
     </div>
 
     <div class="dash-kpi-rij">
-      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-personen">—</div><div class="dash-kpi-l">Personen</div></div>
+      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-personen">—</div><div class="dash-kpi-l">Aantal ind. personen</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n blauw" id="kpi-ind">—</div><div class="dash-kpi-l">Ind. acties</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-uren">—</div><div class="dash-kpi-l">Uren ind.</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n oranje" id="kpi-col">—</div><div class="dash-kpi-l">Col. acties</div></div>
@@ -1436,12 +1439,6 @@
       <div id="dash-instroom"></div>
     </div>
 
-    <div class="dash-kaart-full">
-      <div class="dash-kt">Vrijwilligers</div>
-      <div class="dash-ks">Inzet en betrokkenheid per vrijwilliger</div>
-      <div id="dash-vrijwilligers"></div>
-    </div>
-
     <div class="dash-g2">
       <div class="dash-kaart">
         <div class="dash-kt">Financieel overzicht</div>
@@ -1491,8 +1488,27 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.1"></script>
+<script src="app.js?v=2.2"></script>
 <script>
+  // Versie-check: lege cache en herlaad bij nieuwe versie
+  (function() {
+    var CURRENT_VERSION = '2.2.1';
+    var stored = localStorage.getItem('app_version');
+    if (stored && stored !== CURRENT_VERSION) {
+      localStorage.setItem('app_version', CURRENT_VERSION);
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          names.forEach(function(name) { caches.delete(name); });
+        }).then(function() { window.location.reload(true); });
+      } else {
+        window.location.reload(true);
+      }
+    } else {
+      localStorage.setItem('app_version', CURRENT_VERSION);
+    }
+  })();
+
+  // Service Worker registratie
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js').then(function(reg) {
       reg.addEventListener('updatefound', function() {

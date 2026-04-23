@@ -3,7 +3,7 @@
    Cache-first strategie voor offline gebruik
 ══════════════════════════════════════════ */
 
-var CACHE_NAAM = 'buurtwerk-v2.1';
+var CACHE_NAAM = 'buurtwerk-v2.2';
 var CACHE_BESTANDEN = [
   './',
   './index.html',
@@ -25,8 +25,9 @@ self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
 
-// Activeer: verwijder oude caches
+// Activeer: verwijder oude caches en neem onmiddellijk controle
 self.addEventListener('activate', function(event) {
+  self.skipWaiting();
   event.waitUntil(
     caches.keys().then(function(namen) {
       return Promise.all(

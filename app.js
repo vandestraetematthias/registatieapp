@@ -6,6 +6,8 @@
 
 'use strict';
 
+var APP_VERSION = '2.2.1';
+
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
 ══════════════════════════════════════════ */
@@ -44,6 +46,12 @@ function geldbedrag(n) {
 
 function parseBedrag(s) {
   return parseFloat((s || '0').replace(',', '.')) || 0;
+}
+
+function getInitials(naam) {
+  if (!naam || !naam.trim()) return '?';
+  return naam.trim().split(/\s+/).filter(Boolean)
+    .map(function(w) { return w.charAt(0).toUpperCase(); }).join('');
 }
 
 /* ══════════════════════════════════════════
@@ -316,7 +324,7 @@ var App = {
     var alle = [];
     ind.forEach(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
-      var init = p ? (p.voornaam.charAt(0).toUpperCase() + '.' + p.familienaam.charAt(0).toUpperCase() + '.') : 'P#' + a.persoonNummer;
+      var init = p ? getInitials(p.voornaam + ' ' + p.familienaam) : 'P#' + a.persoonNummer;
       alle.push({ datum: a.datum, label: init, meta: a.maand + ' — ' + (a.tijd || '?'), badge: 'badge-groen', badgeTxt: 'Individueel', pagina: 'pg-rapport-individueel' });
     });
     col.forEach(function(a) {
@@ -359,7 +367,7 @@ var App = {
       if (entry.soort === 'persoon') {
         var p = entry.item;
         html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
-          '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(p.voornaam + ' ' + p.familienaam) + '</div>' +
+          '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(getInitials(p.voornaam + ' ' + p.familienaam)) + '</div>' +
           '<div class="mini-kaart-meta">Nr. ' + p.volgnummer + (p.gemeente ? ' — ' + App.esc(p.gemeente) : '') + '</div></div>' +
           '<div style="display:flex;align-items:center;gap:6px">' +
           '<span class="mini-badge badge-groen">Persoon</span>' +
@@ -368,7 +376,7 @@ var App = {
       } else {
         var a = entry.item;
         var p2 = perMap[a.persoonNummer];
-        var naam = p2 ? p2.voornaam + ' ' + p2.familienaam : 'Persoon #' + a.persoonNummer;
+        var naam = p2 ? getInitials(p2.voornaam + ' ' + p2.familienaam) : 'P#' + a.persoonNummer;
         html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
           '<div class="mini-kaart-info"><div class="mini-kaart-naam">' + App.esc(naam) + '</div>' +
           '<div class="mini-kaart-meta">' + App.esc(a.maand || '') + ' ' + (a.jaar || '') + ' — ' + App.esc((a.methodiek || []).join(', ') || '—') + '</div></div>' +
@@ -1198,7 +1206,7 @@ var App = {
     per.sort(function(a, b) { return (a.familienaam || '').localeCompare(b.familienaam || '', 'nl'); });
     document.getElementById('rp-teller').textContent = per.length + ' personen';
     var html = per.map(function(p) {
-      var init = (p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.';
+      var init = getInitials((p.voornaam || '') + ' ' + (p.familienaam || ''));
       return '<tr>' +
         '<td>' + p.volgnummer + '</td>' +
         '<td>' + App.esc(init) + '</td>' +
@@ -1271,7 +1279,7 @@ var App = {
     }
     var html = ind.map(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
-      var init = p ? ((p.voornaam || '').charAt(0).toUpperCase() + '.' + (p.familienaam || '').charAt(0).toUpperCase() + '.') : 'P#' + a.persoonNummer;
+      var init = p ? getInitials((p.voornaam || '') + ' ' + (p.familienaam || '')) : 'P#' + a.persoonNummer;
       return '<tr>' +
         '<td>' + App.esc(a.maand || '') + '</td>' +
         '<td>' + App.esc(init) + '</td>' +
@@ -2810,7 +2818,6 @@ var App = {
     App._dashThema(d);
     App._dashSignalen(d);
     App._dashInstroom(d);
-    App._dashVrijwilligers(d);
     App._dashFinancieel(d);
     App._dashLocaties(d);
     App._dashBuurtType(d);
