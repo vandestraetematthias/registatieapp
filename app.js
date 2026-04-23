@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.4.0';
+var APP_VERSION = '2.5.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -208,6 +208,10 @@ var State = {
   logUitgaven: [],
   actUitgaven: [],
   actInkomsten: [],
+  // Foto URLs voor collectieve modules
+  logFotoUrl: null,
+  ovFotoUrl:  null,
+  actFotoUrl: null,
   // Bewerkmodus ID's
   _bewerktIaId: null,
   _bewerktCaId: null
@@ -981,7 +985,9 @@ var App = {
       document.getElementById('log-signaal-types').style.display = 'none';
       document.getElementById('log-actienaam-lbl').textContent = State.huidigActie;
       State.logUitgaven = [];
+      State.logFotoUrl = null;
       App.renderKostLijst('log-uitgaven-lijst', State.logUitgaven, 'log');
+      App._resetModuleFotoUI('log');
       App.nav('pg-mod-logistiek');
     } else if (type === 'Overleg') {
       App._resetKeuzes('ov-signalen');
@@ -990,6 +996,8 @@ var App = {
       document.getElementById('ov-notitie').value = '';
       document.getElementById('ov-signaal-types').style.display = 'none';
       document.getElementById('ov-actienaam-lbl').textContent = State.huidigActie;
+      State.ovFotoUrl = null;
+      App._resetModuleFotoUI('ov');
       App.nav('pg-mod-overleg');
     } else if (type === 'Activiteit') {
       App._resetKeuzes('act-locatie');
@@ -1005,11 +1013,47 @@ var App = {
       document.getElementById('act-actienaam-lbl').textContent = State.huidigActie;
       State.actUitgaven = [];
       State.actInkomsten = [];
+      State.actFotoUrl = null;
       App.renderKostLijst('act-uitgaven-lijst', State.actUitgaven, 'act-ug');
       App.renderKostLijst('act-inkomsten-lijst', State.actInkomsten, 'act-ik');
       App.updateFinTotaal();
+      App._resetModuleFotoUI('act');
       App.nav('pg-mod-activiteit');
     }
+  },
+
+  /* ── Module foto upload ── */
+  _resetModuleFotoUI: function(prefix) {
+    var preview = document.getElementById(prefix + '-foto-preview');
+    if (preview) { preview.style.display = 'none'; preview.textContent = ''; }
+  },
+
+  _uploadModuleFoto: function(prefix, input) {
+    var file = input.files[0];
+    if (!file) return;
+    App.toast('Foto uploaden…');
+    verkleenFoto(file, function(blob) {
+      var nu2 = new Date();
+      var datumTijd = nu2.toISOString().substr(0, 16).replace(/[-T:]/g, '');
+      var modulenaam = prefix === 'log' ? 'Logistiek' : prefix === 'ov' ? 'Overleg' : 'Activiteit';
+      var bestandsnaam = modulenaam + '_' + datumTijd + '.jpg';
+      var ref = _storage.ref('collectieve_acties/' + bestandsnaam);
+      ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
+        return ref.getDownloadURL();
+      }).then(function(url) {
+        if (prefix === 'log') State.logFotoUrl = url;
+        else if (prefix === 'ov') State.ovFotoUrl = url;
+        else State.actFotoUrl = url;
+        var preview = document.getElementById(prefix + '-foto-preview');
+        if (preview) {
+          preview.style.display = 'inline-flex';
+          preview.innerHTML = '<a href="' + App.esc(url) + '" target="_blank" style="color:var(--groen);font-weight:700;text-decoration:none">📷 Foto opgeslagen</a>';
+        }
+        App.toast('Foto opgeslagen.', true);
+      }).catch(function(err) {
+        App.toast('Upload mislukt: ' + (err.message || err));
+      });
+    });
   },
 
   /* ── Kosten UI ── */
@@ -1175,6 +1219,7 @@ var App = {
       signalen:       App.getEnkele('log-signalen') === 'Ja',
       signaalTypes:   App.getKeuzes('log-sig-types'),
       notitie:        document.getElementById('log-notitie').value.trim(),
+      fotoUrl:        State.logFotoUrl || null,
       aangemaakt:     nu(),
       status:         'actief'
     };
@@ -1198,6 +1243,7 @@ var App = {
       signalen:       App.getEnkele('ov-signalen') === 'Ja',
       signaalTypes:   App.getKeuzes('ov-sig-types'),
       notitie:        document.getElementById('ov-notitie').value.trim(),
+      fotoUrl:        State.ovFotoUrl || null,
       aangemaakt:     nu(),
       status:         'actief'
     };
@@ -1228,6 +1274,7 @@ var App = {
       signalen:       App.getEnkele('act-signalen') === 'Ja',
       signaalTypes:   App.getKeuzes('act-sig-types'),
       notitie:        document.getElementById('act-notitie').value.trim(),
+      fotoUrl:        State.actFotoUrl || null,
       aangemaakt:     nu(),
       status:         'actief'
     };
@@ -1397,18 +1444,28 @@ var App = {
     }
     var html = col.map(function(c) {
       var totaal = (c.aantalBewoners || 0) + (c.aantalVrijwilligers || 0);
+      // Zoek foto's in gekoppelde modules (Logistiek, Overleg, Activiteit)
+      var moduleFotos = DB.collectief.filter(function(m) {
+        return m.module && m.naamVanDeActie === c.naamVanDeActie && m.fotoUrl;
+      });
+      var bijlageHtml = moduleFotos.length
+        ? moduleFotos.map(function(m) {
+            return '<a href="' + App.esc(m.fotoUrl) + '" target="_blank" title="' + App.esc(m.module) + '" style="font-size:1.2rem;text-decoration:none;margin-right:2px">📷</a>';
+          }).join('')
+        : '—';
       return '<tr>' +
         '<td>' + App.esc(c.naamVanDeActie) + '</td>' +
         '<td>' + App.esc(c.maand || '') + '</td>' +
         '<td>' + totaal + '</td>' +
         '<td>' + App.esc((c.typeActie || []).join(', ') || '—') + '</td>' +
+        '<td style="text-align:center">' + bijlageHtml + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
         '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
         '</td>' +
         '</tr>';
     }).join('');
-    document.getElementById('rc-tbody').innerHTML = html || '<tr><td colspan="5" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
+    document.getElementById('rc-tbody').innerHTML = html || '<tr><td colspan="6" style="color:var(--zacht);text-align:center">Geen acties.</td></tr>';
   },
 
   renderArchief: function() {
