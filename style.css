@@ -235,7 +235,8 @@ body {
   font-weight: 700;
   font-size: 0.92rem;
   margin-bottom: 3px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 .mini-kaart-meta { font-size: 0.78rem; color: var(--zacht); }
 
@@ -494,8 +495,8 @@ textarea { resize: vertical; min-height: 80px; }
   padding: 12px; background: var(--bg); border-radius: 10px;
   border: 1.5px solid var(--rand); margin-bottom: 8px; position: relative;
 }
-.kostlijn.ug { grid-template-columns: 1fr 1fr 115px 28px; }
-.kostlijn.ik { grid-template-columns: 1fr 60px 50px 80px 28px; }
+.kostlijn.ug { grid-template-columns: 80px 1fr 90px auto 28px; }
+.kostlijn.ik { grid-template-columns: 1fr 45px 90px 80px 28px; }
 .kostlijn input { background: white; }
 .del-btn {
   background: none; border: none; color: #ccc; cursor: pointer;
@@ -668,8 +669,9 @@ tr:nth-child(even) td { background: #fafaf9; }
   .wizard-wrap  { padding: 10px 12px 0; }
   .twee-kolommen { grid-template-columns: 1fr; }
   .fin-totaal   { grid-template-columns: 1fr; }
-  .kostlijn.ug  { grid-template-columns: 1fr 100px 28px; }
-  .kostlijn.ik  { grid-template-columns: 1fr 1fr 28px; }
+  .kostlijn.ug  { grid-template-columns: 1fr 90px 28px; }
+  .kostlijn.ug > div:nth-child(4) { grid-column: 1 / -1; } /* Bon: volle breedte */
+  .kostlijn.ik  { grid-template-columns: 1fr 45px 90px 80px 28px; }
   .stap-naam    { display: none; }
   .stap-cirkel  { width: 32px; height: 32px; font-size: 0.75rem; }
   .navigatie    { flex-wrap: wrap; gap: 10px; }

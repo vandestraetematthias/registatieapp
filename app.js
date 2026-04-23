@@ -1112,7 +1112,7 @@ var App = {
         var ikTot = ((item.aantal || 1) * (item.bedragPerStuk || 0)).toFixed(2);
         html += '<div class="kostlijn ik">' +
           '<div><div class="col-lbl">Beschrijving</div><input type="text" value="' + App.esc(item.beschrijving) + '" oninput="App._kostIkUpdate(' + i + ',\'beschrijving\',this.value)"></div>' +
-          '<div><div class="col-lbl">Aantal</div><input type="number" min="0" step="1" value="' + (item.aantal || 1) + '" oninput="App._kostIkUpdate(' + i + ',\'aantal\',this.value)"></div>' +
+          '<div><div class="col-lbl">Aantal</div><input type="number" min="0" step="1" placeholder="St." value="' + (item.aantal || 1) + '" oninput="App._kostIkUpdate(' + i + ',\'aantal\',this.value)"></div>' +
           '<div><div class="col-lbl">Per stuk €</div><input type="number" step="0.01" min="0" value="' + (item.bedragPerStuk || 0) + '" oninput="App._kostIkUpdate(' + i + ',\'bedragPerStuk\',this.value)"></div>' +
           '<div><div class="col-lbl">Totaal €</div><input type="number" id="ik-tot-' + i + '" readonly value="' + ikTot + '" style="background:var(--bg);cursor:default"></div>' +
           '<button class="del-btn" onclick="App._kostDel(\'' + prefix + '\',' + i + ')">✕</button></div>';
