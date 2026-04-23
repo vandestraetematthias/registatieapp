@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.2.1';
+var APP_VERSION = '2.4.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -21,8 +21,9 @@ var _fbConfig = {
   measurementId: "G-6WE2VPG30D"
 };
 firebase.initializeApp(_fbConfig);
-var _fs   = firebase.firestore();
-var _auth = firebase.auth();
+var _fs      = firebase.firestore();
+var _auth    = firebase.auth();
+var _storage = firebase.storage();
 
 /* ── HELPERS ── */
 function uuid() {
@@ -52,6 +53,24 @@ function getInitials(naam) {
   if (!naam || !naam.trim()) return '?';
   return naam.trim().split(/\s+/).filter(Boolean)
     .map(function(w) { return w.charAt(0).toUpperCase(); }).join('');
+}
+
+function verkleenFoto(file, callback) {
+  var maxB = 1024;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxB) { h = Math.round(h * maxB / w); w = maxB; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) { callback(blob); }, 'image/jpeg', 0.85);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 /* ══════════════════════════════════════════
@@ -1002,10 +1021,14 @@ var App = {
     var html = '';
     lijst.forEach(function(item, i) {
       if (isUg) {
+        var bonKnop = '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--groen);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:600">' +
+          '📷 Foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>';
+        var bonLink = item.bonUrl ? '<a href="' + App.esc(item.bonUrl) + '" target="_blank" title="Bekijk bon" style="font-size:1.3rem;text-decoration:none;margin-right:6px">📄</a>' : '';
         html += '<div class="kostlijn ug">' +
           '<div><div class="col-lbl">Beschrijving</div><input type="text" value="' + App.esc(item.beschrijving) + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'beschrijving\',this.value)"></div>' +
           '<div><div class="col-lbl">Leverancier</div><input type="text" value="' + App.esc(item.leverancier || '') + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'leverancier\',this.value)"></div>' +
           '<div><div class="col-lbl">Bedrag €</div><input type="number" step="0.01" value="' + (item.bedrag || 0) + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'bedrag\',this.value)"></div>' +
+          '<div><div class="col-lbl">Bon</div><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + bonLink + bonKnop + '</div></div>' +
           '<button class="del-btn" onclick="App._kostDel(\'' + prefix + '\',' + i + ')">✕</button></div>';
       } else {
         var ikTot = ((item.aantal || 1) * (item.bedragPerStuk || 0)).toFixed(2);
@@ -1046,6 +1069,30 @@ var App = {
     var lijst = App._getLijst(prefix);
     lijst.splice(idx, 1);
     App.renderKostLijst(App._getContainerId(prefix), lijst, prefix);
+  },
+
+  _uploadBon: function(prefix, idx, input) {
+    var file = input.files[0];
+    if (!file) return;
+    var lijst = App._getLijst(prefix);
+    if (!lijst[idx]) return;
+    App.toast('Foto verkleinen en uploaden…');
+    verkleenFoto(file, function(blob) {
+      var datum = new Date().toISOString().substr(0, 10).replace(/-/g, '');
+      var bedrag = String(Math.round((lijst[idx].bedrag || 0) * 100));
+      var willekeurig = Math.random().toString(36).substr(2, 6);
+      var bestandsnaam = datum + '_' + bedrag + '_' + willekeurig + '.jpg';
+      var ref = _storage.ref('uitgaven/' + bestandsnaam);
+      ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
+        return ref.getDownloadURL();
+      }).then(function(url) {
+        lijst[idx].bonUrl = url;
+        App.toast('Bonnetje opgeslagen.', true);
+        App.renderKostLijst(App._getContainerId(prefix), lijst, prefix);
+      }).catch(function(err) {
+        App.toast('Upload mislukt: ' + (err.message || err));
+      });
+    });
   },
 
   voegUitgaveToe: function(prefix) {
