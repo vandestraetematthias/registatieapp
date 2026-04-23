@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.5.0';
+var APP_VERSION = '2.6.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -56,7 +56,7 @@ function getInitials(naam) {
 }
 
 function verkleenFoto(file, callback) {
-  var maxB = 1024;
+  var maxB = 1200;
   var reader = new FileReader();
   reader.onload = function(e) {
     var img = new Image();
@@ -337,6 +337,21 @@ var App = {
   toggleSignalen: function(prefix, toon) {
     var wrap = document.getElementById(prefix + '-signaal-types');
     if (wrap) wrap.style.display = toon ? 'block' : 'none';
+  },
+
+  /* ── LIGHTBOX ── */
+  openLightbox: function(url) {
+    var lb  = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    if (!lb || !img) { window.open(url, '_blank'); return; }
+    img.src = url;
+    lb.style.display = 'flex';
+  },
+  closeLightbox: function() {
+    var lb  = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    if (lb)  lb.style.display  = 'none';
+    if (img) img.src = '';
   },
 
   /* ── START RENDER ── */
@@ -1037,7 +1052,7 @@ var App = {
       var datumTijd = nu2.toISOString().substr(0, 16).replace(/[-T:]/g, '');
       var modulenaam = prefix === 'log' ? 'Logistiek' : prefix === 'ov' ? 'Overleg' : 'Activiteit';
       var bestandsnaam = modulenaam + '_' + datumTijd + '.jpg';
-      var ref = _storage.ref('collectieve_acties/' + bestandsnaam);
+      var ref = _storage.ref('bewijzen/collectief/' + bestandsnaam);
       ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
         return ref.getDownloadURL();
       }).then(function(url) {
@@ -1047,7 +1062,7 @@ var App = {
         var preview = document.getElementById(prefix + '-foto-preview');
         if (preview) {
           preview.style.display = 'inline-flex';
-          preview.innerHTML = '<a href="' + App.esc(url) + '" target="_blank" style="color:var(--groen);font-weight:700;text-decoration:none">📷 Foto opgeslagen</a>';
+          preview.innerHTML = '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(url) + '" style="color:var(--groen);font-weight:700;cursor:pointer">🖼️ Foto opgeslagen — bekijk</span>';
         }
         App.toast('Foto opgeslagen.', true);
       }).catch(function(err) {
@@ -1066,8 +1081,8 @@ var App = {
     lijst.forEach(function(item, i) {
       if (isUg) {
         var bonKnop = '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--groen);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:600">' +
-          '📷 Foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>';
-        var bonLink = item.bonUrl ? '<a href="' + App.esc(item.bonUrl) + '" target="_blank" title="Bekijk bon" style="font-size:1.3rem;text-decoration:none;margin-right:6px">📄</a>' : '';
+          '📷 Foto/Bewijs<input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>';
+        var bonLink = item.bonUrl ? '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(item.bonUrl) + '" title="Bekijk bewijs" style="font-size:1.3rem;cursor:pointer;margin-right:6px">🖼️</span>' : '';
         html += '<div class="kostlijn ug">' +
           '<div><div class="col-lbl">Beschrijving</div><input type="text" value="' + App.esc(item.beschrijving) + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'beschrijving\',this.value)"></div>' +
           '<div><div class="col-lbl">Leverancier</div><input type="text" value="' + App.esc(item.leverancier || '') + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'leverancier\',this.value)"></div>' +
@@ -1126,7 +1141,7 @@ var App = {
       var bedrag = String(Math.round((lijst[idx].bedrag || 0) * 100));
       var willekeurig = Math.random().toString(36).substr(2, 6);
       var bestandsnaam = datum + '_' + bedrag + '_' + willekeurig + '.jpg';
-      var ref = _storage.ref('uitgaven/' + bestandsnaam);
+      var ref = _storage.ref('bewijzen/uitgaven/' + bestandsnaam);
       ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
         return ref.getDownloadURL();
       }).then(function(url) {
@@ -1450,7 +1465,7 @@ var App = {
       });
       var bijlageHtml = moduleFotos.length
         ? moduleFotos.map(function(m) {
-            return '<a href="' + App.esc(m.fotoUrl) + '" target="_blank" title="' + App.esc(m.module) + '" style="font-size:1.2rem;text-decoration:none;margin-right:2px">📷</a>';
+            return '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(m.fotoUrl) + '" title="' + App.esc(m.module) + '" style="font-size:1.2rem;cursor:pointer;margin-right:2px">🖼️</span>';
           }).join('')
         : '—';
       return '<tr>' +
