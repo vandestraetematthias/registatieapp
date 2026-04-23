@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.6">
+<link rel="stylesheet" href="style.css?v=2.7">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1492,6 +1492,17 @@
       <div id="dash-buurttype"></div>
     </div>
 
+    <div class="dash-sec-kop"><span class="dash-badge oranje-badge">📸 Mediabeheer</span></div>
+
+    <div class="dash-kaart-full">
+      <div class="dash-kt">Foto-overzicht</div>
+      <div class="dash-ks">Alle gekoppelde foto's en bewijzen</div>
+      <div style="margin:12px 0">
+        <button class="btn-volgende" onclick="App.exportFotoUrls()" style="font-size:0.85rem;padding:8px 16px">📊 Export foto-URL's naar Excel</button>
+      </div>
+      <div id="dash-media"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1522,11 +1533,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.6"></script>
+<script src="app.js?v=2.7"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.6.0';
+    var CURRENT_VERSION = '2.7.0';
     var stored = localStorage.getItem('app_version');
     if (stored && stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);

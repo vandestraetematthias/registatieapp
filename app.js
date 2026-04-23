@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.6.0';
+var APP_VERSION = '2.7.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -1734,12 +1734,10 @@ var App = {
     var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || (typeof jsPDF !== 'undefined' ? jsPDF : null);
     if (!jsPDFLib) { App.toast('jsPDF niet beschikbaar.'); return; }
 
-    // Alle records (incl. gearchiveerd, excl. definitief gewist = alles in cache)
     var per = DB.personen;
     var ind = DB.individueel;
     var col = DB.collectief.filter(function(c) { return !c.module; });
 
-    // Unieke vrijwilligers ontdubbeld op naam
     var vrijwMap = {};
     DB.collectief.forEach(function(r) {
       (r.naamVrijwilligers || []).forEach(function(n) {
@@ -1756,102 +1754,137 @@ var App = {
       totNieuw  += (r.waarvanNieuweBewoners || 0);
     });
 
-    var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    var y = 40;
-
-    // Titelblok
-    doc.setFillColor(45, 106, 79);
-    doc.rect(0, 0, 595, 50, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-    doc.text('Buurtwerk Venning \u2014 Buurtwerk rapport PDF', 40, 30);
-    doc.setFontSize(10);
-    doc.text('Gegenereerd op: ' + new Date().toLocaleString('nl-BE'), 40, 44);
-    doc.setTextColor(0, 0, 0);
-    y = 70;
-
-    function sectie(tekst) {
-      if (y > 700) { doc.addPage(); y = 40; }
-      doc.setFillColor(64, 145, 108);
-      doc.rect(40, y - 2, 515, 14, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      doc.text(tekst, 46, y + 8);
-      doc.setTextColor(0, 0, 0);
-      y += 22;
-    }
-    function regel(label, waarde) {
-      if (y > 740) { doc.addPage(); y = 40; }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      doc.text(label + ':', 46, y);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-      doc.text(String(waarde), 220, y);
-      y += 14;
-    }
-    function telVeld(records, veld) {
-      var t = {};
-      records.forEach(function(r) {
-        (r[veld] || []).forEach(function(w) { if (w) t[w] = (t[w] || 0) + 1; });
+    var fotoRefs = [];
+    DB.collectief.forEach(function(r) {
+      if (r.fotoUrl) fotoRefs.push({ url: r.fotoUrl, label: (r.module || 'Actie') + ': ' + (r.naamVanDeActie || '') + ' (' + (r.datum || '').substr(0,10) + ')' });
+      (r.uitgaven || []).forEach(function(u) {
+        if (u.bonUrl) fotoRefs.push({ url: u.bonUrl, label: 'Bewijs: ' + (u.beschrijving || '') + ' \u2014 ' + geldbedrag(u.bedrag) + ' (' + (r.naamVanDeActie || '') + ')' });
       });
-      return t;
-    }
-
-    sectie('OVERZICHT');
-    regel('Totaal geregistreerde personen', per.length);
-    regel('Individuele acties (totaal)', ind.length);
-    regel('Collectieve acties (totaal)', col.length);
-    regel('Unieke vrijwilligers (alle acties)', aantalUniekeVrijw);
-    y += 6;
-
-    sectie('INDIVIDUEEL');
-    regel('Totaal acties', ind.length);
-    regel('Totaal uren', (Math.round(totUren * 10) / 10) + 'u');
-    var methT = telVeld(ind, 'methodiek');
-    var methLijst = Object.keys(methT).sort(function(a,b) { return methT[b] - methT[a]; });
-    if (methLijst.length) {
-      y += 4;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Methodiek:', 46, y); y += 13;
-      doc.setFont('helvetica', 'normal');
-      methLijst.forEach(function(m) {
-        if (y > 740) { doc.addPage(); y = 40; }
-        doc.text('  ' + m + ': ' + methT[m] + ' keer', 46, y); y += 11;
-      });
-    }
-    var toelT = telVeld(ind, 'toeleiding');
-    var toelLijst = Object.keys(toelT).sort(function(a,b) { return toelT[b] - toelT[a]; });
-    if (toelLijst.length) {
-      y += 4;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Toeleiding:', 46, y); y += 13;
-      doc.setFont('helvetica', 'normal');
-      toelLijst.forEach(function(m) {
-        if (y > 740) { doc.addPage(); y = 40; }
-        doc.text('  ' + m + ': ' + toelT[m] + ' keer', 46, y); y += 11;
-      });
-    }
-    y += 6;
-
-    sectie('COLLECTIEF');
-    regel('Totaal acties', col.length);
-    regel('Totaal bewoners bereikt', totBereik);
-    regel('Waarvan nieuwe bewoners', totNieuw);
-    regel('Unieke vrijwilligers', aantalUniekeVrijw);
-    var themaT = {};
-    col.forEach(function(r) {
-      (r.thema || []).forEach(function(t) { if (t) themaT[t] = (themaT[t] || 0) + (r.aantalBewoners || 0); });
     });
-    var themaLijst = Object.keys(themaT).sort(function(a,b) { return themaT[b] - themaT[a]; });
-    if (themaLijst.length) {
-      y += 4;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Thema (bewoners bereik):', 46, y); y += 13;
-      doc.setFont('helvetica', 'normal');
-      themaLijst.forEach(function(t) {
-        if (y > 740) { doc.addPage(); y = 40; }
-        doc.text('  ' + t + ': ' + themaT[t] + ' bewoners', 46, y); y += 11;
-      });
-    }
 
-    doc.save('buurtwerk_rapport_' + new Date().getFullYear() + '.pdf');
-    App.toast('Buurtwerk rapport PDF gedownload.', true);
+    App.toast('PDF genereren\u2026');
+
+    Promise.all(fotoRefs.map(function(f) {
+      return App._fetchImageDataUrl(f.url).then(function(res) {
+        f.dataUrl = res ? res.dataUrl : null;
+        f.origW   = res ? res.w : 0;
+        f.origH   = res ? res.h : 0;
+      });
+    })).then(function() {
+      var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      var y = 40;
+
+      doc.setFillColor(45, 106, 79);
+      doc.rect(0, 0, 595, 50, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+      doc.text('Buurtwerk Venning \u2014 Buurtwerk rapport PDF', 40, 30);
+      doc.setFontSize(10);
+      doc.text('Gegenereerd op: ' + new Date().toLocaleString('nl-BE'), 40, 44);
+      doc.setTextColor(0, 0, 0);
+      y = 70;
+
+      function sectie(tekst) {
+        if (y > 700) { doc.addPage(); y = 40; }
+        doc.setFillColor(64, 145, 108);
+        doc.rect(40, y - 2, 515, 14, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.setTextColor(255, 255, 255);
+        doc.text(tekst, 46, y + 8);
+        doc.setTextColor(0, 0, 0);
+        y += 22;
+      }
+      function regel(label, waarde) {
+        if (y > 740) { doc.addPage(); y = 40; }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.text(label + ':', 46, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(String(waarde), 220, y);
+        y += 14;
+      }
+      function telVeld(records, veld) {
+        var t = {};
+        records.forEach(function(r) {
+          (r[veld] || []).forEach(function(w) { if (w) t[w] = (t[w] || 0) + 1; });
+        });
+        return t;
+      }
+
+      sectie('OVERZICHT');
+      regel('Totaal geregistreerde personen', per.length);
+      regel('Individuele acties (totaal)', ind.length);
+      regel('Collectieve acties (totaal)', col.length);
+      regel('Unieke vrijwilligers (alle acties)', aantalUniekeVrijw);
+      y += 6;
+
+      sectie('INDIVIDUEEL');
+      regel('Totaal acties', ind.length);
+      regel('Totaal uren', (Math.round(totUren * 10) / 10) + 'u');
+      var methT = telVeld(ind, 'methodiek');
+      var methLijst = Object.keys(methT).sort(function(a,b) { return methT[b] - methT[a]; });
+      if (methLijst.length) {
+        y += 4;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Methodiek:', 46, y); y += 13;
+        doc.setFont('helvetica', 'normal');
+        methLijst.forEach(function(m) {
+          if (y > 740) { doc.addPage(); y = 40; }
+          doc.text('  ' + m + ': ' + methT[m] + ' keer', 46, y); y += 11;
+        });
+      }
+      var toelT = telVeld(ind, 'toeleiding');
+      var toelLijst = Object.keys(toelT).sort(function(a,b) { return toelT[b] - toelT[a]; });
+      if (toelLijst.length) {
+        y += 4;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Toeleiding:', 46, y); y += 13;
+        doc.setFont('helvetica', 'normal');
+        toelLijst.forEach(function(m) {
+          if (y > 740) { doc.addPage(); y = 40; }
+          doc.text('  ' + m + ': ' + toelT[m] + ' keer', 46, y); y += 11;
+        });
+      }
+      y += 6;
+
+      sectie('COLLECTIEF');
+      regel('Totaal acties', col.length);
+      regel('Totaal bewoners bereikt', totBereik);
+      regel('Waarvan nieuwe bewoners', totNieuw);
+      regel('Unieke vrijwilligers', aantalUniekeVrijw);
+      var themaT = {};
+      col.forEach(function(r) {
+        (r.thema || []).forEach(function(t) { if (t) themaT[t] = (themaT[t] || 0) + (r.aantalBewoners || 0); });
+      });
+      var themaLijst = Object.keys(themaT).sort(function(a,b) { return themaT[b] - themaT[a]; });
+      if (themaLijst.length) {
+        y += 4;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Thema (bewoners bereik):', 46, y); y += 13;
+        doc.setFont('helvetica', 'normal');
+        themaLijst.forEach(function(t) {
+          if (y > 740) { doc.addPage(); y = 40; }
+          doc.text('  ' + t + ': ' + themaT[t] + ' bewoners', 46, y); y += 11;
+        });
+      }
+
+      var metFoto = fotoRefs.filter(function(f) { return f.dataUrl; });
+      if (metFoto.length) {
+        y += 8;
+        sectie('FOTO\'S EN BEWIJZEN (' + metFoto.length + ')');
+        metFoto.forEach(function(f) {
+          var maxW = 170, maxH = 220;
+          var scale = Math.min(maxW / (f.origW || 1), maxH / (f.origH || 1), 1);
+          var dispW = Math.round((f.origW || maxW) * scale);
+          var dispH = Math.round((f.origH || maxH) * scale);
+          if (y + dispH + 20 > 760) { doc.addPage(); y = 40; }
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(7);
+          var lr = doc.splitTextToSize(f.label || '', 515);
+          doc.text(lr, 46, y); y += lr.length * 9 + 2;
+          doc.addImage(f.dataUrl, 'JPEG', 40, y, dispW, dispH);
+          y += dispH + 12;
+        });
+      }
+
+      doc.save('buurtwerk_rapport_' + new Date().getFullYear() + '.pdf');
+      App.toast('Buurtwerk rapport PDF gedownload.', true);
+    });
   },
 
   /* ══════════════════════════════════════
@@ -2159,6 +2192,35 @@ var App = {
     return 'Van ' + labelKort[min] + ' tot ' + labelKort[max];
   },
 
+  _fetchImageDataUrl: function(url) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), w: img.naturalWidth, h: img.naturalHeight });
+      } catch(e) { resolve(null); }
+    };
+    img.onerror = function() { resolve(null); };
+    img.src = url;
+  });
+},
+
+_collectProjectFotos: function(naam) {
+  var col = DB.collectief.filter(function(r) { return r.naamVanDeActie === naam; });
+  var fotos = [];
+  col.forEach(function(r) {
+    if (r.fotoUrl) fotos.push({ url: r.fotoUrl, label: (r.module || 'Actie') + ' \u2014 ' + (r.datum || '').substr(0,10) });
+    (r.uitgaven || []).forEach(function(u) {
+      if (u.bonUrl) fotos.push({ url: u.bonUrl, label: 'Bewijs: ' + (u.beschrijving || '') + ' \u2014 ' + geldbedrag(u.bedrag) });
+    });
+  });
+  return fotos;
+},
+
   _berekenFiche: function(naam) {
     var col = DB.collectief.filter(function(r) { return r.naamVanDeActie === naam && r.status === 'actief'; });
     var hoofdRecords  = col.filter(function(r) { return !r.module; });
@@ -2280,7 +2342,7 @@ var App = {
     div.innerHTML = html;
   },
 
-  _drawFiche: function(doc, naam) {
+  _drawFiche: function(doc, naam, fotos) {
     var f = App._berekenFiche(naam);
     var mL = 40, breedte = 515;
     var y = 65;
@@ -2383,15 +2445,41 @@ var App = {
         y += regels.length * 10 + 4;
       });
     }
+
+    var metFoto = (fotos || []).filter(function(f) { return f && f.dataUrl; });
+    if (metFoto.length) {
+      sectieKop('FOTO\'S EN BEWIJZEN');
+      metFoto.forEach(function(f) {
+        var maxW = 170, maxH = 220;
+        var scale = Math.min(maxW / (f.w || 1), maxH / (f.h || 1), 1);
+        var dispW = Math.round((f.w || maxW) * scale);
+        var dispH = Math.round((f.h || maxH) * scale);
+        if (y + dispH + 20 > 760) { doc.addPage(); y = 40; }
+        doc.setFont('helvetica','italic'); doc.setFontSize(7);
+        var lr = doc.splitTextToSize(f.label || '', breedte);
+        doc.text(lr, mL, y); y += lr.length * 9 + 2;
+        doc.addImage(f.dataUrl, 'JPEG', mL, y, dispW, dispH);
+        y += dispH + 12;
+      });
+    }
   },
 
   jaarplanPDF: function(naam) {
     var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || (typeof jsPDF !== 'undefined' ? jsPDF : null);
     if (!jsPDFLib) { App.toast('jsPDF niet beschikbaar.'); return; }
-    var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    App._drawFiche(doc, naam);
-    doc.save('projectfiche_' + naam.replace(/[^a-z0-9]/gi, '_') + '.pdf');
-    App.toast('PDF gedownload: ' + naam, true);
+    App.toast('PDF genereren\u2026');
+    var fotoBronnen = App._collectProjectFotos(naam);
+    Promise.all(fotoBronnen.map(function(f) {
+      return App._fetchImageDataUrl(f.url).then(function(res) {
+        f.dataUrl = res ? res.dataUrl : null;
+        f.w = res ? res.w : 0; f.h = res ? res.h : 0;
+      });
+    })).then(function() {
+      var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      App._drawFiche(doc, naam, fotoBronnen);
+      doc.save('projectfiche_' + naam.replace(/[^a-z0-9]/gi, '_') + '.pdf');
+      App.toast('PDF gedownload: ' + naam, true);
+    });
   },
 
   exporteerJaarplanPDF: function() {
@@ -2399,13 +2487,26 @@ var App = {
     if (!jsPDFLib) { App.toast('jsPDF niet beschikbaar.'); return; }
     var namen = DB.actieNamen();
     if (!namen.length) { App.toast('Geen projecten om te exporteren.'); return; }
-    var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    namen.forEach(function(naam, idx) {
-      if (idx > 0) doc.addPage();
-      App._drawFiche(doc, naam);
+    App.toast('PDF genereren\u2026');
+    var alleFotoBronnen = namen.map(function(naam) { return App._collectProjectFotos(naam); });
+    var fetchPromises = [];
+    alleFotoBronnen.forEach(function(fotos) {
+      fotos.forEach(function(f) {
+        fetchPromises.push(App._fetchImageDataUrl(f.url).then(function(res) {
+          f.dataUrl = res ? res.dataUrl : null;
+          f.w = res ? res.w : 0; f.h = res ? res.h : 0;
+        }));
+      });
     });
-    doc.save('jaarplan_' + new Date().getFullYear() + '.pdf');
-    App.toast('Jaarplan PDF gedownload (' + namen.length + ' projecten).', true);
+    Promise.all(fetchPromises).then(function() {
+      var doc = new jsPDFLib({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      namen.forEach(function(naam, idx) {
+        if (idx > 0) doc.addPage();
+        App._drawFiche(doc, naam, alleFotoBronnen[idx]);
+      });
+      doc.save('jaarplan_' + new Date().getFullYear() + '.pdf');
+      App.toast('Jaarplan PDF gedownload (' + namen.length + ' projecten).', true);
+    });
   },
 
   archiveerProject: function(naam) {
@@ -2920,6 +3021,56 @@ var App = {
       '<div style="font-size:0.75rem;color:var(--zacht)">Totaal ' + totaal + ' activiteiten geregistreerd</div>';
   },
 
+  exportFotoUrls: function() {
+    if (typeof XLSX === 'undefined') { App.toast('XLSX niet beschikbaar.'); return; }
+    var rijen = [['Type', 'Project/Actie', 'Datum', 'Omschrijving', 'URL']];
+    DB.collectief.forEach(function(r) {
+      if (r.fotoUrl) {
+        rijen.push([r.module || 'Collectieve actie', r.naamVanDeActie || '', (r.datum || '').substr(0,10), (r.module || 'Actie') + ' foto', r.fotoUrl]);
+      }
+      (r.uitgaven || []).forEach(function(u) {
+        if (u.bonUrl) {
+          rijen.push(['Uitgave bewijs', r.naamVanDeActie || '', (r.datum || '').substr(0,10), (u.beschrijving || '') + ' \u2014 ' + geldbedrag(u.bedrag), u.bonUrl]);
+        }
+      });
+    });
+    if (rijen.length === 1) { App.toast('Geen foto\'s gevonden in de database.'); return; }
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(rijen);
+    ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 12 }, { wch: 40 }, { wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Foto URLs');
+    XLSX.writeFile(wb, 'foto_urls_' + new Date().toISOString().substr(0,10) + '.xlsx');
+    App.toast((rijen.length - 1) + ' foto-URL\'s geëxporteerd.', true);
+  },
+
+  _dashMedia: function() {
+    var el = document.getElementById('dash-media');
+    if (!el) return;
+    var fotos = [];
+    DB.collectief.forEach(function(r) {
+      if (r.fotoUrl) fotos.push({ type: r.module || 'Actie', naam: r.naamVanDeActie || '', url: r.fotoUrl, label: (r.datum || '').substr(0,10) });
+      (r.uitgaven || []).forEach(function(u) {
+        if (u.bonUrl) fotos.push({ type: 'Bewijs', naam: r.naamVanDeActie || '', url: u.bonUrl, label: (u.beschrijving || '') + ' \u2014 ' + geldbedrag(u.bedrag) });
+      });
+    });
+    if (!fotos.length) {
+      el.innerHTML = '<div style="color:var(--zacht);font-size:0.9rem">Nog geen foto\'s geüpload.</div>';
+      return;
+    }
+    var html = '<div style="font-size:0.85rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' foto\'s gevonden</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    fotos.forEach(function(f) {
+      html += '<div onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(f.url) + '" style="background:var(--bg);border-radius:8px;padding:10px;min-width:110px;max-width:150px;cursor:pointer;border:1px solid #e5e7eb">' +
+        '<div style="font-size:0.68rem;font-weight:700;color:var(--groen);text-transform:uppercase">' + App.esc(f.type) + '</div>' +
+        '<div style="font-size:0.72rem;font-weight:600;color:var(--donker);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(f.naam) + '">' + App.esc(f.naam) + '</div>' +
+        '<div style="font-size:0.68rem;color:var(--zacht);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(f.label) + '</div>' +
+        '<div style="margin-top:6px;font-size:1.4rem;text-align:center">🖼️</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  },
+
   renderDashboard: function() {
     var tsEl = document.getElementById('dash-ts');
     if (tsEl) tsEl.textContent = 'Bijgewerkt: ' + new Date().toLocaleString('nl-BE');
@@ -2940,6 +3091,7 @@ var App = {
     App._dashFinancieel(d);
     App._dashLocaties(d);
     App._dashBuurtType(d);
+    App._dashMedia();
   },
 
   exportDashboardPDF: function() {
