@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok5(data);
     App._dashIndBlok4(data);
     App._dashIndBlok3(data);
     App._dashIndBlok2(data);
@@ -2983,6 +2984,126 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 5: Intensiteit per persoon ── */
+  _maandNaarNummer: function(m) {
+    var map = { 'Januari':0,'Februari':1,'Maart':2,'April':3,'Mei':4,'Juni':5,
+                'Juli':6,'Augustus':7,'September':8,'Oktober':9,'November':10,'December':11 };
+    return map[m] !== undefined ? map[m] : 0;
+  },
+
+  _actieDatum: function(r) {
+    if (!r.jaar) return null;
+    return new Date(r.jaar, App._maandNaarNummer(r.maand || 'Januari'), 1);
+  },
+
+  _statusBadge: function(maandenGeleden) {
+    if (maandenGeleden < 3)  return '<span style="background:var(--groen-licht);color:var(--groen);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">actief</span>';
+    if (maandenGeleden < 12) return '<span style="background:var(--oranje-licht);color:var(--oranje);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">sluimerend</span>';
+    return '<span style="background:#fde8e8;color:var(--rood);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">inactief</span>';
+  },
+
+  _dashIndBlok5: function(data) {
+    var nu = new Date();
+
+    // Laatste actiedatum per persoon (over ALLE data, niet alleen filter)
+    var alleActies = DB.individueel;
+    var laatstePer = {};
+    alleActies.forEach(function(r) {
+      var d = App._actieDatum(r);
+      if (!d) return;
+      var nr = r.persoonNummer;
+      if (!laatstePer[nr] || d > laatstePer[nr]) laatstePer[nr] = d;
+    });
+
+    function maandenGeleden(d) {
+      if (!d) return 999;
+      return (nu.getFullYear() - d.getFullYear()) * 12 + (nu.getMonth() - d.getMonth());
+    }
+
+    // Top 20 uren met statusbadge
+    function renderTop20(elId, teller, sleutel, suffix) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!data.ind.length) { el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
+      var lijst = [];
+      for (var nr in teller) {
+        if (teller.hasOwnProperty(nr)) lijst.push({ nr: parseInt(nr), val: teller[nr] });
+      }
+      lijst.sort(function(a, b) { return b.val - a.val; });
+      lijst = lijst.slice(0, 20);
+      var max = lijst.length ? lijst[0].val : 1;
+      if (max === 0) max = 1;
+      var html = '<div class="dash-bar-lijst">';
+      lijst.forEach(function(it, i) {
+        var p    = data.per.find(function(x) { return x.volgnummer === it.nr; });
+        var naam = p ? ((p.voornaam||'').charAt(0).toUpperCase() + '.' + (p.familienaam||'').charAt(0).toUpperCase() + '.') : 'P#' + it.nr;
+        var mg   = maandenGeleden(laatstePer[it.nr]);
+        var badge = App._statusBadge(mg);
+        var pct  = Math.round((it.val / max) * 100);
+        html += '<div class="dash-bi dash-bi-r">' +
+          '<span class="dash-br">' + (i+1) + '.</span>' +
+          '<span class="dash-bl">' + App.esc(naam) + badge + '</span>' +
+          '<div class="dash-bt"><div class="dash-bf ' + sleutel + '" style="width:' + pct + '%"></div></div>' +
+          '<span class="dash-bv">' + it.val + suffix + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    var urenPer = {};
+    data.ind.forEach(function(r) {
+      if (!urenPer[r.persoonNummer]) urenPer[r.persoonNummer] = 0;
+      urenPer[r.persoonNummer] += App._tijdNaarUren(r.tijd);
+    });
+    var urenAfgerond = {};
+    for (var k in urenPer) { if (urenPer.hasOwnProperty(k)) urenAfgerond[k] = Math.round(urenPer[k] * 10) / 10; }
+    renderTop20('dash-ind-top20-status', urenAfgerond, 'fill-groen', 'u');
+
+    var actiesPer = {};
+    data.ind.forEach(function(r) {
+      actiesPer[r.persoonNummer] = (actiesPer[r.persoonNummer] || 0) + 1;
+    });
+    renderTop20('dash-ind-top20-acties-status', actiesPer, 'fill-blauw', 'x');
+
+    // Sluimerende contacten: minstens 1 actie ooit, geen actie de laatste 6 maanden
+    var elSlui = document.getElementById('dash-ind-sluimerend');
+    if (!elSlui) return;
+    var sluimerend = [];
+    for (var nr in laatstePer) {
+      if (!laatstePer.hasOwnProperty(nr)) continue;
+      var mg2 = maandenGeleden(laatstePer[nr]);
+      if (mg2 >= 6) {
+        var p2 = data.per.find(function(x) { return x.volgnummer === parseInt(nr); });
+        var initialen = p2
+          ? ((p2.voornaam||'').charAt(0).toUpperCase() + '.' + (p2.familienaam||'').charAt(0).toUpperCase() + '.')
+          : 'P#' + nr;
+        var aantalActies = alleActies.filter(function(r) { return r.persoonNummer === parseInt(nr); }).length;
+        sluimerend.push({ nr: parseInt(nr), initialen: initialen, laatste: laatstePer[nr], mg: mg2, acties: aantalActies });
+      }
+    }
+    sluimerend.sort(function(a, b) { return a.mg - b.mg; }); // minst lang sluimerend eerst
+    if (!sluimerend.length) {
+      elSlui.innerHTML = '<div class="dash-leeg">Geen sluimerende contacten.</div>';
+      return;
+    }
+    var html2 = '<table class="dash-hm"><thead><tr>' +
+      '<th>Persoon</th><th>Laatste contact</th><th>Maanden geleden</th><th>Totaal acties</th><th>Status</th>' +
+      '</tr></thead><tbody>';
+    sluimerend.forEach(function(it) {
+      var maand = it.laatste.toLocaleString('nl-BE', { month: 'long', year: 'numeric' });
+      html2 += '<tr>' +
+        '<td style="font-weight:600">' + App.esc(it.initialen) + '</td>' +
+        '<td>' + maand + '</td>' +
+        '<td style="text-align:center">' + it.mg + '</td>' +
+        '<td style="text-align:center">' + it.acties + '</td>' +
+        '<td>' + App._statusBadge(it.mg) + '</td>' +
+        '</tr>';
+    });
+    html2 += '</tbody></table>';
+    elSlui.innerHTML = html2;
   },
 
   /* ── Blok 4: Toeleiding & netwerk ── */
