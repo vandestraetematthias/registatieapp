@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok7(data);
     App._dashIndBlok6(data);
     App._dashIndBlok5(data);
     App._dashIndBlok4(data);
@@ -2985,6 +2986,111 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 7: Samenwerking ── */
+  _dashIndBlok7: function(data) {
+    var collegas = ['MW', 'SHW', 'Woonzorg', 'Brugfiguur'];
+
+    // Filter personen tot diegenen met acties in de periode
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+
+    if (!per.length) {
+      ['dash-ind-gekend-bar','dash-ind-gekend-spread','dash-ind-overlap'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
+      });
+      return;
+    }
+
+    // ── Gekend bij verdeling (bar) ──
+    var gekendTeller = {};
+    collegas.forEach(function(c) { gekendTeller[c] = 0; });
+    per.forEach(function(p) {
+      var vals = p.gekendBij || [];
+      if (!Array.isArray(vals)) vals = [vals];
+      vals.forEach(function(v) { if (gekendTeller.hasOwnProperty(v)) gekendTeller[v]++; });
+    });
+    var maxG = 0;
+    collegas.forEach(function(c) { if (gekendTeller[c] > maxG) maxG = gekendTeller[c]; });
+    if (maxG === 0) maxG = 1;
+    var fillKleuren = { 'MW': 'fill-groen', 'SHW': 'fill-blauw', 'Woonzorg': 'fill-oranje', 'Brugfiguur': 'fill-paars' };
+    var html = '<div class="dash-bar-lijst">';
+    collegas.forEach(function(c) {
+      var v = gekendTeller[c];
+      var pct = Math.round((v / maxG) * 100);
+      html += '<div class="dash-bi">' +
+        '<span class="dash-bl">' + c + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf ' + (fillKleuren[c] || 'fill-groen') + '" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + v + '</span>' +
+        '</div>';
+    });
+    html += '</div>';
+    var elBar = document.getElementById('dash-ind-gekend-bar');
+    if (elBar) elBar.innerHTML = html;
+
+    // ── Spreiding: aantal collega's per persoon ──
+    var spreadTeller = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0 };
+    per.forEach(function(p) {
+      var vals = (p.gekendBij || []).filter(function(v) { return collegas.indexOf(v) !== -1; });
+      var n = String(Math.min(vals.length, 4));
+      spreadTeller[n]++;
+    });
+    var spreadItems = [
+      { label: '0 collega\'s', value: spreadTeller['0'] },
+      { label: '1 collega',    value: spreadTeller['1'] },
+      { label: '2 collega\'s', value: spreadTeller['2'] },
+      { label: '3 collega\'s', value: spreadTeller['3'] },
+      { label: '4 collega\'s', value: spreadTeller['4'] }
+    ].filter(function(it) { return it.value > 0; });
+    App._renderBars('dash-ind-gekend-spread', spreadItems, 'fill-groen2', false);
+
+    // ── Overlapmatrix ──
+    var elOverlap = document.getElementById('dash-ind-overlap');
+    if (!elOverlap) return;
+
+    // Diagonaal = totaal per collega; off-diagonaal = pairwise overlap
+    var matrix = {};
+    collegas.forEach(function(a) {
+      matrix[a] = {};
+      collegas.forEach(function(b) { matrix[a][b] = 0; });
+    });
+    per.forEach(function(p) {
+      var vals = (p.gekendBij || []).filter(function(v) { return collegas.indexOf(v) !== -1; });
+      vals.forEach(function(a) {
+        vals.forEach(function(b) { matrix[a][b]++; });
+      });
+    });
+
+    var maxM = 0;
+    collegas.forEach(function(a) {
+      collegas.forEach(function(b) { if (matrix[a][b] > maxM) maxM = matrix[a][b]; });
+    });
+    if (maxM === 0) maxM = 1;
+
+    var html2 = '<table class="dash-hm"><thead><tr><th></th>';
+    collegas.forEach(function(c) { html2 += '<th>' + c + '</th>'; });
+    html2 += '</tr></thead><tbody>';
+    collegas.forEach(function(a) {
+      html2 += '<tr><td style="font-weight:600">' + a + '</td>';
+      collegas.forEach(function(b) {
+        var v = matrix[a][b];
+        if (v === 0) {
+          html2 += '<td style="text-align:center;color:#ccc">—</td>';
+        } else if (a === b) {
+          // Diagonaal: totaal
+          html2 += '<td><span class="dash-hmc" style="background:var(--groen-licht);color:var(--groen)">' + v + '</span></td>';
+        } else {
+          var int = Math.round(219 - (v / maxM) * 160);
+          html2 += '<td><span class="dash-hmc" style="background:rgb(' + int + ',' + Math.round(int * 0.7) + ',' + Math.round(int * 1.1) + ')">' + v + '</span></td>';
+        }
+      });
+      html2 += '</tr>';
+    });
+    html2 += '</tbody></table>';
+    elOverlap.innerHTML = html2;
   },
 
   /* ── Blok 6: Evolutie in tijd ── */
