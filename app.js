@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok3(data);
     App._dashIndBlok2(data);
     App._dashIndBlok1(data);
   },
@@ -2981,6 +2982,65 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 3: Wat doe je? ── */
+  _dashIndBlok3: function(data) {
+    // Levensdomeinen heatmap met extra kolom: gemiddelde tijdsinvestering
+    var elLd = document.getElementById('dash-ind-levensdomeinen');
+    if (elLd) {
+      if (!data.ind.length) {
+        elLd.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
+      } else {
+        var teller = App._telVeld(data.ind, 'levensdomein');
+        var sorted = App._sortTeller(teller, 'count');
+        if (!sorted.length) {
+          elLd.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
+        } else {
+          var maxC = sorted[0].data.count || 1;
+          var maxU = 0;
+          sorted.forEach(function(it) { if (it.data.uren > maxU) maxU = it.data.uren; });
+          if (maxU === 0) maxU = 1;
+          var html = '<table class="dash-hm"><thead><tr>' +
+            '<th>Domein</th><th>Contacten</th><th>Uren</th><th>Gem. tijd</th>' +
+            '</tr></thead><tbody>';
+          sorted.forEach(function(it) {
+            var pc = it.data.count / maxC;
+            var pu = it.data.uren / maxU;
+            var gr = 'rgb(' + Math.round(216 - pc*171) + ',' + Math.round(243 - pc*137) + ',' + Math.round(220 - pc*141) + ')';
+            var bl = 'rgb(' + Math.round(219 - pu*193) + ',' + Math.round(234 - pu*148) + ',' + Math.round(251 - pu*91) + ')';
+            var uren = Math.round(it.data.uren * 10) / 10;
+            var gem  = it.data.count ? Math.round((it.data.uren / it.data.count) * 10) / 10 : 0;
+            html += '<tr>' +
+              '<td>' + App.esc(it.label) + '</td>' +
+              '<td><span class="dash-hmc" style="background:' + gr + '">' + it.data.count + '</span></td>' +
+              '<td><span class="dash-hmc" style="background:' + bl + '">' + uren + 'u</span></td>' +
+              '<td><span class="dash-hmc" style="background:#f3f4f6">' + gem + 'u</span></td>' +
+              '</tr>';
+          });
+          html += '</tbody></table>';
+          elLd.innerHTML = html;
+        }
+      }
+    }
+
+    // Top 10 combinaties levensdomein + methodiek
+    var comboTeller = {};
+    data.ind.forEach(function(r) {
+      var ld = r.levensdomein || [];
+      var me = r.methodiek    || [];
+      if (!Array.isArray(ld)) ld = [ld];
+      if (!Array.isArray(me)) me = [me];
+      ld.forEach(function(d) {
+        me.forEach(function(m) {
+          if (!d || !m) return;
+          var sleutel = d + ' + ' + m;
+          comboTeller[sleutel] = (comboTeller[sleutel] || 0) + 1;
+        });
+      });
+    });
+    var comboItems = App._sortObjCount(comboTeller).slice(0, 10);
+    App._renderBars('dash-ind-combo-lm', comboItems, 'fill-groen2', true);
   },
 
   /* ── Blok 2: Hoe kom je bij mensen? ── */
