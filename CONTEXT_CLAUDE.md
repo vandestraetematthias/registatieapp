@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 2.9.5 | **Datum**: 2026-04-25
+**Versie**: 2.9.6 | **Datum**: 2026-04-25
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v2.9.5`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v2.9.6`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -249,6 +249,12 @@ Sleutelmethoden:
 - `App._nominatim(adres, cb)` — Nominatim API (`countrycodes=be`, vereiste `User-Agent` header)
 - `App._haversine(lat1,lon1,lat2,lon2)` — Afstand in km
 
+**GPS start in wizardstap 1** (v2.9.6):
+- `ia-s1` en `ca-s1` hebben elk een `<div class="fiets-gps-start">` met:
+  - `{prefix}-gps-start-btn` — knop "🚲 Start fietsrit", wordt groen en toont "Rit klaar: X km" na stop
+  - `{prefix}-gps-km-teller` — live km-display in de wizard (verborgen totdat GPS loopt)
+- `startGps(prefix)` update ook de wizard-teller; `stopGps(prefix)` reset de widget
+
 **GPS floating badge**: `#gps-badge` — zichtbaar tijdens live tracking, toont lopende km.
 
 **Adressen en favorieten** (localStorage):
@@ -256,11 +262,22 @@ Sleutelmethoden:
 - `App._getFietsFavs()` — standaard: Buurthuis Venning + Stadhuis Leuven; opgeslagen in `bwv_fiets_favs`
 - `App._fietsInput(prefix, veld)` / `_kiesSuggestie(prefix, veld, adres)` — live dropdown
 
-**Fietsvergoeding sectie in wizards**:
-- Zowel `ia-s3` (IA wizard stap 3) als `ca-s3` (CA wizard stap 3) hebben een `<div class="fiets-sectie">` met toggle-knop
-- Prefix `'ia'` of `'ca'` bepaalt welke DOM-IDs gebruikt worden (bv. `ia-fiets-van`, `ca-fiets-km`)
+**Fietsvergoeding sectie in wizards** (stap 3):
+- Zowel `ia-s3` als `ca-s3` hebben `<div class="fiets-sectie">` met toggle-knop
+- **Multi-stop route** (v2.9.6): `{prefix}-fiets-stops` container gevuld door `_fietsRenderStops(prefix)`
+  - Stops opgeslagen in `App._fietsStops = { ia: ['',''], ca: ['',''] }`
+  - `_fietsVoegStopToe(prefix)` voegt tussenstop in voor Naar
+  - `_fietsVerwijderStop(prefix, idx)` verwijdert tussenstop
+  - `_fietsInput2(prefix, idx)` / `_kiesSuggestie2(prefix, idx, adres)` — suggesties per stop
+- **Auto-invulling** (v2.9.6): `_fietsAutoVulbestemming(prefix)`:
+  - IA: vult Naar met `State.gekozenPersoon.adres`; Van met eerste favoriet
+  - CA: vult Naar met actienaam (`ca-naam` veld)
+- `_vulFietsSamenvatting(prefix)` — aangeroepen vanuit `iaStap(3)` / `caStap(3)`:
+  - Rendert stops, vult favorieten, auto-vult bestemming
+  - Als GPS actief was: vult km in, toont GPS-samenvatting, opent sectie automatisch
 - Tarief: `0.2287` €/km
-- `App.slaFietsRitOp(prefix)` — slaat rit op in `DB.fietsritten`, reset sectie
+- `berekenAfstand(prefix)` leest Van/Naar uit `_fietsStops` (niet meer uit vaste `{prefix}-fiets-van/naar` inputs)
+- `App.slaFietsRitOp(prefix)` — leest stops uit DOM, bouwt `via` uit tussenstops, slaat rit op
 
 **Logboek** (`pg-fiets-logboek`):
 - `App.renderFietsLogboek()` — rendert gefilterde tabel
@@ -370,12 +387,18 @@ Score 0–3 per persoon, 1 punt per criterium:
 - Divider: `dash-divider`
 - Leeg: `dash-leeg`
 
-**Fietsritten CSS-klassen (v2.9.5)**:
+**Fietsritten CSS-klassen (v2.9.5 + v2.9.6)**:
 - `gps-badge` — fixed positie (rechtsonder), groen, pulserende animatie tijdens GPS
+- `fiets-gps-start`, `fiets-gps-start-btn` — GPS widget in stap 1 (dashed groen, actief = gevuld groen)
+- `fiets-gps-km-teller`, `fiets-gps-stop-mini` — live km-teller in wizard + stop-knopje
+- `fiets-gps-sam` — GPS samenvatting blok in stap 3 (groen, toont bijgehouden km)
 - `fiets-sectie`, `fiets-toggle`, `fiets-inhoud` — inklapbare fietsvergoeding sectie
+- `fiets-stop-rij`, `fiets-stop-label`, `fiets-stop-del-btn` — multi-stop route rijen
+- `fiets-extra-stop-btn` — blauw "+ Extra stop" knop
+- `fiets-auto-btn` — oranje "🔄 Vul bestemming in" knop
 - `fiets-input`, `fiets-sug`, `fiets-sug-item` — adresinvoer met dropdown suggesties
 - `fiets-favs`, `fiets-fav-btn` — favoriete adressen knoppen
-- `fiets-btn-gps`, `fiets-btn-route` — actieknoppen GPS / bereken route
+- `fiets-btn-route` — bereken route knop
 - `fiets-result`, `fiets-km-input`, `fiets-totaal` — resultaatbalk km × tarief
 - `fiets-sla-btn` — opslaan knop (verborgen tot km ingevuld)
 - `fiets-log-tabel`, `fiets-kop-btn`, `fiets-del-btn` — logboek tabel + knoppen
@@ -463,6 +486,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v2.9.6` | GPS in wizardstap 1 met live km-teller, multi-stop route (+Extra stop), auto-invulling bestemming |
 | `v2.9.5` | Fietsritten module: GPS tracking, Nominatim/OSRM routeberekening, logboek, Rydoo-export |
 | `v2.9.4` | Individueel dashboard volledig vernieuwd: 9 blokken + drill-down N1/N2 |
 | `v2.9.3` | 8 nieuwe analyseblokken individueel dashboard + filterbar (backup-tag: `v2.9.3-backup`) |
