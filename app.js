@@ -2907,6 +2907,48 @@ _collectProjectFotos: function(naam) {
     App._renderBars('dash-methodiek-ind', items, 'fill-paars', false);
   },
 
+  /* ── Individueel sectie-filter ── */
+  _dashIndVulFilters: function() {
+    var jaarEl  = document.getElementById('dash-ind-jaar');
+    var maandEl = document.getElementById('dash-ind-maand');
+    if (!jaarEl || !maandEl) return;
+
+    // Jaar: huidig jaar en 2 vorige jaren
+    var huidigJaar = new Date().getFullYear();
+    var huidigVal  = jaarEl.value || String(huidigJaar);
+    var jHtml = '';
+    for (var j = huidigJaar; j >= huidigJaar - 2; j--) {
+      jHtml += '<option value="' + j + '"' + (String(j) === huidigVal ? ' selected' : '') + '>' + j + '</option>';
+    }
+    jaarEl.innerHTML = jHtml;
+
+    // Maand: alle 12 maanden
+    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+    var huidigMaand = maandEl.value;
+    var mHtml = '<option value="">Alle maanden</option>';
+    maanden.forEach(function(m) {
+      mHtml += '<option value="' + m + '"' + (m === huidigMaand ? ' selected' : '') + '>' + m + '</option>';
+    });
+    maandEl.innerHTML = mHtml;
+  },
+
+  _dashIndData: function() {
+    var jaarEl  = document.getElementById('dash-ind-jaar');
+    var maandEl = document.getElementById('dash-ind-maand');
+    var jaarFilter  = jaarEl  ? jaarEl.value  : '';
+    var maandFilter = maandEl ? maandEl.value : '';
+    var ind = DB.individueel.filter(function(r) {
+      if (jaarFilter  && String(r.jaar) !== jaarFilter)  return false;
+      if (maandFilter && r.maand !== maandFilter)         return false;
+      return true;
+    });
+    return { per: DB.personen, ind: ind };
+  },
+
+  _dashIndRender: function() {
+    // Wordt uitgebreid in Stap 4 t.e.m. Stap 11 met de 8 nieuwe analyseblokken.
+  },
+
   _dashClusterBereik: function(d) {
     var teller = {};
     d.col.forEach(function(r) {
@@ -3302,6 +3344,8 @@ _collectProjectFotos: function(naam) {
     if (tsEl) tsEl.textContent = 'Bijgewerkt: ' + new Date().toLocaleString('nl-BE');
     App._dashVulJaarFilter();
     App._dashVulMaandFilter();
+    App._dashIndVulFilters();
+    App._dashIndRender();
     var d = App._dashData();
     App._dashKPI(d);
     App._dashTop20(d);
