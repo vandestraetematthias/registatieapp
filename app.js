@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok4(data);
     App._dashIndBlok3(data);
     App._dashIndBlok2(data);
     App._dashIndBlok1(data);
@@ -2982,6 +2983,84 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 4: Toeleiding & netwerk ── */
+  _dashIndBlok4: function(data) {
+    // Prominente metric: % acties met toeleiding
+    var elRatio = document.getElementById('dash-ind-toel-ratio');
+    if (elRatio) {
+      var metToel = data.ind.filter(function(r) { return (r.toeleiding || []).length > 0; }).length;
+      var totaal  = data.ind.length;
+      var pct     = totaal ? Math.round((metToel / totaal) * 100) : 0;
+      elRatio.innerHTML = '<strong>' + pct + '%</strong> van de acties leidde tot een doorverwijzing' +
+        ' <span style="color:var(--zacht);font-size:0.85em">(' + metToel + ' van ' + totaal + ' acties)</span>';
+    }
+
+    // Toeleiding balkgrafiek
+    var teller  = App._telVeld(data.ind, 'toeleiding');
+    var sorted  = App._sortTeller(teller, 'count');
+    App._renderBars('dash-ind-toeleiding',
+      sorted.map(function(it) { return { label: it.label, value: it.data.count }; }),
+      'fill-oranje', false);
+
+    // Kruistabel: rijen = levensdomeinen, kolommen = toeleiding-organisaties
+    var elKruis = document.getElementById('dash-ind-toel-kruis');
+    if (!elKruis) return;
+    if (!data.ind.length) { elKruis.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
+
+    var domeinen = {}, orgs = {}, matrix = {};
+    data.ind.forEach(function(r) {
+      var ld = r.levensdomein || [];
+      var tl = r.toeleiding   || [];
+      if (!Array.isArray(ld)) ld = [ld];
+      if (!Array.isArray(tl)) tl = [tl];
+      ld.forEach(function(d) {
+        if (!d) return;
+        domeinen[d] = true;
+        tl.forEach(function(o) {
+          if (!o) return;
+          orgs[o] = true;
+          var sleutel = d + '||' + o;
+          matrix[sleutel] = (matrix[sleutel] || 0) + 1;
+        });
+      });
+    });
+
+    var domLijst = Object.keys(domeinen).sort();
+    var orgLijst = Object.keys(orgs).sort();
+    if (!domLijst.length || !orgLijst.length) {
+      elKruis.innerHTML = '<div class="dash-leeg">Geen kruisdata beschikbaar.</div>';
+      return;
+    }
+
+    var maxVal = 0;
+    domLijst.forEach(function(d) {
+      orgLijst.forEach(function(o) {
+        var v = matrix[d + '||' + o] || 0;
+        if (v > maxVal) maxVal = v;
+      });
+    });
+    if (maxVal === 0) maxVal = 1;
+
+    var html = '<table class="dash-hm"><thead><tr><th>Domein</th>';
+    orgLijst.forEach(function(o) { html += '<th>' + App.esc(o) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    domLijst.forEach(function(d) {
+      html += '<tr><td style="font-weight:600">' + App.esc(d) + '</td>';
+      orgLijst.forEach(function(o) {
+        var v = matrix[d + '||' + o] || 0;
+        if (v === 0) {
+          html += '<td style="text-align:center;color:#ccc">—</td>';
+        } else {
+          var int = Math.round(200 - (v / maxVal) * 155);
+          html += '<td><span class="dash-hmc" style="background:rgb(' + int + ',' + Math.round(int * 0.6) + ',50);color:white">' + v + '</span></td>';
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    elKruis.innerHTML = html;
   },
 
   /* ── Blok 3: Wat doe je? ── */
