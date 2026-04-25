@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok6(data);
     App._dashIndBlok5(data);
     App._dashIndBlok4(data);
     App._dashIndBlok3(data);
@@ -2984,6 +2985,89 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 6: Evolutie in tijd ── */
+  _dashIndBlok6: function(data) {
+    var maanden = ['Januari','Februari','Maart','April','Mei','Juni',
+                   'Juli','Augustus','September','Oktober','November','December'];
+    var jaarEl = document.getElementById('dash-ind-jaar');
+    var huidigJaar = jaarEl && jaarEl.value ? parseInt(jaarEl.value) : new Date().getFullYear();
+    var vorigJaar  = huidigJaar - 1;
+
+    // ── Nieuwe personen per maand (op basis van aangemaakt-datum) ──
+    var elNieuw = document.getElementById('dash-ind-nieuwe-per-maand');
+    if (elNieuw) {
+      var nieuwPerMaand = {};
+      maanden.forEach(function(m) { nieuwPerMaand[m] = 0; });
+      DB.personen.forEach(function(p) {
+        if (!p.aangemaakt) return;
+        var d = new Date(p.aangemaakt);
+        if (d.getFullYear() !== huidigJaar) return;
+        var mn = maanden[d.getMonth()];
+        nieuwPerMaand[mn] = (nieuwPerMaand[mn] || 0) + 1;
+      });
+      var maxN = 0;
+      maanden.forEach(function(m) { if (nieuwPerMaand[m] > maxN) maxN = nieuwPerMaand[m]; });
+      if (maxN === 0) maxN = 1;
+      var html = '<div class="dash-bar-lijst">';
+      maanden.forEach(function(m) {
+        var v   = nieuwPerMaand[m];
+        var pct = Math.round((v / maxN) * 100);
+        var lbl = m.substring(0, 3);
+        html += '<div class="dash-bi">' +
+          '<span class="dash-bl" style="min-width:32px">' + lbl + '</span>' +
+          '<div class="dash-bt"><div class="dash-bf fill-groen" style="width:' + pct + '%"></div></div>' +
+          '<span class="dash-bv">' + v + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+      elNieuw.innerHTML = html;
+    }
+
+    // ── Acties per maand: huidig jaar (balk) vs vorig jaar (grijze balk eronder) ──
+    var elActies = document.getElementById('dash-ind-acties-per-maand');
+    if (elActies) {
+      var huidigPerMaand = {};
+      var vorigPerMaand  = {};
+      maanden.forEach(function(m) { huidigPerMaand[m] = 0; vorigPerMaand[m] = 0; });
+      DB.individueel.forEach(function(r) {
+        if (!r.jaar || !r.maand) return;
+        if (r.jaar === huidigJaar && huidigPerMaand.hasOwnProperty(r.maand)) huidigPerMaand[r.maand]++;
+        if (r.jaar === vorigJaar  && vorigPerMaand.hasOwnProperty(r.maand))  vorigPerMaand[r.maand]++;
+      });
+      var maxA = 0;
+      maanden.forEach(function(m) {
+        if (huidigPerMaand[m] > maxA) maxA = huidigPerMaand[m];
+        if (vorigPerMaand[m]  > maxA) maxA = vorigPerMaand[m];
+      });
+      if (maxA === 0) maxA = 1;
+      var html2 = '<div style="font-size:0.65rem;color:var(--zacht);margin-bottom:6px;display:flex;gap:12px">' +
+        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--blauw);margin-right:3px"></span>' + huidigJaar + '</span>' +
+        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c8d0dc;margin-right:3px"></span>' + vorigJaar + '</span>' +
+        '</div><div class="dash-bar-lijst">';
+      maanden.forEach(function(m) {
+        var h   = huidigPerMaand[m];
+        var v   = vorigPerMaand[m];
+        var ph  = Math.round((h / maxA) * 100);
+        var pv  = Math.round((v / maxA) * 100);
+        var lbl = m.substring(0, 3);
+        html2 += '<div style="margin-bottom:3px">' +
+          '<div class="dash-bi">' +
+            '<span class="dash-bl" style="min-width:32px">' + lbl + '</span>' +
+            '<div class="dash-bt"><div class="dash-bf fill-blauw" style="width:' + ph + '%"></div></div>' +
+            '<span class="dash-bv">' + h + '</span>' +
+          '</div>' +
+          '<div class="dash-bi" style="opacity:0.55">' +
+            '<span class="dash-bl" style="min-width:32px"></span>' +
+            '<div class="dash-bt"><div class="dash-bf" style="width:' + pv + '%;background:#c8d0dc"></div></div>' +
+            '<span class="dash-bv">' + v + '</span>' +
+          '</div>' +
+        '</div>';
+      });
+      html2 += '</div>';
+      elActies.innerHTML = html2;
+    }
   },
 
   /* ── Blok 5: Intensiteit per persoon ── */
