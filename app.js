@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok8(data);
     App._dashIndBlok7(data);
     App._dashIndBlok6(data);
     App._dashIndBlok5(data);
@@ -2986,6 +2987,111 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 8: Kwetsbaarheid & nood ── */
+  _dashIndBlok8: function(data) {
+    var kwetsbaarInkomen   = ['Leefloon', 'Geen inkomen', 'Invaliditeit', 'Werkloosheid'];
+    var kwetsbaarHuisvest  = ['Dak/Thuisloos', 'Begeleid wonen', 'Housing First'];
+
+    // Filter personen tot diegenen met acties in de periode
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+
+    if (!per.length) {
+      ['dash-ind-kwets-dist','dash-ind-kwets-top10'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
+      });
+      return;
+    }
+
+    // Unieke levensdomeinen per persoon in de gefilterde periode
+    var domeinenPerPersoon = {};
+    data.ind.forEach(function(r) {
+      var ld = r.levensdomein || [];
+      if (!Array.isArray(ld)) ld = [ld];
+      if (!domeinenPerPersoon[r.persoonNummer]) domeinenPerPersoon[r.persoonNummer] = {};
+      ld.forEach(function(d) { if (d) domeinenPerPersoon[r.persoonNummer][d] = true; });
+    });
+
+    // Bereken score per persoon
+    var scores = [];
+    per.forEach(function(p) {
+      var score = 0;
+      var reden = [];
+
+      // 1. Kwetsbaar inkomen
+      var ink = p.inkomen || [];
+      if (!Array.isArray(ink)) ink = [ink];
+      var heeftKwetsbaarInkomen = ink.some(function(v) { return kwetsbaarInkomen.indexOf(v) !== -1; });
+      if (heeftKwetsbaarInkomen) { score++; reden.push('Laag inkomen'); }
+
+      // 2. Precaire huisvesting
+      var huis = p.huisvesting || [];
+      if (!Array.isArray(huis)) huis = [huis];
+      var heeftPrecaireHuisvest = huis.some(function(v) { return kwetsbaarHuisvest.indexOf(v) !== -1; });
+      if (heeftPrecaireHuisvest) { score++; reden.push('Precaire huisvesting'); }
+
+      // 3. Acties in 3+ levensdomeinen
+      var domeinen = Object.keys(domeinenPerPersoon[p.volgnummer] || {});
+      if (domeinen.length >= 3) { score++; reden.push(domeinen.length + ' levensdomeinen'); }
+
+      var initialen = (p.voornaam || '').charAt(0).toUpperCase() + '.' +
+                      (p.familienaam || '').charAt(0).toUpperCase() + '.';
+      scores.push({ initialen: initialen, score: score, reden: reden, domeinen: domeinen });
+    });
+
+    // Verdeling 0-3
+    var dist = { '0': 0, '1': 0, '2': 0, '3': 0 };
+    scores.forEach(function(s) { dist[String(s.score)]++; });
+    var scoreKleuren = { '0': 'fill-groen', '1': 'fill-oranje', '2': 'fill-rood', '3': 'fill-rood' };
+    var scoreLbls    = { '0': 'Score 0 — niet kwetsbaar', '1': 'Score 1 — licht kwetsbaar', '2': 'Score 2 — matig kwetsbaar', '3': 'Score 3 — hoog kwetsbaar' };
+    var distItems = ['0','1','2','3'].map(function(k) {
+      return { label: 'Score ' + k, value: dist[k] };
+    }).filter(function(it) { return it.value > 0; });
+    App._renderBars('dash-ind-kwets-dist', distItems.map(function(it, i) {
+      return { label: it.label, value: it.value };
+    }), 'fill-oranje', false);
+
+    // Legenda
+    var elLeg = document.getElementById('dash-ind-kwets-legenda');
+    if (elLeg) {
+      elLeg.innerHTML = Object.keys(scoreLbls).map(function(k) {
+        return '<div>' + scoreLbls[k] + ': <strong>' + (dist[k] || 0) + ' personen</strong></div>';
+      }).join('') +
+      '<div style="margin-top:6px">Criteria: laag inkomen · precaire huisvesting · ≥3 levensdomeinen</div>';
+    }
+
+    // Top 10 hoogste score
+    var elTop = document.getElementById('dash-ind-kwets-top10');
+    if (!elTop) return;
+    var top10 = scores.slice().sort(function(a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.domeinen.length - a.domeinen.length;
+    }).slice(0, 10);
+
+    if (!top10.length) { elTop.innerHTML = '<div class="dash-leeg">Geen data.</div>'; return; }
+
+    var scoreAchtergrond = ['var(--groen-licht)','var(--oranje-licht)','#fde8e8','#fde8e8'];
+    var scoreTekst       = ['var(--groen)','var(--oranje)','var(--rood)','var(--rood)'];
+    var html = '<table class="dash-hm"><thead><tr>' +
+      '<th>#</th><th>Initialen</th><th>Score</th><th>Actieve domeinen</th><th>Factoren</th>' +
+      '</tr></thead><tbody>';
+    top10.forEach(function(it, i) {
+      var bg  = scoreAchtergrond[it.score] || '#f3f4f6';
+      var clr = scoreTekst[it.score]       || 'var(--tekst)';
+      html += '<tr>' +
+        '<td style="color:var(--zacht);font-size:0.7rem">' + (i+1) + '</td>' +
+        '<td style="font-weight:700">' + App.esc(it.initialen) + '</td>' +
+        '<td><span class="dash-hmc" style="background:' + bg + ';color:' + clr + ';font-weight:700">' + it.score + '/3</span></td>' +
+        '<td style="font-size:0.7rem">' + App.esc(it.domeinen.join(', ') || '—') + '</td>' +
+        '<td style="font-size:0.7rem;color:var(--zacht)">' + App.esc(it.reden.join(', ') || '—') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    elTop.innerHTML = html;
   },
 
   /* ── Blok 7: Samenwerking ── */
