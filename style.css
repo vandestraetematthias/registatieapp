@@ -1189,6 +1189,62 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 @media (hover: hover) { .fiets-sla-btn:hover { filter: brightness(1.08); } }
 
+/* GPS start widget (stap 1) */
+.fiets-gps-start { margin: 14px 0 0; }
+.fiets-gps-start-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 11px 16px; border-radius: 12px;
+  border: 2px dashed var(--groen); color: var(--groen);
+  background: var(--groen-licht); font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.fiets-gps-start-btn.actief {
+  border-style: solid; background: var(--groen); color: #fff;
+}
+.fiets-gps-km-teller {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--groen-licht);
+  border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+  color: var(--groen); margin-top: 6px;
+}
+.fiets-gps-stop-mini {
+  margin-left: auto; padding: 4px 12px; border-radius: 6px;
+  border: none; background: var(--rood); color: #fff;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+}
+
+/* GPS samenvatting in stap 3 */
+.fiets-gps-sam {
+  padding: 8px 12px; background: var(--groen-licht); border-radius: 10px;
+  font-size: 0.85rem; color: var(--groen); margin-bottom: 10px;
+}
+
+/* Multi-stop route */
+.fiets-stop-rij {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;
+}
+.fiets-stop-label {
+  min-width: 38px; font-size: 0.75rem; font-weight: 700;
+  color: var(--zacht); padding-top: 10px; text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.fiets-stop-del-btn {
+  flex-shrink: 0; padding: 8px 10px; border: none; background: none;
+  color: var(--rood); font-size: 0.9rem; cursor: pointer; line-height: 1;
+}
+.fiets-extra-stop-btn {
+  padding: 6px 14px; border-radius: 8px;
+  border: 1.5px solid var(--blauw); color: var(--blauw);
+  background: var(--blauw-licht); font-size: 0.82rem;
+  font-weight: 600; cursor: pointer;
+}
+.fiets-auto-btn {
+  padding: 6px 14px; border-radius: 8px;
+  border: 1.5px solid var(--oranje); color: var(--oranje);
+  background: var(--oranje-licht); font-size: 0.82rem;
+  font-weight: 600; cursor: pointer;
+}
+
 /* Logboek */
 .fiets-log-teller {
   font-size: 0.82rem; font-weight: 600; color: var(--zacht); margin-bottom: 4px;

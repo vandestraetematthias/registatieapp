@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.9.5">
+<link rel="stylesheet" href="style.css?v=2.9.6">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -373,6 +373,17 @@
         <button class="toevoeg-btn" onclick="App.nav('pg-persoon-wiz')">➕ Nieuwe persoon registreren</button>
       </div>
 
+      <!-- 🚲 GPS FIETSRIT START -->
+      <div class="fiets-gps-start">
+        <button type="button" class="fiets-gps-start-btn" id="ia-gps-start-btn" onclick="App.toggleGps('ia')">
+          🚲 Start fietsrit
+        </button>
+        <div class="fiets-gps-km-teller" id="ia-gps-km-teller" style="display:none">
+          📍 <span id="ia-gps-km-val">0,0</span> km — rit loopt…
+          <button type="button" class="fiets-gps-stop-mini" onclick="App.stopGps('ia')">⏹ Stop</button>
+        </div>
+      </div>
+
       <div class="navigatie">
         <span class="stap-teller">Stap 1 / 3</span>
         <button class="btn-volgende blauw" onclick="App.iaStap(2)">Verder →</button>
@@ -510,31 +521,22 @@
       <!-- 🚲 FIETSVERGOEDING -->
       <div class="fiets-sectie">
         <button type="button" class="fiets-toggle" onclick="App.toggleFiets('ia')">
-          🚲 Fietsvergoeding toevoegen
+          🚲 Fietsvergoeding
           <span class="fiets-toggle-badge" id="ia-fiets-badge" style="display:none">✓</span>
           <span class="fiets-toggle-pijl" id="ia-fiets-pijl">▼</span>
         </button>
         <div id="ia-fiets-inhoud" class="fiets-inhoud" style="display:none">
-          <div class="fiets-rij">
-            <div class="vraag-label">Van</div>
-            <div class="fiets-input-wrap">
-              <input type="text" id="ia-fiets-van" class="fiets-input" placeholder="Startadres…"
-                     oninput="App._fietsInput('ia','van')" autocomplete="off">
-              <div id="ia-fiets-van-sug" class="fiets-sug" style="display:none"></div>
-            </div>
+          <div class="fiets-gps-sam" id="ia-fiets-gps-sam" style="display:none">
+            📍 GPS bijgehouden: <strong id="ia-fiets-gps-km-lbl">0,0</strong> km
           </div>
-          <div class="fiets-rij">
-            <div class="vraag-label">Naar</div>
-            <div class="fiets-input-wrap">
-              <input type="text" id="ia-fiets-naar" class="fiets-input" placeholder="Eindadres…"
-                     oninput="App._fietsInput('ia','naar')" autocomplete="off">
-              <div id="ia-fiets-naar-sug" class="fiets-sug" style="display:none"></div>
-            </div>
+          <div class="vraag-label" style="margin-bottom:6px">Route</div>
+          <div id="ia-fiets-stops"></div>
+          <div style="display:flex;gap:8px;margin:8px 0 4px">
+            <button type="button" class="fiets-extra-stop-btn" onclick="App._fietsVoegStopToe('ia')">+ Extra stop</button>
+            <button type="button" class="fiets-auto-btn" onclick="App._fietsAutoVulbestemming('ia')">🔄 Vul bestemming in</button>
           </div>
           <div id="ia-fiets-favs" class="fiets-favs"></div>
           <div class="fiets-actie-rij">
-            <button type="button" class="fiets-btn-gps" id="ia-fiets-gps-btn" onclick="App.toggleGps('ia')">📍 GPS starten</button>
-            <span class="fiets-of-lbl">of</span>
             <button type="button" class="fiets-btn-route" id="ia-fiets-bereken" onclick="App.berekenAfstand('ia')">🗺 Bereken route</button>
           </div>
           <div class="fiets-result">
@@ -655,6 +657,17 @@
         <div class="vraag-label">Naam van de actie <span class="verplicht">*</span></div>
         <input type="text" id="ca-naam" placeholder="Bijv. Buurtbarbecue Venning 2024" autocapitalize="sentences">
         <div id="ca-naam-suggesties" style="margin-top:8px"></div>
+      </div>
+
+      <!-- 🚲 GPS FIETSRIT START -->
+      <div class="fiets-gps-start">
+        <button type="button" class="fiets-gps-start-btn" id="ca-gps-start-btn" onclick="App.toggleGps('ca')">
+          🚲 Start fietsrit
+        </button>
+        <div class="fiets-gps-km-teller" id="ca-gps-km-teller" style="display:none">
+          📍 <span id="ca-gps-km-val">0,0</span> km — rit loopt…
+          <button type="button" class="fiets-gps-stop-mini" onclick="App.stopGps('ca')">⏹ Stop</button>
+        </div>
       </div>
 
       <div class="navigatie">
@@ -792,31 +805,22 @@
       <!-- 🚲 FIETSVERGOEDING -->
       <div class="fiets-sectie">
         <button type="button" class="fiets-toggle" onclick="App.toggleFiets('ca')">
-          🚲 Fietsvergoeding toevoegen
+          🚲 Fietsvergoeding
           <span class="fiets-toggle-badge" id="ca-fiets-badge" style="display:none">✓</span>
           <span class="fiets-toggle-pijl" id="ca-fiets-pijl">▼</span>
         </button>
         <div id="ca-fiets-inhoud" class="fiets-inhoud" style="display:none">
-          <div class="fiets-rij">
-            <div class="vraag-label">Van</div>
-            <div class="fiets-input-wrap">
-              <input type="text" id="ca-fiets-van" class="fiets-input" placeholder="Startadres…"
-                     oninput="App._fietsInput('ca','van')" autocomplete="off">
-              <div id="ca-fiets-van-sug" class="fiets-sug" style="display:none"></div>
-            </div>
+          <div class="fiets-gps-sam" id="ca-fiets-gps-sam" style="display:none">
+            📍 GPS bijgehouden: <strong id="ca-fiets-gps-km-lbl">0,0</strong> km
           </div>
-          <div class="fiets-rij">
-            <div class="vraag-label">Naar</div>
-            <div class="fiets-input-wrap">
-              <input type="text" id="ca-fiets-naar" class="fiets-input" placeholder="Eindadres…"
-                     oninput="App._fietsInput('ca','naar')" autocomplete="off">
-              <div id="ca-fiets-naar-sug" class="fiets-sug" style="display:none"></div>
-            </div>
+          <div class="vraag-label" style="margin-bottom:6px">Route</div>
+          <div id="ca-fiets-stops"></div>
+          <div style="display:flex;gap:8px;margin:8px 0 4px">
+            <button type="button" class="fiets-extra-stop-btn" onclick="App._fietsVoegStopToe('ca')">+ Extra stop</button>
+            <button type="button" class="fiets-auto-btn" onclick="App._fietsAutoVulbestemming('ca')">🔄 Vul bestemming in</button>
           </div>
           <div id="ca-fiets-favs" class="fiets-favs"></div>
           <div class="fiets-actie-rij">
-            <button type="button" class="fiets-btn-gps" id="ca-fiets-gps-btn" onclick="App.toggleGps('ca')">📍 GPS starten</button>
-            <span class="fiets-of-lbl">of</span>
             <button type="button" class="fiets-btn-route" id="ca-fiets-bereken" onclick="App.berekenAfstand('ca')">🗺 Bereken route</button>
           </div>
           <div class="fiets-result">
@@ -1766,11 +1770,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.9.5"></script>
+<script src="app.js?v=2.9.6"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.9.5';
+    var CURRENT_VERSION = '2.9.6';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1817,6 +1821,6 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.5</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.6</footer>
 </body>
 </html>
