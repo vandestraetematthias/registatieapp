@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.9.2';
+var APP_VERSION = '2.9.3';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
