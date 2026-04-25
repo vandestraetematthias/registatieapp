@@ -4336,6 +4336,7 @@ _collectProjectFotos: function(naam) {
   _gpsTotaalKm:    0,
   _fietsGpsActief: false,
   _fietsGpsPrefix: '',
+  _wakeLock:       null,
 
   // Haversine — geeft km tussen twee coördinaten
   _haversine: function(lat1, lon1, lat2, lon2) {
@@ -4438,6 +4439,15 @@ _collectProjectFotos: function(naam) {
     if (badge) { badge.style.display = 'flex'; document.getElementById('gps-badge-km').textContent = '0,0'; }
     var btn = document.getElementById(prefix + '-fiets-gps-btn');
     if (btn) { btn.textContent = '⏹ GPS stoppen'; btn.classList.add('actief'); }
+    // Wake Lock: voorkom dat scherm/browser slaapt tijdens GPS
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(function(lock) {
+        App._wakeLock = lock;
+        lock.addEventListener('release', function() { App._wakeLock = null; });
+      }).catch(function() {});
+    } else {
+      App.toast('Tip: houd je browser op de voorgrond tijdens de rit voor accurate GPS-meting.', false, true);
+    }
     App.toast('GPS-meting gestart\u2026', true);
     App._gpsWatchId = navigator.geolocation.watchPosition(
       function(pos) {
@@ -4462,6 +4472,7 @@ _collectProjectFotos: function(naam) {
       navigator.geolocation.clearWatch(App._gpsWatchId);
       App._gpsWatchId = null;
     }
+    if (App._wakeLock) { App._wakeLock.release(); App._wakeLock = null; }
     App._fietsGpsActief = false;
     var badge = document.getElementById('gps-badge');
     if (badge) badge.style.display = 'none';
