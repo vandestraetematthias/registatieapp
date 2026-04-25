@@ -2947,6 +2947,7 @@ _collectProjectFotos: function(naam) {
 
   _dashIndRender: function() {
     var data = App._dashIndData();
+    App._dashIndBlok2(data);
     App._dashIndBlok1(data);
   },
 
@@ -2980,6 +2981,28 @@ _collectProjectFotos: function(naam) {
       vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
     });
     return teller;
+  },
+
+  /* ── Blok 2: Hoe kom je bij mensen? ── */
+  _dashIndBlok2: function(data) {
+    // Vindplaatsen op basis van gefilterde acties
+    var teller = App._telVeld(data.ind, 'vindplaats');
+    var sortedFreq = App._sortTeller(teller, 'count');
+    var sortedUren = App._sortTeller(teller, 'uren');
+    App._renderBars('dash-ind-vp-freq',
+      sortedFreq.map(function(it) { return { label: it.label, value: it.data.count }; }),
+      'fill-groen', false);
+    App._renderBars('dash-ind-vp-uren',
+      sortedUren.map(function(it) { return { label: it.label, value: Math.round(it.data.uren * 10) / 10, suffix: 'u' }; }),
+      'fill-blauw', false);
+
+    // Eerste contact — op basis van personen met acties in de periode
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+    App._renderBars('dash-ind-eerste',
+      App._sortObjCount(App._telEnkel(per, 'eersteContact')),
+      'fill-oranje', false);
   },
 
   /* ── Blok 1: Wie bereik je? ── */
