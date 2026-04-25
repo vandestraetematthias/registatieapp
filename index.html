@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.9.4">
+<link rel="stylesheet" href="style.css?v=2.9.5">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -507,6 +507,51 @@
         </div>
       </div>
 
+      <!-- 🚲 FIETSVERGOEDING -->
+      <div class="fiets-sectie">
+        <button type="button" class="fiets-toggle" onclick="App.toggleFiets('ia')">
+          🚲 Fietsvergoeding toevoegen
+          <span class="fiets-toggle-badge" id="ia-fiets-badge" style="display:none">✓</span>
+          <span class="fiets-toggle-pijl" id="ia-fiets-pijl">▼</span>
+        </button>
+        <div id="ia-fiets-inhoud" class="fiets-inhoud" style="display:none">
+          <div class="fiets-rij">
+            <div class="vraag-label">Van</div>
+            <div class="fiets-input-wrap">
+              <input type="text" id="ia-fiets-van" class="fiets-input" placeholder="Startadres…"
+                     oninput="App._fietsInput('ia','van')" autocomplete="off">
+              <div id="ia-fiets-van-sug" class="fiets-sug" style="display:none"></div>
+            </div>
+          </div>
+          <div class="fiets-rij">
+            <div class="vraag-label">Naar</div>
+            <div class="fiets-input-wrap">
+              <input type="text" id="ia-fiets-naar" class="fiets-input" placeholder="Eindadres…"
+                     oninput="App._fietsInput('ia','naar')" autocomplete="off">
+              <div id="ia-fiets-naar-sug" class="fiets-sug" style="display:none"></div>
+            </div>
+          </div>
+          <div id="ia-fiets-favs" class="fiets-favs"></div>
+          <div class="fiets-actie-rij">
+            <button type="button" class="fiets-btn-gps" id="ia-fiets-gps-btn" onclick="App.toggleGps('ia')">📍 GPS starten</button>
+            <span class="fiets-of-lbl">of</span>
+            <button type="button" class="fiets-btn-route" id="ia-fiets-bereken" onclick="App.berekenAfstand('ia')">🗺 Bereken route</button>
+          </div>
+          <div class="fiets-result">
+            <input type="number" id="ia-fiets-km" class="fiets-km-input" step="0.1" min="0"
+                   placeholder="0.0" oninput="App._fietsKmInput('ia')">
+            <span class="fiets-km-eenheid">km × €0,2287 =</span>
+            <span class="fiets-totaal" id="ia-fiets-totaal">€ 0,00</span>
+          </div>
+          <div class="fiets-rij" id="ia-fiets-opm-wrap" style="display:none">
+            <div class="vraag-label">Rydoo-opmerking</div>
+            <input type="text" id="ia-fiets-opm" class="fiets-input" placeholder="Individueel — V.F.">
+          </div>
+          <button type="button" class="fiets-sla-btn" id="ia-fiets-sla"
+                  onclick="App.slaFietsRitOp('ia')" style="display:none">💾 Rit opslaan in logboek</button>
+        </div>
+      </div>
+
       <div class="navigatie">
         <button class="btn-terug" onclick="App.iaStap(2)">← Terug</button>
         <button class="btn-volgende opslaan" onclick="App.slaIaOp()">Opslaan ✓</button>
@@ -741,6 +786,51 @@
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">6 uur</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">7 uur</div>
           <div class="keuze" onclick="App.enkeleKeuze(this,'ca-duur')">8 uur</div>
+        </div>
+      </div>
+
+      <!-- 🚲 FIETSVERGOEDING -->
+      <div class="fiets-sectie">
+        <button type="button" class="fiets-toggle" onclick="App.toggleFiets('ca')">
+          🚲 Fietsvergoeding toevoegen
+          <span class="fiets-toggle-badge" id="ca-fiets-badge" style="display:none">✓</span>
+          <span class="fiets-toggle-pijl" id="ca-fiets-pijl">▼</span>
+        </button>
+        <div id="ca-fiets-inhoud" class="fiets-inhoud" style="display:none">
+          <div class="fiets-rij">
+            <div class="vraag-label">Van</div>
+            <div class="fiets-input-wrap">
+              <input type="text" id="ca-fiets-van" class="fiets-input" placeholder="Startadres…"
+                     oninput="App._fietsInput('ca','van')" autocomplete="off">
+              <div id="ca-fiets-van-sug" class="fiets-sug" style="display:none"></div>
+            </div>
+          </div>
+          <div class="fiets-rij">
+            <div class="vraag-label">Naar</div>
+            <div class="fiets-input-wrap">
+              <input type="text" id="ca-fiets-naar" class="fiets-input" placeholder="Eindadres…"
+                     oninput="App._fietsInput('ca','naar')" autocomplete="off">
+              <div id="ca-fiets-naar-sug" class="fiets-sug" style="display:none"></div>
+            </div>
+          </div>
+          <div id="ca-fiets-favs" class="fiets-favs"></div>
+          <div class="fiets-actie-rij">
+            <button type="button" class="fiets-btn-gps" id="ca-fiets-gps-btn" onclick="App.toggleGps('ca')">📍 GPS starten</button>
+            <span class="fiets-of-lbl">of</span>
+            <button type="button" class="fiets-btn-route" id="ca-fiets-bereken" onclick="App.berekenAfstand('ca')">🗺 Bereken route</button>
+          </div>
+          <div class="fiets-result">
+            <input type="number" id="ca-fiets-km" class="fiets-km-input" step="0.1" min="0"
+                   placeholder="0.0" oninput="App._fietsKmInput('ca')">
+            <span class="fiets-km-eenheid">km × €0,2287 =</span>
+            <span class="fiets-totaal" id="ca-fiets-totaal">€ 0,00</span>
+          </div>
+          <div class="fiets-rij" id="ca-fiets-opm-wrap" style="display:none">
+            <div class="vraag-label">Rydoo-opmerking</div>
+            <input type="text" id="ca-fiets-opm" class="fiets-input" placeholder="Collectief — Actienaam">
+          </div>
+          <button type="button" class="fiets-sla-btn" id="ca-fiets-sla"
+                  onclick="App.slaFietsRitOp('ca')" style="display:none">💾 Rit opslaan in logboek</button>
         </div>
       </div>
 
@@ -1110,6 +1200,7 @@
         <button class="blauw" onclick="App.nav('pg-rapport-collectief')"><i data-lucide="users"></i> Collectief</button>
         <button class="bruin" onclick="App.nav('pg-archief')"><i data-lucide="archive"></i> Archief</button>
         <button class="bruin" onclick="App.nav('pg-jaarplan-mod')"><i data-lucide="bar-chart-2"></i> Rapporten</button>
+        <button class="groen" onclick="App.nav('pg-fiets-logboek')">🚲 Fietslogboek</button>
       </div>
 
       <hr class="divider">
@@ -1586,6 +1677,68 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     GPS BADGE (floating, zichtbaar tijdens meting)
+══════════════════════════════════════════ -->
+<div id="gps-badge" class="gps-badge" style="display:none">
+  📍 <span id="gps-badge-km">0,0</span> km
+</div>
+
+<!-- ══════════════════════════════════════════
+     FIETSLOGBOEK
+══════════════════════════════════════════ -->
+<div class="pagina" id="pg-fiets-logboek">
+  <div class="wizard-wrap sectie-rap">
+    <div class="terug-link">
+      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
+    </div>
+    <div class="wiz-header">
+      <div class="wiz-sectie-icon">🚲</div>
+      <h1>Fietslogboek</h1>
+      <p>Rydoo-compatibele rittenregistratie</p>
+    </div>
+
+    <div class="kaart">
+      <div class="kaart-titel">Filter &amp; Acties</div>
+      <div class="filter-balk" style="margin-bottom:14px">
+        <span class="filter-lbl">Filter</span>
+        <div class="filter-groep">
+          <label class="filter-label-klein">Jaar</label>
+          <select id="fiets-log-jaar" onchange="App.renderFietsLogboek()"></select>
+        </div>
+        <div class="filter-groep">
+          <label class="filter-label-klein">Maand</label>
+          <select id="fiets-log-maand" onchange="App.renderFietsLogboek()"></select>
+        </div>
+      </div>
+      <div id="fiets-log-teller" class="fiets-log-teller"></div>
+      <div class="actie-rij" style="margin-top:12px">
+        <button onclick="App.printLogboek()">🖨 Afdrukken (A4)</button>
+        <button class="blauw" onclick="App.exportFietsExcel()">📥 Excel export</button>
+      </div>
+    </div>
+
+    <div class="kaart" style="margin-top:16px;overflow-x:auto" id="fiets-logboek-kaart">
+      <div class="kaart-titel">Rittenlijst <span style="font-size:0.72rem;font-weight:400;color:var(--zacht)">— klik 📋 om cel te kopiëren voor Rydoo</span></div>
+      <table class="fiets-log-tabel">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Van</th>
+            <th>Naar</th>
+            <th style="text-align:right">km</th>
+            <th style="text-align:right">€/km</th>
+            <th style="text-align:right">Totaal</th>
+            <th>Opmerking</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="fiets-logboek-tabel"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="bn-item actief" data-page="pg-start" onclick="App.nav('pg-start')">
     <i data-lucide="home"></i>
@@ -1613,11 +1766,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.9.4"></script>
+<script src="app.js?v=2.9.5"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.9.4';
+    var CURRENT_VERSION = '2.9.5';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1664,6 +1817,6 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.4</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.5</footer>
 </body>
 </html>

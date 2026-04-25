@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.9.4';
+var APP_VERSION = '2.9.5';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -80,6 +80,7 @@ var DB = {
   _personen:    [],
   _individueel: [],
   _collectief:  [],
+  _fietsritten: [],
   _unsubs:      [],
   _uid:         null,
   _laadGereed:  0,
@@ -93,6 +94,7 @@ var DB = {
   get personen()    { return this._personen; },
   get individueel() { return this._individueel; },
   get collectief()  { return this._collectief; },
+  get fietsritten() { return this._fietsritten; },
 
   // Start realtime-listeners naar Firestore (gebruiker-gekoppeld)
   startListeners: function() {
@@ -121,6 +123,13 @@ var DB = {
         App._herlaadHuidigePagina();
       }, function(e) { console.error('collectief listener:', e); })
     );
+    // Fietsritten — apart (eigen teller niet nodig voor initieel geladen-signaal)
+    DB._unsubs.push(
+      DB._col('fietsritten').onSnapshot(function(snap) {
+        DB._fietsritten = snap.docs.map(function(d) { return d.data(); });
+        if (State.huidigePagina === 'pg-fiets-logboek') App.renderFietsLogboek();
+      }, function(e) { console.error('fietsritten listener:', e); })
+    );
   },
 
   // Stop listeners en leeg cache bij uitloggen
@@ -130,6 +139,7 @@ var DB = {
     DB._personen = [];
     DB._individueel = [];
     DB._collectief = [];
+    DB._fietsritten = [];
     DB._uid = null;
     DB._laadGereed = 0;
   },
@@ -175,6 +185,11 @@ var DB = {
     var oud = this._collectief.slice();
     this._collectief = lijst;
     DB._syncLijst('collectief', oud, lijst);
+  },
+  slaFietsOp: function(lijst) {
+    var oud = this._fietsritten.slice();
+    this._fietsritten = lijst;
+    DB._syncLijst('fietsritten', oud, lijst);
   },
 
   // Volgnummer
@@ -244,6 +259,7 @@ var App = {
       'pg-mod-logistiek':'pg-collectief-start','pg-mod-overleg':'pg-collectief-start','pg-mod-activiteit':'pg-collectief-start',
       'pg-jaarplan':'pg-jaarplan','pg-rapport-personen':'pg-jaarplan','pg-rapport-individueel':'pg-jaarplan',
       'pg-rapport-collectief':'pg-jaarplan','pg-jaarplan-mod':'pg-jaarplan','pg-persoon-detail':'pg-jaarplan',
+      'pg-fiets-logboek':'pg-jaarplan',
       'pg-archief':'pg-archief',
       'pg-dashboard':'pg-dashboard'
     };
@@ -266,6 +282,7 @@ var App = {
     if (pagina === 'pg-col-actie-wiz')     App.resetCa();
     if (pagina === 'pg-jaarplan-mod')      App.renderJaarplan();
     if (pagina === 'pg-dashboard')         App.renderDashboard();
+    if (pagina === 'pg-fiets-logboek')     App.renderFietsLogboek();
   },
 
   /* ── UI HELPERS ── */
@@ -4281,6 +4298,13 @@ _collectProjectFotos: function(naam) {
 
     App._initAutoCapitalize();
 
+    // Sluit adres-suggesties bij klik buiten
+    document.addEventListener('click', function(e) {
+      if (!e.target.classList.contains('fiets-input')) {
+        document.querySelectorAll('.fiets-sug').forEach(function(el) { el.style.display = 'none'; });
+      }
+    });
+
     // Duplikaat-check: waarschuwingsdiv aanmaken onder familienaam-veld
     var vnEl = document.getElementById('per-voornaam');
     var fnEl = document.getElementById('per-familienaam');
@@ -4300,7 +4324,409 @@ _collectProjectFotos: function(naam) {
       fnEl.addEventListener('input', function() { App._clearDubbeleNaam(); });
     }
 
+  },
+
+  /* ══════════════════════════════════════════
+     FIETSRITTEN — v2.9.5
+  ══════════════════════════════════════════ */
+
+  // GPS state
+  _gpsWatchId:     null,
+  _gpsRoute:       [],
+  _gpsTotaalKm:    0,
+  _fietsGpsActief: false,
+  _fietsGpsPrefix: '',
+
+  // Haversine — geeft km tussen twee coördinaten
+  _haversine: function(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  },
+
+  // localStorage: adressuggesties
+  _slaAdresOp: function(adres) {
+    if (!adres || adres.trim().length < 3) return;
+    var lijst = App._getAdresSuggesties();
+    lijst = lijst.filter(function(a) { return a !== adres; });
+    lijst.unshift(adres);
+    try { localStorage.setItem('bwv_adressen', JSON.stringify(lijst.slice(0, 20))); } catch(e) {}
+  },
+  _getAdresSuggesties: function() {
+    try { return JSON.parse(localStorage.getItem('bwv_adressen') || '[]'); } catch(e) { return []; }
+  },
+  _getFietsFavs: function() {
+    var std = [
+      { naam: 'Buurthuis Venning', adres: 'Calvarieberg 4, Leuven' },
+      { naam: 'Stadhuis Leuven',   adres: 'Grote Markt 1, Leuven'  }
+    ];
+    try { return JSON.parse(localStorage.getItem('bwv_fiets_favs') || 'null') || std; } catch(e) { return std; }
+  },
+
+  // Toon suggesties bij typen
+  _fietsInput: function(prefix, veld) {
+    var inputEl = document.getElementById(prefix + '-fiets-' + veld);
+    var sugEl   = document.getElementById(prefix + '-fiets-' + veld + '-sug');
+    if (!inputEl || !sugEl) return;
+    var val = inputEl.value.trim().toLowerCase();
+    var lijst = App._getAdresSuggesties();
+    var match = val
+      ? lijst.filter(function(a) { return a.toLowerCase().indexOf(val) !== -1; })
+      : lijst;
+    if (!match.length) { sugEl.style.display = 'none'; return; }
+    sugEl.innerHTML = match.slice(0, 6).map(function(a) {
+      return '<div class="fiets-sug-item" onclick="App._kiesSuggestie(\'' +
+        prefix + '\',\'' + veld + '\',\'' + a.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">' +
+        App.esc(a) + '</div>';
+    }).join('');
+    sugEl.style.display = 'block';
+  },
+  _kiesSuggestie: function(prefix, veld, adres) {
+    var inputEl = document.getElementById(prefix + '-fiets-' + veld);
+    var sugEl   = document.getElementById(prefix + '-fiets-' + veld + '-sug');
+    if (inputEl) inputEl.value = adres;
+    if (sugEl)   sugEl.style.display = 'none';
+  },
+
+  // Toggle de fiets-sectie open/dicht
+  toggleFiets: function(prefix) {
+    var inhoud = document.getElementById(prefix + '-fiets-inhoud');
+    var pijl   = document.getElementById(prefix + '-fiets-pijl');
+    if (!inhoud) return;
+    var open = inhoud.style.display !== 'none';
+    inhoud.style.display = open ? 'none' : 'block';
+    if (pijl) pijl.textContent = open ? '▼' : '▲';
+    if (!open) App._vulFietsFavs(prefix);
+  },
+
+  // Render favorieten-knoppen
+  _vulFietsFavs: function(prefix) {
+    var el = document.getElementById(prefix + '-fiets-favs');
+    if (!el) return;
+    var favs = App._getFietsFavs();
+    if (!favs.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="fiets-favs-lbl">Favorieten:</div>' +
+      favs.map(function(f) {
+        return '<button type="button" class="fiets-fav-btn" onclick="App._kiesFav(\'' +
+          prefix + '\',\'' + f.adres.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">' +
+          App.esc(f.naam) + '</button>';
+      }).join('');
+  },
+  _kiesFav: function(prefix, adres) {
+    var vanEl  = document.getElementById(prefix + '-fiets-van');
+    var naarEl = document.getElementById(prefix + '-fiets-naar');
+    if (vanEl && !vanEl.value) vanEl.value = adres;
+    else if (naarEl)           naarEl.value = adres;
+  },
+
+  // GPS tracking
+  toggleGps: function(prefix) {
+    if (App._fietsGpsActief) App.stopGps(prefix);
+    else                     App.startGps(prefix);
+  },
+  startGps: function(prefix) {
+    if (!navigator.geolocation) { App.toast('GPS niet beschikbaar op dit toestel'); return; }
+    App._gpsRoute      = [];
+    App._gpsTotaalKm   = 0;
+    App._fietsGpsActief = true;
+    App._fietsGpsPrefix = prefix;
+    var badge = document.getElementById('gps-badge');
+    if (badge) { badge.style.display = 'flex'; document.getElementById('gps-badge-km').textContent = '0,0'; }
+    var btn = document.getElementById(prefix + '-fiets-gps-btn');
+    if (btn) { btn.textContent = '⏹ GPS stoppen'; btn.classList.add('actief'); }
+    App.toast('GPS-meting gestart\u2026', true);
+    App._gpsWatchId = navigator.geolocation.watchPosition(
+      function(pos) {
+        var lat = pos.coords.latitude, lon = pos.coords.longitude;
+        if (App._gpsRoute.length) {
+          var prev = App._gpsRoute[App._gpsRoute.length - 1];
+          var d = App._haversine(prev.lat, prev.lon, lat, lon);
+          if (d > 0.01) {
+            App._gpsTotaalKm += d;
+            var b = document.getElementById('gps-badge-km');
+            if (b) b.textContent = App._gpsTotaalKm.toFixed(1).replace('.', ',');
+          }
+        }
+        App._gpsRoute.push({ lat: lat, lon: lon });
+      },
+      function(err) { App.toast('GPS fout: ' + err.message); App.stopGps(prefix); },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+  },
+  stopGps: function(prefix) {
+    if (App._gpsWatchId !== null) {
+      navigator.geolocation.clearWatch(App._gpsWatchId);
+      App._gpsWatchId = null;
+    }
+    App._fietsGpsActief = false;
+    var badge = document.getElementById('gps-badge');
+    if (badge) badge.style.display = 'none';
+    var btn = document.getElementById(prefix + '-fiets-gps-btn');
+    if (btn) { btn.textContent = '📍 GPS starten'; btn.classList.remove('actief'); }
+    if (App._gpsTotaalKm > 0) {
+      var kmEl = document.getElementById(prefix + '-fiets-km');
+      if (kmEl) { kmEl.value = App._gpsTotaalKm.toFixed(1); App._fietsKmInput(prefix); }
+      App._fietsAutoOpmerking(prefix);
+      App.toast('GPS gestopt \u2014 ' + App._gpsTotaalKm.toFixed(1).replace('.', ',') + ' km', true);
+    } else {
+      App.toast('GPS gestopt \u2014 geen beweging geregistreerd');
+    }
+  },
+
+  // Geocoding via Nominatim + routering via OSRM
+  berekenAfstand: function(prefix) {
+    var vanEl  = document.getElementById(prefix + '-fiets-van');
+    var naarEl = document.getElementById(prefix + '-fiets-naar');
+    var van    = vanEl  ? vanEl.value.trim()  : '';
+    var naar   = naarEl ? naarEl.value.trim() : '';
+    if (!van || !naar) { App.toast('Vul Van \u00e9n Naar in'); return; }
+    var btn = document.getElementById(prefix + '-fiets-bereken');
+    if (btn) btn.textContent = '\u23f3 Berekenen\u2026';
+    App._nominatim(van, function(vanC) {
+      if (!vanC) { if (btn) btn.textContent = '\ud83d\uddfa Bereken route'; App.toast('Adres "' + van + '" niet gevonden'); return; }
+      App._nominatim(naar, function(naarC) {
+        if (!naarC) { if (btn) btn.textContent = '\ud83d\uddfa Bereken route'; App.toast('Adres "' + naar + '" niet gevonden'); return; }
+        var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
+          vanC.lon + ',' + vanC.lat + ';' + naarC.lon + ',' + naarC.lat + '?overview=false';
+        fetch(osrmUrl)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (btn) btn.textContent = '\ud83d\uddfa Bereken route';
+            var km = (data.code === 'Ok' && data.routes && data.routes.length)
+              ? Math.round(data.routes[0].distance / 100) / 10
+              : Math.round(App._haversine(vanC.lat, vanC.lon, naarC.lat, naarC.lon) * 1.2 * 10) / 10;
+            var kmEl = document.getElementById(prefix + '-fiets-km');
+            if (kmEl) { kmEl.value = km; App._fietsKmInput(prefix); }
+            App._slaAdresOp(van); App._slaAdresOp(naar);
+            App._fietsAutoOpmerking(prefix);
+            App.toast(km.toString().replace('.', ',') + ' km berekend', true);
+          })
+          .catch(function() {
+            if (btn) btn.textContent = '\ud83d\uddfa Bereken route';
+            var km = Math.round(App._haversine(vanC.lat, vanC.lon, naarC.lat, naarC.lon) * 1.2 * 10) / 10;
+            var kmEl = document.getElementById(prefix + '-fiets-km');
+            if (kmEl) { kmEl.value = km; App._fietsKmInput(prefix); }
+            App._slaAdresOp(van); App._slaAdresOp(naar);
+            App._fietsAutoOpmerking(prefix);
+            App.toast('Geschatte afstand: ' + km.toString().replace('.', ',') + ' km', true);
+          });
+      });
+    });
+  },
+  _nominatim: function(adres, cb) {
+    var url = 'https://nominatim.openstreetmap.org/search?q=' +
+      encodeURIComponent(adres) + '&format=json&limit=1&countrycodes=be';
+    fetch(url, { headers: { 'Accept-Language': 'nl', 'User-Agent': 'BuurtwerkVenning/2.9.5' } })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { cb(d && d.length ? { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) } : null); })
+      .catch(function() { cb(null); });
+  },
+
+  // Update totaal wanneer km-veld wijzigt
+  _fietsKmInput: function(prefix) {
+    var kmEl     = document.getElementById(prefix + '-fiets-km');
+    var totEl    = document.getElementById(prefix + '-fiets-totaal');
+    var slaEl    = document.getElementById(prefix + '-fiets-sla');
+    var opmWrap  = document.getElementById(prefix + '-fiets-opm-wrap');
+    if (!kmEl) return;
+    var km = parseFloat(kmEl.value) || 0;
+    var tot = km * 0.2287;
+    if (totEl) totEl.textContent = '\u20ac\u00a0' + tot.toFixed(2).replace('.', ',');
+    if (slaEl)   slaEl.style.display   = km > 0 ? 'block' : 'none';
+    if (opmWrap) opmWrap.style.display = km > 0 ? 'block' : 'none';
+  },
+
+  // Auto-genereer Rydoo-opmerking
+  _fietsAutoOpmerking: function(prefix) {
+    var opmEl = document.getElementById(prefix + '-fiets-opm');
+    if (!opmEl || opmEl.value) return;
+    var categorie = prefix === 'ia' ? 'Individueel' : 'Collectief';
+    var naam = '';
+    if (prefix === 'ia' && State.gekozenPersoon) {
+      var p = State.gekozenPersoon;
+      naam = ((p.voornaam || '').charAt(0).toUpperCase() || '?') + '.' +
+             ((p.familienaam || '').charAt(0).toUpperCase() || '?') + '.';
+    } else if (prefix === 'ca') {
+      var caEl = document.getElementById('ca-naam');
+      naam = (caEl ? caEl.value : '') || (State.huidigActie || '');
+    }
+    opmEl.value = categorie + (naam ? ' \u2014 ' + naam : '');
+  },
+
+  // Sla rit op in Firestore
+  slaFietsRitOp: function(prefix) {
+    var kmEl   = document.getElementById(prefix + '-fiets-km');
+    var vanEl  = document.getElementById(prefix + '-fiets-van');
+    var naarEl = document.getElementById(prefix + '-fiets-naar');
+    var opmEl  = document.getElementById(prefix + '-fiets-opm');
+    var km = parseFloat(kmEl ? kmEl.value : 0) || 0;
+    if (km <= 0) { App.toast('Vul een geldige afstand in'); return; }
+    var van  = vanEl  ? vanEl.value.trim()  : '';
+    var naar = naarEl ? naarEl.value.trim() : '';
+    var opm  = opmEl  ? opmEl.value.trim()  : '';
+    App._slaAdresOp(van); App._slaAdresOp(naar);
+    var nu = new Date();
+    var dag   = ('0' + nu.getDate()).slice(-2);
+    var maandN = ('0' + (nu.getMonth() + 1)).slice(-2);
+    var maandNamen = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+    var rit = {
+      id:        uuid(),
+      datum:     nu.toISOString(),
+      datumRit:  dag + '/' + maandN + '/' + nu.getFullYear(),
+      van:       van,
+      naar:      naar,
+      via:       '',
+      afstand:   Math.round(km * 10) / 10,
+      tarief:    0.2287,
+      totaal:    Math.round(km * 0.2287 * 100) / 100,
+      opmerking: opm,
+      type:      App._fietsGpsActief ? 'gps' : 'manueel',
+      categorie: prefix === 'ia' ? 'individueel' : 'collectief',
+      actieRef:  prefix === 'ia'
+        ? (State.gekozenPersoon ? '#' + State.gekozenPersoon.volgnummer : '')
+        : (State.huidigActie || ''),
+      jaar:   nu.getFullYear(),
+      maand:  maandNamen[nu.getMonth()],
+      status: 'actief'
+    };
+    DB.slaFietsOp(DB._fietsritten.concat([rit]));
+    var badge = document.getElementById(prefix + '-fiets-badge');
+    if (badge) { badge.textContent = '\u2713'; badge.style.display = 'inline'; }
+    App._resetFietsSectie(prefix);
+    App.toast('\ud83d\udeb4 Rit opgeslagen \u2014 ' + rit.afstand + ' km \u2014 \u20ac' + rit.totaal.toFixed(2).replace('.', ','), true);
+  },
+
+  _resetFietsSectie: function(prefix) {
+    ['van', 'naar'].forEach(function(v) {
+      var el = document.getElementById(prefix + '-fiets-' + v);
+      if (el) el.value = '';
+      var sug = document.getElementById(prefix + '-fiets-' + v + '-sug');
+      if (sug) sug.style.display = 'none';
+    });
+    var kmEl = document.getElementById(prefix + '-fiets-km');
+    if (kmEl) kmEl.value = '';
+    var totEl = document.getElementById(prefix + '-fiets-totaal');
+    if (totEl) totEl.textContent = '\u20ac\u00a0' + '0,00';
+    var opmEl = document.getElementById(prefix + '-fiets-opm');
+    if (opmEl) opmEl.value = '';
+    var slaEl = document.getElementById(prefix + '-fiets-sla');
+    if (slaEl) slaEl.style.display = 'none';
+    var opmW = document.getElementById(prefix + '-fiets-opm-wrap');
+    if (opmW) opmW.style.display = 'none';
+    var inhoud = document.getElementById(prefix + '-fiets-inhoud');
+    if (inhoud) inhoud.style.display = 'none';
+    var pijl = document.getElementById(prefix + '-fiets-pijl');
+    if (pijl) pijl.textContent = '\u25bc';
+  },
+
+  // Logboek
+  renderFietsLogboek: function() {
+    App._vulFietsFilters();
+    var jaarEl  = document.getElementById('fiets-log-jaar');
+    var maandEl = document.getElementById('fiets-log-maand');
+    var jaarF   = jaarEl  ? jaarEl.value  : '';
+    var maandF  = maandEl ? maandEl.value : '';
+    var ritten  = DB._fietsritten.filter(function(r) {
+      if (r.status === 'gearchiveerd') return false;
+      if (jaarF  && String(r.jaar) !== jaarF)  return false;
+      if (maandF && r.maand !== maandF)         return false;
+      return true;
+    }).sort(function(a, b) { return a.datum < b.datum ? 1 : -1; });
+
+    var totKm = 0, totEur = 0;
+    ritten.forEach(function(r) { totKm += (r.afstand || 0); totEur += (r.totaal || 0); });
+
+    var telEl = document.getElementById('fiets-log-teller');
+    if (telEl) telEl.textContent = ritten.length + ' rit' + (ritten.length !== 1 ? 'ten' : '') +
+      ' \u2014 ' + totKm.toFixed(1).replace('.', ',') + ' km \u2014 ' +
+      '\u20ac\u00a0' + totEur.toFixed(2).replace('.', ',');
+
+    var el = document.getElementById('fiets-logboek-tabel');
+    if (!el) return;
+    if (!ritten.length) {
+      el.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--zacht);padding:20px">Geen ritten gevonden.</td></tr>';
+      return;
+    }
+    el.innerHTML = ritten.map(function(r) {
+      return '<tr>' +
+        '<td>' + App.esc(r.datumRit || '\u2014') + App._fietsKopBtn(r.datumRit || '') + '</td>' +
+        '<td>' + App.esc(r.van  || '\u2014') + App._fietsKopBtn(r.van  || '') + '</td>' +
+        '<td>' + App.esc(r.naar || '\u2014') + App._fietsKopBtn(r.naar || '') + '</td>' +
+        '<td style="text-align:right">' + (r.afstand || 0).toFixed(1).replace('.', ',') +
+          App._fietsKopBtn(String(r.afstand || 0).replace('.', ',')) + '</td>' +
+        '<td style="text-align:right">0,2287' + App._fietsKopBtn('0.2287') + '</td>' +
+        '<td style="text-align:right;font-weight:700">\u20ac\u00a0' +
+          (r.totaal || 0).toFixed(2).replace('.', ',') +
+          App._fietsKopBtn((r.totaal || 0).toFixed(2)) + '</td>' +
+        '<td>' + App.esc(r.opmerking || '\u2014') + App._fietsKopBtn(r.opmerking || '') + '</td>' +
+        '<td><button class="fiets-del-btn" onclick="App._verwijderRit(\'' + r.id + '\')" title="Verwijderen">\ud83d\uddd1</button></td>' +
+      '</tr>';
+    }).join('');
+  },
+  _fietsKopBtn: function(tekst) {
+    if (!tekst) return '';
+    return '<button class="fiets-kop-btn" onclick="App.kopieerTekst(\'' +
+      tekst.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" title="Kopi\u00ebren">\ud83d\udccb</button>';
+  },
+  _vulFietsFilters: function() {
+    var jaarEl  = document.getElementById('fiets-log-jaar');
+    var maandEl = document.getElementById('fiets-log-maand');
+    if (!jaarEl || !maandEl) return;
+    var hj = new Date().getFullYear();
+    var hv = jaarEl.value || String(hj);
+    var jHtml = '';
+    for (var j = hj; j >= hj - 2; j--) {
+      jHtml += '<option value="' + j + '"' + (String(j) === hv ? ' selected' : '') + '>' + j + '</option>';
+    }
+    jaarEl.innerHTML = jHtml;
+    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+    var hm = maandEl.value;
+    maandEl.innerHTML = '<option value="">Alle maanden</option>' +
+      maanden.map(function(m) {
+        return '<option value="' + m + '"' + (m === hm ? ' selected' : '') + '>' + m + '</option>';
+      }).join('');
+  },
+  _verwijderRit: function(id) {
+    DB.slaFietsOp(DB._fietsritten.filter(function(r) { return r.id !== id; }));
+    App.renderFietsLogboek();
+  },
+  kopieerTekst: function(tekst) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tekst)
+        .then(function() { App.toast('Gekopieerd \u2714', true); })
+        .catch(function() { App._kopieerFallback(tekst); });
+    } else {
+      App._kopieerFallback(tekst);
+    }
+  },
+  _kopieerFallback: function(tekst) {
+    var ta = document.createElement('textarea');
+    ta.value = tekst;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); App.toast('Gekopieerd \u2714', true); }
+    catch(e) { App.toast('Kopi\u00ebren mislukt'); }
+    document.body.removeChild(ta);
+  },
+  printLogboek: function() { window.print(); },
+  exportFietsExcel: function() {
+    var ritten = DB._fietsritten.filter(function(r) { return r.status !== 'gearchiveerd'; });
+    if (!ritten.length) { App.toast('Geen ritten om te exporteren'); return; }
+    var rijen = [['Datum','Van','Naar','Via','Afstand (km)','Tarief (\u20ac/km)','Totaal (\u20ac)','Opmerking','Type','Categorie']];
+    ritten.forEach(function(r) {
+      rijen.push([r.datumRit, r.van, r.naar, r.via || '', r.afstand, r.tarief, r.totaal, r.opmerking, r.type, r.categorie]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(rijen);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fietsritten');
+    XLSX.writeFile(wb, 'fietsritten_' + new Date().getFullYear() + '.xlsx');
   }
+
 };
 
 /* ══════════════════════════════════════════

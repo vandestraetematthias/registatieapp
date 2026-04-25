@@ -1051,6 +1051,185 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 @media (hover: hover) { .uitlog-btn:hover { border-color: var(--rood); color: var(--rood); } }
 
+/* ══ FIETSRITTEN v2.9.5 ══ */
+
+/* GPS floating badge */
+.gps-badge {
+  position: fixed;
+  bottom: 76px;
+  right: 14px;
+  background: var(--groen);
+  color: #fff;
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: gpsPulse 1.6s ease-in-out infinite;
+}
+@keyframes gpsPulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 16px rgba(0,0,0,0.22); }
+  50%       { transform: scale(1.06); box-shadow: 0 6px 22px rgba(46,125,50,0.4); }
+}
+
+/* Fiets sectie in wizard */
+.fiets-sectie {
+  margin: 20px 0 0;
+  border: 1.5px dashed var(--rand);
+  border-radius: 12px;
+  overflow: visible;
+}
+.fiets-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--tekst);
+  text-align: left;
+  border-radius: 12px;
+}
+.fiets-toggle-pijl { margin-left: auto; font-size: 0.72rem; color: var(--zacht); }
+.fiets-toggle-badge {
+  background: var(--groen); color: #fff;
+  border-radius: 10px; padding: 1px 7px;
+  font-size: 0.65rem; font-weight: 700;
+}
+.fiets-inhoud {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--rand);
+  margin-top: 0;
+}
+.fiets-rij { margin-bottom: 10px; }
+.fiets-input-wrap { position: relative; }
+.fiets-input {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--rand); border-radius: 8px;
+  font-family: 'Poppins', sans-serif; font-size: 0.85rem;
+  background: #fff; box-sizing: border-box;
+}
+.fiets-input:focus { outline: none; border-color: var(--blauw); }
+
+/* Suggestie-dropdown */
+.fiets-sug {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+  background: #fff; border: 1.5px solid var(--rand);
+  border-radius: 0 0 8px 8px; z-index: 300;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  max-height: 180px; overflow-y: auto;
+}
+.fiets-sug-item {
+  padding: 9px 14px; font-size: 0.82rem;
+  cursor: pointer; border-bottom: 1px solid var(--rand);
+}
+.fiets-sug-item:last-child { border-bottom: none; }
+@media (hover: hover) { .fiets-sug-item:hover { background: var(--blauw-licht); } }
+
+/* Favorieten */
+.fiets-favs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.fiets-favs-lbl {
+  font-size: 0.65rem; color: var(--zacht); width: 100%;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.fiets-fav-btn {
+  font-size: 0.72rem; padding: 4px 11px;
+  background: var(--blauw-licht); color: var(--blauw);
+  border: 1px solid var(--blauw); border-radius: 14px;
+  cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600;
+}
+
+/* Actie-knoppen (GPS / Bereken) */
+.fiets-actie-rij {
+  display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap;
+}
+.fiets-btn-gps {
+  padding: 8px 14px; background: var(--groen-licht); color: var(--groen);
+  border: 1.5px solid var(--groen); border-radius: 8px;
+  font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}
+.fiets-btn-gps.actief { background: var(--groen); color: #fff; }
+.fiets-btn-route {
+  padding: 8px 14px; background: var(--blauw-licht); color: var(--blauw);
+  border: 1.5px solid var(--blauw); border-radius: 8px;
+  font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}
+.fiets-of-lbl { font-size: 0.75rem; color: var(--zacht); }
+
+/* Resultaat-balk */
+.fiets-result {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--groen-licht); border: 1.5px solid var(--groen);
+  border-radius: 8px; padding: 10px 14px; margin: 10px 0;
+}
+.fiets-km-input {
+  width: 72px; padding: 6px 8px;
+  border: 1.5px solid var(--groen); border-radius: 6px;
+  font-family: 'Poppins', sans-serif; font-size: 1rem;
+  font-weight: 700; color: var(--groen); background: #fff; text-align: right;
+}
+.fiets-km-eenheid { font-size: 0.8rem; color: var(--zacht); }
+.fiets-totaal { font-size: 1.1rem; font-weight: 800; color: var(--groen); margin-left: auto; }
+
+/* Opslaan-knop */
+.fiets-sla-btn {
+  width: 100%; margin-top: 12px; padding: 11px;
+  background: var(--groen); color: #fff; border: none;
+  border-radius: 8px; font-family: 'Poppins', sans-serif;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+}
+@media (hover: hover) { .fiets-sla-btn:hover { filter: brightness(1.08); } }
+
+/* Logboek */
+.fiets-log-teller {
+  font-size: 0.82rem; font-weight: 600; color: var(--zacht); margin-bottom: 4px;
+}
+.fiets-log-tabel {
+  width: 100%; border-collapse: collapse; font-size: 0.78rem;
+}
+.fiets-log-tabel th {
+  text-align: left; font-size: 0.63rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--zacht); border-bottom: 2px solid var(--rand);
+  padding: 6px 8px; white-space: nowrap;
+}
+.fiets-log-tabel td {
+  padding: 8px 8px; border-bottom: 1px solid var(--rand); vertical-align: middle;
+}
+.fiets-log-tabel tr:last-child td { border-bottom: none; }
+@media (hover: hover) { .fiets-log-tabel tbody tr:hover td { background: var(--blauw-licht); } }
+
+.fiets-kop-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.75rem; opacity: 0.4; padding: 0 2px; vertical-align: middle;
+}
+@media (hover: hover) { .fiets-kop-btn:hover { opacity: 1; } }
+.fiets-del-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.82rem; opacity: 0.35; padding: 2px 4px;
+}
+@media (hover: hover) { .fiets-del-btn:hover { opacity: 1; } }
+
+/* Print — alleen logboek zichtbaar op A4 */
+@media print {
+  body > *:not(#pg-fiets-logboek) { display: none !important; }
+  #pg-fiets-logboek { display: block !important; position: static !important; }
+  .terug-link, .actie-rij, .filter-balk,
+  .fiets-kop-btn, .fiets-del-btn, .gps-badge { display: none !important; }
+  .kaart { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
+  .fiets-log-tabel { font-size: 9pt; }
+  .fiets-log-tabel th, .fiets-log-tabel td { padding: 4px 6px; }
+}
+
 /* ══ INDIVIDUEEL DASHBOARD v2.9.4 — drill-down ══ */
 
 .dash-ind-drill-panel {
