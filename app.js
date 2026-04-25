@@ -2946,7 +2946,67 @@ _collectProjectFotos: function(naam) {
   },
 
   _dashIndRender: function() {
-    // Wordt uitgebreid in Stap 4 t.e.m. Stap 11 met de 8 nieuwe analyseblokken.
+    var data = App._dashIndData();
+    App._dashIndBlok1(data);
+  },
+
+  /* Helper: sorteer een eenvoudig {label: count} object aflopend */
+  _sortObjCount: function(obj) {
+    var arr = [];
+    for (var k in obj) {
+      if (obj.hasOwnProperty(k)) arr.push({ label: k, value: obj[k] });
+    }
+    arr.sort(function(a, b) { return b.value - a.value; });
+    return arr;
+  },
+
+  /* Helper: tel enkelvoudig veld uit array van records */
+  _telEnkel: function(records, veld) {
+    var teller = {};
+    records.forEach(function(r) {
+      var v = r[veld] || 'Onbekend';
+      teller[v] = (teller[v] || 0) + 1;
+    });
+    return teller;
+  },
+
+  /* Helper: tel meerwaardig (array) veld uit array van records */
+  _telMeervoud: function(records, veld) {
+    var teller = {};
+    records.forEach(function(r) {
+      var vals = r[veld] || [];
+      if (!Array.isArray(vals)) vals = [vals];
+      if (!vals.length) { teller['Onbekend'] = (teller['Onbekend'] || 0) + 1; return; }
+      vals.forEach(function(v) { if (v) teller[v] = (teller[v] || 0) + 1; });
+    });
+    return teller;
+  },
+
+  /* ── Blok 1: Wie bereik je? ── */
+  _dashIndBlok1: function(data) {
+    // Filter personen tot enkel diegenen met acties in de geselecteerde periode
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+
+    var leeftijdVolgorde = ['-18','18-25','26-40','41-60','61-80','80+'];
+    var leeftijdTeller = App._telEnkel(per, 'leeftijd');
+    var leeftijdItems = leeftijdVolgorde
+      .filter(function(k) { return leeftijdTeller[k]; })
+      .map(function(k) { return { label: k, value: leeftijdTeller[k] }; });
+    for (var k in leeftijdTeller) {
+      if (leeftijdVolgorde.indexOf(k) === -1) leeftijdItems.push({ label: k, value: leeftijdTeller[k] });
+    }
+    App._renderBars('dash-ind-leeftijd', leeftijdItems, 'fill-groen', false);
+
+    App._renderBars('dash-ind-inkomen',
+      App._sortObjCount(App._telMeervoud(per, 'inkomen')), 'fill-blauw', false);
+
+    App._renderBars('dash-ind-woonsituatie',
+      App._sortObjCount(App._telEnkel(per, 'woonsituatie')), 'fill-oranje', false);
+
+    App._renderBars('dash-ind-huisvesting',
+      App._sortObjCount(App._telMeervoud(per, 'huisvesting')), 'fill-paars', false);
   },
 
   _dashClusterBereik: function(d) {
