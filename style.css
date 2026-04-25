@@ -1050,3 +1050,179 @@ tr:nth-child(even) td { background: #fafaf9; }
   margin-top: 8px;
 }
 @media (hover: hover) { .uitlog-btn:hover { border-color: var(--rood); color: var(--rood); } }
+
+/* ══ INDIVIDUEEL DASHBOARD v2.9.4 — drill-down ══ */
+
+.dash-ind-drill-panel {
+  background: rgba(255,255,255,0.96);
+  border: 1.5px solid var(--rand);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.dash-ind-n1-header {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--zacht);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.dash-ind-n1-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-ind-person-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+@media (hover: hover) { .dash-ind-person-row:hover { background: var(--blauw-licht); } }
+
+.dash-ind-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+.dash-ind-avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 0.85rem;
+}
+
+.dash-ind-tag {
+  font-size: 0.62rem;
+  background: var(--blauw-licht);
+  color: var(--blauw);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+}
+
+.dash-ind-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dash-ind-pill-actief   { background: var(--groen-licht); color: var(--groen); }
+.dash-ind-pill-uitbeeld { background: #fde8e8; color: var(--rood); }
+.dash-ind-pill-eenmalig { background: var(--oranje-licht); color: var(--oranje); }
+.dash-ind-pill-geen     { background: #f3f4f6; color: var(--zacht); }
+
+.dash-ind-n2-wrapper {
+  margin: 0 0 4px 42px;
+  border-left: 2px solid var(--rand);
+  padding-left: 12px;
+}
+
+.dash-ind-n2 {
+  background: var(--achtergrond);
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--rand);
+  margin-bottom: 4px;
+}
+
+.dash-ind-n2-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dash-ind-n2-blok {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.dash-ind-n2-blok-titel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--zacht);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.dash-ind-actie-rij {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rand);
+  font-size: 0.78rem;
+}
+.dash-ind-actie-rij:last-child { border-bottom: none; }
+
+.dash-ind-actie-datum {
+  font-weight: 600;
+  color: var(--blauw);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+
+.dash-ind-actie-info {
+  color: var(--tekst);
+  flex: 1;
+}
+
+/* Metric cards */
+.dash-ind-metric {
+  border-radius: 12px;
+  padding: 16px 14px;
+  text-align: center;
+  border: 1.5px solid transparent;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+@media (hover: hover) { .dash-ind-metric:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); } }
+
+.dash-ind-metric-groen  { background: var(--groen-licht);  border-color: var(--groen);  }
+.dash-ind-metric-blauw  { background: var(--blauw-licht);  border-color: var(--blauw);  }
+.dash-ind-metric-oranje { background: var(--oranje-licht); border-color: var(--oranje); }
+.dash-ind-metric-rood   { background: #fde8e8;             border-color: var(--rood);   }
+
+.dash-ind-metric-getal {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.dash-ind-metric-groen  .dash-ind-metric-getal { color: var(--groen);  }
+.dash-ind-metric-blauw  .dash-ind-metric-getal { color: var(--blauw);  }
+.dash-ind-metric-oranje .dash-ind-metric-getal { color: var(--oranje); }
+.dash-ind-metric-rood   .dash-ind-metric-getal { color: var(--rood);   }
+
+.dash-ind-metric-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--tekst);
+}
+
+.dash-ind-metric-sub {
+  font-size: 0.68rem;
+  color: var(--zacht);
+  margin-top: 2px;
+}
+

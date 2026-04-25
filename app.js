@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.9.3';
+var APP_VERSION = '2.9.4';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -2612,7 +2612,7 @@ _collectProjectFotos: function(naam) {
   ══════════════════════════════════════ */
   _tijdNaarUren: function(t) {
     if (!t) return 0;
-    var map = { '5 min': 0.083, '15 min': 0.25, '30 min': 0.5, '1 uur': 1, '1u30': 1.5, '2 uur': 2 };
+    var map = { '5 min': 0.083, '15 min': 0.25, '30 min': 0.5, '1 uur': 1, '1u30': 1.5, '2 uur': 2, '3 uur': 3, '4 uur': 4 };
     return map[t] || 0;
   },
 
@@ -2946,15 +2946,21 @@ _collectProjectFotos: function(naam) {
   },
 
   _dashIndRender: function() {
+    App._dashIndCloseAll();
+    App._dashIndClickMap = {};
     var data = App._dashIndData();
-    App._dashIndBlok8(data);
-    App._dashIndBlok7(data);
-    App._dashIndBlok6(data);
-    App._dashIndBlok5(data);
-    App._dashIndBlok4(data);
-    App._dashIndBlok3(data);
-    App._dashIndBlok2(data);
+    App._dashIndLastData = data;
+    App._dashIndPM = {};
+    data.per.forEach(function(p) { App._dashIndPM[p.volgnummer] = p; });
     App._dashIndBlok1(data);
+    App._dashIndBlok2(data);
+    App._dashIndBlok3(data);
+    App._dashIndBlok4(data);
+    App._dashIndBlok5(data);
+    App._dashIndBlok6(data);
+    App._dashIndBlok7(data);
+    App._dashIndBlok8(data);
+    App._dashIndBlok9(data);
   },
 
   /* Helper: sorteer een eenvoudig {label: count} object aflopend */
@@ -2989,605 +2995,595 @@ _collectProjectFotos: function(naam) {
     return teller;
   },
 
-  /* ── Blok 8: Kwetsbaarheid & nood ── */
-  _dashIndBlok8: function(data) {
-    var kwetsbaarInkomen   = ['Leefloon', 'Geen inkomen', 'Invaliditeit', 'Werkloosheid'];
-    var kwetsbaarHuisvest  = ['Dak/Thuisloos', 'Begeleid wonen', 'Housing First'];
+  /* ── Individueel dashboard v2.9.4 — state & helpers ── */
+  _dashIndState: { n1PanelId: null, n1Key: null, n2Nr: null },
+  _dashIndLastData: null,
+  _dashIndPM: {},
+  _dashIndClickMap: {},
 
-    // Filter personen tot diegenen met acties in de periode
-    var nummers = {};
-    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
-    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
-
-    if (!per.length) {
-      ['dash-ind-kwets-dist','dash-ind-kwets-top10'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
-      });
-      return;
-    }
-
-    // Unieke levensdomeinen per persoon in de gefilterde periode
-    var domeinenPerPersoon = {};
-    data.ind.forEach(function(r) {
-      var ld = r.levensdomein || [];
-      if (!Array.isArray(ld)) ld = [ld];
-      if (!domeinenPerPersoon[r.persoonNummer]) domeinenPerPersoon[r.persoonNummer] = {};
-      ld.forEach(function(d) { if (d) domeinenPerPersoon[r.persoonNummer][d] = true; });
-    });
-
-    // Bereken score per persoon
-    var scores = [];
-    per.forEach(function(p) {
-      var score = 0;
-      var reden = [];
-
-      // 1. Kwetsbaar inkomen
-      var ink = p.inkomen || [];
-      if (!Array.isArray(ink)) ink = [ink];
-      var heeftKwetsbaarInkomen = ink.some(function(v) { return kwetsbaarInkomen.indexOf(v) !== -1; });
-      if (heeftKwetsbaarInkomen) { score++; reden.push('Laag inkomen'); }
-
-      // 2. Precaire huisvesting
-      var huis = p.huisvesting || [];
-      if (!Array.isArray(huis)) huis = [huis];
-      var heeftPrecaireHuisvest = huis.some(function(v) { return kwetsbaarHuisvest.indexOf(v) !== -1; });
-      if (heeftPrecaireHuisvest) { score++; reden.push('Precaire huisvesting'); }
-
-      // 3. Acties in 3+ levensdomeinen
-      var domeinen = Object.keys(domeinenPerPersoon[p.volgnummer] || {});
-      if (domeinen.length >= 3) { score++; reden.push(domeinen.length + ' levensdomeinen'); }
-
-      var initialen = (p.voornaam || '').charAt(0).toUpperCase() + '.' +
-                      (p.familienaam || '').charAt(0).toUpperCase() + '.';
-      scores.push({ initialen: initialen, score: score, reden: reden, domeinen: domeinen });
-    });
-
-    // Verdeling 0-3
-    var dist = { '0': 0, '1': 0, '2': 0, '3': 0 };
-    scores.forEach(function(s) { dist[String(s.score)]++; });
-    var scoreKleuren = { '0': 'fill-groen', '1': 'fill-oranje', '2': 'fill-rood', '3': 'fill-rood' };
-    var scoreLbls    = { '0': 'Score 0 — niet kwetsbaar', '1': 'Score 1 — licht kwetsbaar', '2': 'Score 2 — matig kwetsbaar', '3': 'Score 3 — hoog kwetsbaar' };
-    var distItems = ['0','1','2','3'].map(function(k) {
-      return { label: 'Score ' + k, value: dist[k] };
-    }).filter(function(it) { return it.value > 0; });
-    App._renderBars('dash-ind-kwets-dist', distItems.map(function(it, i) {
-      return { label: it.label, value: it.value };
-    }), 'fill-oranje', false);
-
-    // Legenda
-    var elLeg = document.getElementById('dash-ind-kwets-legenda');
-    if (elLeg) {
-      elLeg.innerHTML = Object.keys(scoreLbls).map(function(k) {
-        return '<div>' + scoreLbls[k] + ': <strong>' + (dist[k] || 0) + ' personen</strong></div>';
-      }).join('') +
-      '<div style="margin-top:6px">Criteria: laag inkomen · precaire huisvesting · ≥3 levensdomeinen</div>';
-    }
-
-    // Top 10 hoogste score
-    var elTop = document.getElementById('dash-ind-kwets-top10');
-    if (!elTop) return;
-    var top10 = scores.slice().sort(function(a, b) {
-      if (b.score !== a.score) return b.score - a.score;
-      return b.domeinen.length - a.domeinen.length;
-    }).slice(0, 10);
-
-    if (!top10.length) { elTop.innerHTML = '<div class="dash-leeg">Geen data.</div>'; return; }
-
-    var scoreAchtergrond = ['var(--groen-licht)','var(--oranje-licht)','#fde8e8','#fde8e8'];
-    var scoreTekst       = ['var(--groen)','var(--oranje)','var(--rood)','var(--rood)'];
-    var html = '<table class="dash-hm"><thead><tr>' +
-      '<th>#</th><th>Initialen</th><th>Score</th><th>Actieve domeinen</th><th>Factoren</th>' +
-      '</tr></thead><tbody>';
-    top10.forEach(function(it, i) {
-      var bg  = scoreAchtergrond[it.score] || '#f3f4f6';
-      var clr = scoreTekst[it.score]       || 'var(--tekst)';
-      html += '<tr>' +
-        '<td style="color:var(--zacht);font-size:0.7rem">' + (i+1) + '</td>' +
-        '<td style="font-weight:700">' + App.esc(it.initialen) + '</td>' +
-        '<td><span class="dash-hmc" style="background:' + bg + ';color:' + clr + ';font-weight:700">' + it.score + '/3</span></td>' +
-        '<td style="font-size:0.7rem">' + App.esc(it.domeinen.join(', ') || '—') + '</td>' +
-        '<td style="font-size:0.7rem;color:var(--zacht)">' + App.esc(it.reden.join(', ') || '—') + '</td>' +
-        '</tr>';
-    });
-    html += '</tbody></table>';
-    elTop.innerHTML = html;
+  _dashIndAvatarKleur: function(s) {
+    var kleuren = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#e65100','#00695c','#4527a0','#558b2f'];
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff;
+    return kleuren[h % kleuren.length];
   },
 
-  /* ── Blok 7: Samenwerking ── */
-  _dashIndBlok7: function(data) {
-    var collegas = ['MW', 'SHW', 'Woonzorg', 'Brugfiguur'];
+  _dashIndInit: function(p) {
+    return ((p.voornaam || '').charAt(0).toUpperCase() || '?') + '.' +
+           ((p.familienaam || '').charAt(0).toUpperCase() || '?') + '.';
+  },
 
-    // Filter personen tot diegenen met acties in de periode
-    var nummers = {};
-    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
-    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+  _dashIndStatus: function(nr) {
+    var alleActies = DB.individueel.filter(function(r) { return r.persoonNummer === nr; });
+    if (!alleActies.length) return 'geen';
+    if (alleActies.length === 1) return 'eenmalig';
+    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+    var nu = new Date();
+    var meestRecent = null;
+    alleActies.forEach(function(r) {
+      var mi = maanden.indexOf(r.maand);
+      if (mi === -1) return;
+      var d = new Date(Number(r.jaar), mi, 1);
+      if (!meestRecent || d > meestRecent) meestRecent = d;
+    });
+    if (!meestRecent) return 'uitBeeld';
+    var diff = (nu.getFullYear() - meestRecent.getFullYear()) * 12 + (nu.getMonth() - meestRecent.getMonth());
+    return diff < 6 ? 'actief' : 'uitBeeld';
+  },
 
-    if (!per.length) {
-      ['dash-ind-gekend-bar','dash-ind-gekend-spread','dash-ind-overlap'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
-      });
+  _dashIndCloseAll: function() {
+    var panels = document.querySelectorAll('.dash-ind-drill-panel');
+    for (var i = 0; i < panels.length; i++) panels[i].style.display = 'none';
+    App._dashIndState = { n1PanelId: null, n1Key: null, n2Nr: null };
+  },
+
+  _dashIndOpenN1: function(panelId, key) {
+    var lookup = App._dashIndClickMap[panelId + '::' + key];
+    if (!lookup) return;
+    var state = App._dashIndState;
+    if (state.n1PanelId === panelId && state.n1Key === key) {
+      App._dashIndCloseAll();
       return;
     }
+    App._dashIndCloseAll();
+    var el = document.getElementById(panelId);
+    if (!el) return;
+    var data = App._dashIndLastData;
+    el.innerHTML = App._dashIndN1HTML(lookup.personen, lookup.msgs, data ? data.ind : []);
+    el.style.display = 'block';
+    App._dashIndState.n1PanelId = panelId;
+    App._dashIndState.n1Key = key;
+  },
 
-    // ── Gekend bij verdeling (bar) ──
-    var gekendTeller = {};
-    collegas.forEach(function(c) { gekendTeller[c] = 0; });
-    per.forEach(function(p) {
-      var vals = p.gekendBij || [];
-      if (!Array.isArray(vals)) vals = [vals];
-      vals.forEach(function(v) { if (gekendTeller.hasOwnProperty(v)) gekendTeller[v]++; });
+  _dashIndToggleN2: function(nr) {
+    var state = App._dashIndState;
+    var el = document.getElementById('dash-ind-n2-' + nr);
+    if (!el) return;
+    if (state.n2Nr === nr) {
+      el.style.display = 'none';
+      App._dashIndState.n2Nr = null;
+    } else {
+      if (state.n2Nr !== null) {
+        var prev = document.getElementById('dash-ind-n2-' + state.n2Nr);
+        if (prev) prev.style.display = 'none';
+      }
+      var p = App._dashIndPM[nr];
+      var data = App._dashIndLastData;
+      var acties = data ? data.ind.filter(function(r) { return r.persoonNummer === nr; }) : [];
+      el.innerHTML = App._dashIndN2HTML(p, acties);
+      el.style.display = 'block';
+      App._dashIndState.n2Nr = nr;
+    }
+  },
+
+  _dashIndOpenN2Direct: function(panelId, nr) {
+    var state = App._dashIndState;
+    if (state.n1PanelId === panelId && state.n2Nr === nr) {
+      App._dashIndCloseAll();
+      return;
+    }
+    App._dashIndCloseAll();
+    var el = document.getElementById(panelId);
+    if (!el) return;
+    var p = App._dashIndPM[nr];
+    var data = App._dashIndLastData;
+    var acties = data ? data.ind.filter(function(r) { return r.persoonNummer === nr; }) : [];
+    el.innerHTML = App._dashIndN2HTML(p, acties);
+    el.style.display = 'block';
+    App._dashIndState.n1PanelId = panelId;
+    App._dashIndState.n2Nr = nr;
+  },
+
+  _dashIndPersonRij: function(p, indActies, msg) {
+    var nr = p.volgnummer;
+    var init = App._dashIndInit(p);
+    var kleur = App._dashIndAvatarKleur(init);
+    var status = App._dashIndStatus(nr);
+    var statusLabels = { actief: 'actief', uitBeeld: 'uit beeld', eenmalig: 'eenmalig', geen: '—' };
+    var statusClass  = { actief: 'dash-ind-pill-actief', uitBeeld: 'dash-ind-pill-uitbeeld', eenmalig: 'dash-ind-pill-eenmalig', geen: 'dash-ind-pill-geen' };
+    var domSet = {};
+    indActies.filter(function(r) { return r.persoonNummer === nr; }).forEach(function(r) {
+      (r.levensdomein || []).forEach(function(d) { if (d) domSet[d] = true; });
     });
-    var maxG = 0;
-    collegas.forEach(function(c) { if (gekendTeller[c] > maxG) maxG = gekendTeller[c]; });
-    if (maxG === 0) maxG = 1;
-    var fillKleuren = { 'MW': 'fill-groen', 'SHW': 'fill-blauw', 'Woonzorg': 'fill-oranje', 'Brugfiguur': 'fill-paars' };
-    var html = '<div class="dash-bar-lijst">';
-    collegas.forEach(function(c) {
-      var v = gekendTeller[c];
-      var pct = Math.round((v / maxG) * 100);
-      html += '<div class="dash-bi">' +
-        '<span class="dash-bl">' + c + '</span>' +
-        '<div class="dash-bt"><div class="dash-bf ' + (fillKleuren[c] || 'fill-groen') + '" style="width:' + pct + '%"></div></div>' +
-        '<span class="dash-bv">' + v + '</span>' +
-        '</div>';
+    var tags = Object.keys(domSet).slice(0, 3).map(function(d) {
+      return '<span class="dash-ind-tag">' + App.esc(d) + '</span>';
+    }).join('');
+    var extraHtml = msg ? '<span style="font-size:0.7rem;color:var(--zacht);white-space:nowrap;padding:0 4px">' + App.esc(msg) + '</span>' : '';
+    return '<div class="dash-ind-person-row" onclick="App._dashIndToggleN2(' + nr + ')">' +
+      '<div class="dash-ind-avatar" style="background:' + kleur + '">' + App.esc(init) + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:600;font-size:0.82rem">' + App.esc(init) + '</div>' +
+        '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">' + tags + '</div>' +
+      '</div>' +
+      extraHtml +
+      '<span class="dash-ind-pill ' + (statusClass[status] || 'dash-ind-pill-geen') + '">' + (statusLabels[status] || '—') + '</span>' +
+    '</div>' +
+    '<div id="dash-ind-n2-' + nr + '" class="dash-ind-n2-wrapper" style="display:none"></div>';
+  },
+
+  _dashIndN1HTML: function(personen, msgs, indActies) {
+    if (!personen || !personen.length) return '<div class="dash-leeg">Geen personen gevonden.</div>';
+    var html = '<div class="dash-ind-n1-header">' + personen.length + ' persoon' + (personen.length !== 1 ? 'en' : '') + '</div>';
+    html += '<div class="dash-ind-n1-list">';
+    personen.forEach(function(p) {
+      html += App._dashIndPersonRij(p, indActies, msgs && msgs[p.volgnummer] ? msgs[p.volgnummer] : '');
     });
     html += '</div>';
-    var elBar = document.getElementById('dash-ind-gekend-bar');
-    if (elBar) elBar.innerHTML = html;
-
-    // ── Spreiding: aantal collega's per persoon ──
-    var spreadTeller = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0 };
-    per.forEach(function(p) {
-      var vals = (p.gekendBij || []).filter(function(v) { return collegas.indexOf(v) !== -1; });
-      var n = String(Math.min(vals.length, 4));
-      spreadTeller[n]++;
-    });
-    var spreadItems = [
-      { label: '0 collega\'s', value: spreadTeller['0'] },
-      { label: '1 collega',    value: spreadTeller['1'] },
-      { label: '2 collega\'s', value: spreadTeller['2'] },
-      { label: '3 collega\'s', value: spreadTeller['3'] },
-      { label: '4 collega\'s', value: spreadTeller['4'] }
-    ].filter(function(it) { return it.value > 0; });
-    App._renderBars('dash-ind-gekend-spread', spreadItems, 'fill-groen2', false);
-
-    // ── Overlapmatrix ──
-    var elOverlap = document.getElementById('dash-ind-overlap');
-    if (!elOverlap) return;
-
-    // Diagonaal = totaal per collega; off-diagonaal = pairwise overlap
-    var matrix = {};
-    collegas.forEach(function(a) {
-      matrix[a] = {};
-      collegas.forEach(function(b) { matrix[a][b] = 0; });
-    });
-    per.forEach(function(p) {
-      var vals = (p.gekendBij || []).filter(function(v) { return collegas.indexOf(v) !== -1; });
-      vals.forEach(function(a) {
-        vals.forEach(function(b) { matrix[a][b]++; });
-      });
-    });
-
-    var maxM = 0;
-    collegas.forEach(function(a) {
-      collegas.forEach(function(b) { if (matrix[a][b] > maxM) maxM = matrix[a][b]; });
-    });
-    if (maxM === 0) maxM = 1;
-
-    var html2 = '<table class="dash-hm"><thead><tr><th></th>';
-    collegas.forEach(function(c) { html2 += '<th>' + c + '</th>'; });
-    html2 += '</tr></thead><tbody>';
-    collegas.forEach(function(a) {
-      html2 += '<tr><td style="font-weight:600">' + a + '</td>';
-      collegas.forEach(function(b) {
-        var v = matrix[a][b];
-        if (v === 0) {
-          html2 += '<td style="text-align:center;color:#ccc">—</td>';
-        } else if (a === b) {
-          // Diagonaal: totaal
-          html2 += '<td><span class="dash-hmc" style="background:var(--groen-licht);color:var(--groen)">' + v + '</span></td>';
-        } else {
-          var int = Math.round(219 - (v / maxM) * 160);
-          html2 += '<td><span class="dash-hmc" style="background:rgb(' + int + ',' + Math.round(int * 0.7) + ',' + Math.round(int * 1.1) + ')">' + v + '</span></td>';
-        }
-      });
-      html2 += '</tr>';
-    });
-    html2 += '</tbody></table>';
-    elOverlap.innerHTML = html2;
+    return html;
   },
 
-  /* ── Blok 6: Evolutie in tijd ── */
-  _dashIndBlok6: function(data) {
-    var maanden = ['Januari','Februari','Maart','April','Mei','Juni',
-                   'Juli','Augustus','September','Oktober','November','December'];
-    var jaarEl = document.getElementById('dash-ind-jaar');
-    var huidigJaar = jaarEl && jaarEl.value ? parseInt(jaarEl.value) : new Date().getFullYear();
-    var vorigJaar  = huidigJaar - 1;
-
-    // ── Nieuwe personen per maand (op basis van aangemaakt-datum) ──
-    var elNieuw = document.getElementById('dash-ind-nieuwe-per-maand');
-    if (elNieuw) {
-      var nieuwPerMaand = {};
-      maanden.forEach(function(m) { nieuwPerMaand[m] = 0; });
-      DB.personen.forEach(function(p) {
-        if (!p.aangemaakt) return;
-        var d = new Date(p.aangemaakt);
-        if (d.getFullYear() !== huidigJaar) return;
-        var mn = maanden[d.getMonth()];
-        nieuwPerMaand[mn] = (nieuwPerMaand[mn] || 0) + 1;
-      });
-      var maxN = 0;
-      maanden.forEach(function(m) { if (nieuwPerMaand[m] > maxN) maxN = nieuwPerMaand[m]; });
-      if (maxN === 0) maxN = 1;
-      var html = '<div class="dash-bar-lijst">';
-      maanden.forEach(function(m) {
-        var v   = nieuwPerMaand[m];
-        var pct = Math.round((v / maxN) * 100);
-        var lbl = m.substring(0, 3);
-        html += '<div class="dash-bi">' +
-          '<span class="dash-bl" style="min-width:32px">' + lbl + '</span>' +
-          '<div class="dash-bt"><div class="dash-bf fill-groen" style="width:' + pct + '%"></div></div>' +
-          '<span class="dash-bv">' + v + '</span>' +
-          '</div>';
-      });
-      html += '</div>';
-      elNieuw.innerHTML = html;
+  _dashIndN2HTML: function(p, acties) {
+    if (!p) return '<div class="dash-leeg">Persoon niet gevonden.</div>';
+    var init = App._dashIndInit(p);
+    var kleur = App._dashIndAvatarKleur(init);
+    var status = App._dashIndStatus(p.volgnummer);
+    var statusLabels = { actief: 'actief', uitBeeld: 'uit beeld', eenmalig: 'eenmalig', geen: '—' };
+    var statusClass  = { actief: 'dash-ind-pill-actief', uitBeeld: 'dash-ind-pill-uitbeeld', eenmalig: 'dash-ind-pill-eenmalig', geen: 'dash-ind-pill-geen' };
+    var html = '<div class="dash-ind-n2">';
+    html += '<div class="dash-ind-n2-header">' +
+      '<div class="dash-ind-avatar dash-ind-avatar-lg" style="background:' + kleur + '">' + App.esc(init) + '</div>' +
+      '<div style="flex:1">' +
+        '<div style="font-size:0.95rem;font-weight:700">' + App.esc(init) + '</div>' +
+        '<div style="font-size:0.7rem;color:var(--zacht)">#' + p.volgnummer + ' · aangemaakt: ' + App.esc(p.aangemaakt || '—') + '</div>' +
+      '</div>' +
+      '<span class="dash-ind-pill ' + (statusClass[status] || 'dash-ind-pill-geen') + '">' + (statusLabels[status] || '—') + '</span>' +
+    '</div>';
+    var velden = [
+      ['Adres', [p.adres, p.postcode, p.gemeente].filter(Boolean).join(', ') || '—'],
+      ['Leeftijd', p.leeftijd || '—'],
+      ['Woonsituatie', p.woonsituatie || '—'],
+      ['Huisvesting', (p.huisvesting || []).join(', ') || '—'],
+      ['Inkomen', (p.inkomen || []).join(', ') || '—'],
+      ['Eerste contact', p.eersteContact || '—'],
+      ['Gekend bij', (p.gekendBij || []).join(', ') || '—'],
+    ];
+    html += '<div class="dash-g2" style="margin:10px 0;gap:6px">';
+    velden.forEach(function(v) {
+      html += '<div class="dash-ind-n2-blok"><div class="dash-ind-n2-blok-titel">' + v[0] + '</div><div style="font-size:0.78rem">' + App.esc(v[1]) + '</div></div>';
+    });
+    html += '</div>';
+    if (p.notitie) {
+      html += '<div class="dash-ind-n2-blok" style="margin-bottom:8px"><div class="dash-ind-n2-blok-titel">Notitie</div><div style="white-space:pre-wrap;font-size:0.78rem">' + App.esc(p.notitie) + '</div></div>';
     }
-
-    // ── Acties per maand: huidig jaar (balk) vs vorig jaar (grijze balk eronder) ──
-    var elActies = document.getElementById('dash-ind-acties-per-maand');
-    if (elActies) {
-      var huidigPerMaand = {};
-      var vorigPerMaand  = {};
-      maanden.forEach(function(m) { huidigPerMaand[m] = 0; vorigPerMaand[m] = 0; });
-      DB.individueel.forEach(function(r) {
-        if (!r.jaar || !r.maand) return;
-        if (r.jaar === huidigJaar && huidigPerMaand.hasOwnProperty(r.maand)) huidigPerMaand[r.maand]++;
-        if (r.jaar === vorigJaar  && vorigPerMaand.hasOwnProperty(r.maand))  vorigPerMaand[r.maand]++;
-      });
-      var maxA = 0;
-      maanden.forEach(function(m) {
-        if (huidigPerMaand[m] > maxA) maxA = huidigPerMaand[m];
-        if (vorigPerMaand[m]  > maxA) maxA = vorigPerMaand[m];
-      });
-      if (maxA === 0) maxA = 1;
-      var html2 = '<div style="font-size:0.65rem;color:var(--zacht);margin-bottom:6px;display:flex;gap:12px">' +
-        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--blauw);margin-right:3px"></span>' + huidigJaar + '</span>' +
-        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c8d0dc;margin-right:3px"></span>' + vorigJaar + '</span>' +
-        '</div><div class="dash-bar-lijst">';
-      maanden.forEach(function(m) {
-        var h   = huidigPerMaand[m];
-        var v   = vorigPerMaand[m];
-        var ph  = Math.round((h / maxA) * 100);
-        var pv  = Math.round((v / maxA) * 100);
-        var lbl = m.substring(0, 3);
-        html2 += '<div style="margin-bottom:3px">' +
-          '<div class="dash-bi">' +
-            '<span class="dash-bl" style="min-width:32px">' + lbl + '</span>' +
-            '<div class="dash-bt"><div class="dash-bf fill-blauw" style="width:' + ph + '%"></div></div>' +
-            '<span class="dash-bv">' + h + '</span>' +
-          '</div>' +
-          '<div class="dash-bi" style="opacity:0.55">' +
-            '<span class="dash-bl" style="min-width:32px"></span>' +
-            '<div class="dash-bt"><div class="dash-bf" style="width:' + pv + '%;background:#c8d0dc"></div></div>' +
-            '<span class="dash-bv">' + v + '</span>' +
-          '</div>' +
+    html += '<div class="dash-ind-n2-blok-titel" style="margin:8px 0 4px">Acties in de periode (' + acties.length + ')</div>';
+    if (!acties.length) {
+      html += '<div class="dash-leeg">Geen acties in de geselecteerde periode.</div>';
+    } else {
+      var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+      acties.slice().sort(function(a, b) {
+        if (Number(b.jaar) !== Number(a.jaar)) return Number(b.jaar) - Number(a.jaar);
+        return maanden.indexOf(b.maand) - maanden.indexOf(a.maand);
+      }).forEach(function(r) {
+        html += '<div class="dash-ind-actie-rij">' +
+          '<span class="dash-ind-actie-datum">' + App.esc((r.maand || '') + ' ' + (r.jaar || '')) + '</span>' +
+          '<span class="dash-ind-actie-info">' + App.esc((r.levensdomein || []).join(', ') || '—') + ' · ' + App.esc((r.methodiek || []).join(', ') || '—') + ' · ' + App.esc(r.tijd || '—') + '</span>' +
         '</div>';
       });
-      html2 += '</div>';
-      elActies.innerHTML = html2;
     }
+    html += '</div>';
+    return html;
   },
 
-  /* ── Blok 5: Intensiteit per persoon ── */
-  _maandNaarNummer: function(m) {
-    var map = { 'Januari':0,'Februari':1,'Maart':2,'April':3,'Mei':4,'Juni':5,
-                'Juli':6,'Augustus':7,'September':8,'Oktober':9,'November':10,'December':11 };
-    return map[m] !== undefined ? map[m] : 0;
-  },
+  _dashIndClickMetric1: function(key) { App._dashIndOpenN1('dash-blok1-n1', key); },
+  _dashIndClickMetric5: function(key) { App._dashIndOpenN1('dash-blok5-n1', key); },
 
-  _actieDatum: function(r) {
-    if (!r.jaar) return null;
-    return new Date(r.jaar, App._maandNaarNummer(r.maand || 'Januari'), 1);
-  },
-
-  _statusBadge: function(maandenGeleden) {
-    if (maandenGeleden < 3)  return '<span style="background:var(--groen-licht);color:var(--groen);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">actief</span>';
-    if (maandenGeleden < 12) return '<span style="background:var(--oranje-licht);color:var(--oranje);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">sluimerend</span>';
-    return '<span style="background:#fde8e8;color:var(--rood);font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">inactief</span>';
-  },
-
-  _dashIndBlok5: function(data) {
-    var nu = new Date();
-
-    // Laatste actiedatum per persoon (over ALLE data, niet alleen filter)
-    var alleActies = DB.individueel;
-    var laatstePer = {};
-    alleActies.forEach(function(r) {
-      var d = App._actieDatum(r);
-      if (!d) return;
-      var nr = r.persoonNummer;
-      if (!laatstePer[nr] || d > laatstePer[nr]) laatstePer[nr] = d;
-    });
-
-    function maandenGeleden(d) {
-      if (!d) return 999;
-      return (nu.getFullYear() - d.getFullYear()) * 12 + (nu.getMonth() - d.getMonth());
-    }
-
-    // Top 20 uren met statusbadge
-    function renderTop20(elId, teller, sleutel, suffix) {
-      var el = document.getElementById(elId);
-      if (!el) return;
-      if (!data.ind.length) { el.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
-      var lijst = [];
-      for (var nr in teller) {
-        if (teller.hasOwnProperty(nr)) lijst.push({ nr: parseInt(nr), val: teller[nr] });
-      }
-      lijst.sort(function(a, b) { return b.val - a.val; });
-      lijst = lijst.slice(0, 20);
-      var max = lijst.length ? lijst[0].val : 1;
-      if (max === 0) max = 1;
-      var html = '<div class="dash-bar-lijst">';
-      lijst.forEach(function(it, i) {
-        var p    = data.per.find(function(x) { return x.volgnummer === it.nr; });
-        var naam = p ? ((p.voornaam||'').charAt(0).toUpperCase() + '.' + (p.familienaam||'').charAt(0).toUpperCase() + '.') : 'P#' + it.nr;
-        var mg   = maandenGeleden(laatstePer[it.nr]);
-        var badge = App._statusBadge(mg);
-        var pct  = Math.round((it.val / max) * 100);
-        html += '<div class="dash-bi dash-bi-r">' +
-          '<span class="dash-br">' + (i+1) + '.</span>' +
-          '<span class="dash-bl">' + App.esc(naam) + badge + '</span>' +
-          '<div class="dash-bt"><div class="dash-bf ' + sleutel + '" style="width:' + pct + '%"></div></div>' +
-          '<span class="dash-bv">' + it.val + suffix + '</span>' +
-          '</div>';
-      });
-      html += '</div>';
-      el.innerHTML = html;
-    }
-
-    var urenPer = {};
-    data.ind.forEach(function(r) {
-      if (!urenPer[r.persoonNummer]) urenPer[r.persoonNummer] = 0;
-      urenPer[r.persoonNummer] += App._tijdNaarUren(r.tijd);
-    });
-    var urenAfgerond = {};
-    for (var k in urenPer) { if (urenPer.hasOwnProperty(k)) urenAfgerond[k] = Math.round(urenPer[k] * 10) / 10; }
-    renderTop20('dash-ind-top20-status', urenAfgerond, 'fill-groen', 'u');
-
-    var actiesPer = {};
-    data.ind.forEach(function(r) {
-      actiesPer[r.persoonNummer] = (actiesPer[r.persoonNummer] || 0) + 1;
-    });
-    renderTop20('dash-ind-top20-acties-status', actiesPer, 'fill-blauw', 'x');
-
-    // Sluimerende contacten: minstens 1 actie ooit, geen actie de laatste 6 maanden
-    var elSlui = document.getElementById('dash-ind-sluimerend');
-    if (!elSlui) return;
-    var sluimerend = [];
-    for (var nr in laatstePer) {
-      if (!laatstePer.hasOwnProperty(nr)) continue;
-      var mg2 = maandenGeleden(laatstePer[nr]);
-      if (mg2 >= 6) {
-        var p2 = data.per.find(function(x) { return x.volgnummer === parseInt(nr); });
-        var initialen = p2
-          ? ((p2.voornaam||'').charAt(0).toUpperCase() + '.' + (p2.familienaam||'').charAt(0).toUpperCase() + '.')
-          : 'P#' + nr;
-        var aantalActies = alleActies.filter(function(r) { return r.persoonNummer === parseInt(nr); }).length;
-        sluimerend.push({ nr: parseInt(nr), initialen: initialen, laatste: laatstePer[nr], mg: mg2, acties: aantalActies });
-      }
-    }
-    sluimerend.sort(function(a, b) { return a.mg - b.mg; }); // minst lang sluimerend eerst
-    if (!sluimerend.length) {
-      elSlui.innerHTML = '<div class="dash-leeg">Geen sluimerende contacten.</div>';
-      return;
-    }
-    var html2 = '<table class="dash-hm"><thead><tr>' +
-      '<th>Persoon</th><th>Laatste contact</th><th>Maanden geleden</th><th>Totaal acties</th><th>Status</th>' +
-      '</tr></thead><tbody>';
-    sluimerend.forEach(function(it) {
-      var maand = it.laatste.toLocaleString('nl-BE', { month: 'long', year: 'numeric' });
-      html2 += '<tr>' +
-        '<td style="font-weight:600">' + App.esc(it.initialen) + '</td>' +
-        '<td>' + maand + '</td>' +
-        '<td style="text-align:center">' + it.mg + '</td>' +
-        '<td style="text-align:center">' + it.acties + '</td>' +
-        '<td>' + App._statusBadge(it.mg) + '</td>' +
-        '</tr>';
-    });
-    html2 += '</tbody></table>';
-    elSlui.innerHTML = html2;
-  },
-
-  /* ── Blok 4: Toeleiding & netwerk ── */
-  _dashIndBlok4: function(data) {
-    // Prominente metric: % acties met toeleiding
-    var elRatio = document.getElementById('dash-ind-toel-ratio');
-    if (elRatio) {
-      var metToel = data.ind.filter(function(r) { return (r.toeleiding || []).length > 0; }).length;
-      var totaal  = data.ind.length;
-      var pct     = totaal ? Math.round((metToel / totaal) * 100) : 0;
-      elRatio.innerHTML = '<strong>' + pct + '%</strong> van de acties leidde tot een doorverwijzing' +
-        ' <span style="color:var(--zacht);font-size:0.85em">(' + metToel + ' van ' + totaal + ' acties)</span>';
-    }
-
-    // Toeleiding balkgrafiek
-    var teller  = App._telVeld(data.ind, 'toeleiding');
-    var sorted  = App._sortTeller(teller, 'count');
-    App._renderBars('dash-ind-toeleiding',
-      sorted.map(function(it) { return { label: it.label, value: it.data.count }; }),
-      'fill-oranje', false);
-
-    // Kruistabel: rijen = levensdomeinen, kolommen = toeleiding-organisaties
-    var elKruis = document.getElementById('dash-ind-toel-kruis');
-    if (!elKruis) return;
-    if (!data.ind.length) { elKruis.innerHTML = '<div class="dash-leeg">Nog geen data.</div>'; return; }
-
-    var domeinen = {}, orgs = {}, matrix = {};
-    data.ind.forEach(function(r) {
-      var ld = r.levensdomein || [];
-      var tl = r.toeleiding   || [];
-      if (!Array.isArray(ld)) ld = [ld];
-      if (!Array.isArray(tl)) tl = [tl];
-      ld.forEach(function(d) {
-        if (!d) return;
-        domeinen[d] = true;
-        tl.forEach(function(o) {
-          if (!o) return;
-          orgs[o] = true;
-          var sleutel = d + '||' + o;
-          matrix[sleutel] = (matrix[sleutel] || 0) + 1;
-        });
-      });
-    });
-
-    var domLijst = Object.keys(domeinen).sort();
-    var orgLijst = Object.keys(orgs).sort();
-    if (!domLijst.length || !orgLijst.length) {
-      elKruis.innerHTML = '<div class="dash-leeg">Geen kruisdata beschikbaar.</div>';
-      return;
-    }
-
-    var maxVal = 0;
-    domLijst.forEach(function(d) {
-      orgLijst.forEach(function(o) {
-        var v = matrix[d + '||' + o] || 0;
-        if (v > maxVal) maxVal = v;
-      });
-    });
-    if (maxVal === 0) maxVal = 1;
-
-    var html = '<table class="dash-hm"><thead><tr><th>Domein</th>';
-    orgLijst.forEach(function(o) { html += '<th>' + App.esc(o) + '</th>'; });
-    html += '</tr></thead><tbody>';
-    domLijst.forEach(function(d) {
-      html += '<tr><td style="font-weight:600">' + App.esc(d) + '</td>';
-      orgLijst.forEach(function(o) {
-        var v = matrix[d + '||' + o] || 0;
-        if (v === 0) {
-          html += '<td style="text-align:center;color:#ccc">—</td>';
-        } else {
-          var int = Math.round(200 - (v / maxVal) * 155);
-          html += '<td><span class="dash-hmc" style="background:rgb(' + int + ',' + Math.round(int * 0.6) + ',50);color:white">' + v + '</span></td>';
-        }
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table>';
-    elKruis.innerHTML = html;
-  },
-
-  /* ── Blok 3: Wat doe je? ── */
-  _dashIndBlok3: function(data) {
-    // Levensdomeinen heatmap met extra kolom: gemiddelde tijdsinvestering
-    var elLd = document.getElementById('dash-ind-levensdomeinen');
-    if (elLd) {
-      if (!data.ind.length) {
-        elLd.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
-      } else {
-        var teller = App._telVeld(data.ind, 'levensdomein');
-        var sorted = App._sortTeller(teller, 'count');
-        if (!sorted.length) {
-          elLd.innerHTML = '<div class="dash-leeg">Nog geen data.</div>';
-        } else {
-          var maxC = sorted[0].data.count || 1;
-          var maxU = 0;
-          sorted.forEach(function(it) { if (it.data.uren > maxU) maxU = it.data.uren; });
-          if (maxU === 0) maxU = 1;
-          var html = '<table class="dash-hm"><thead><tr>' +
-            '<th>Domein</th><th>Contacten</th><th>Uren</th><th>Gem. tijd</th>' +
-            '</tr></thead><tbody>';
-          sorted.forEach(function(it) {
-            var pc = it.data.count / maxC;
-            var pu = it.data.uren / maxU;
-            var gr = 'rgb(' + Math.round(216 - pc*171) + ',' + Math.round(243 - pc*137) + ',' + Math.round(220 - pc*141) + ')';
-            var bl = 'rgb(' + Math.round(219 - pu*193) + ',' + Math.round(234 - pu*148) + ',' + Math.round(251 - pu*91) + ')';
-            var uren = Math.round(it.data.uren * 10) / 10;
-            var gem  = it.data.count ? Math.round((it.data.uren / it.data.count) * 10) / 10 : 0;
-            html += '<tr>' +
-              '<td>' + App.esc(it.label) + '</td>' +
-              '<td><span class="dash-hmc" style="background:' + gr + '">' + it.data.count + '</span></td>' +
-              '<td><span class="dash-hmc" style="background:' + bl + '">' + uren + 'u</span></td>' +
-              '<td><span class="dash-hmc" style="background:#f3f4f6">' + gem + 'u</span></td>' +
-              '</tr>';
-          });
-          html += '</tbody></table>';
-          elLd.innerHTML = html;
-        }
-      }
-    }
-
-    // Top 10 combinaties levensdomein + methodiek
-    var comboTeller = {};
-    data.ind.forEach(function(r) {
-      var ld = r.levensdomein || [];
-      var me = r.methodiek    || [];
-      if (!Array.isArray(ld)) ld = [ld];
-      if (!Array.isArray(me)) me = [me];
-      ld.forEach(function(d) {
-        me.forEach(function(m) {
-          if (!d || !m) return;
-          var sleutel = d + ' + ' + m;
-          comboTeller[sleutel] = (comboTeller[sleutel] || 0) + 1;
-        });
-      });
-    });
-    var comboItems = App._sortObjCount(comboTeller).slice(0, 10);
-    App._renderBars('dash-ind-combo-lm', comboItems, 'fill-groen2', true);
-  },
-
-  /* ── Blok 2: Hoe kom je bij mensen? ── */
-  _dashIndBlok2: function(data) {
-    // Vindplaatsen op basis van gefilterde acties
-    var teller = App._telVeld(data.ind, 'vindplaats');
-    var sortedFreq = App._sortTeller(teller, 'count');
-    var sortedUren = App._sortTeller(teller, 'uren');
-    App._renderBars('dash-ind-vp-freq',
-      sortedFreq.map(function(it) { return { label: it.label, value: it.data.count }; }),
-      'fill-groen', false);
-    App._renderBars('dash-ind-vp-uren',
-      sortedUren.map(function(it) { return { label: it.label, value: Math.round(it.data.uren * 10) / 10, suffix: 'u' }; }),
-      'fill-blauw', false);
-
-    // Eerste contact — op basis van personen met acties in de periode
-    var nummers = {};
-    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
-    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
-    App._renderBars('dash-ind-eerste',
-      App._sortObjCount(App._telEnkel(per, 'eersteContact')),
-      'fill-oranje', false);
-  },
-
-  /* ── Blok 1: Wie bereik je? ── */
+  /* ── BLOK 1: Totaal bereik (jaarbasis) ── */
   _dashIndBlok1: function(data) {
-    // Filter personen tot enkel diegenen met acties in de geselecteerde periode
+    var jaarEl = document.getElementById('dash-ind-jaar');
+    var jaarFilter = jaarEl ? jaarEl.value : '';
+    var indJaar = DB.individueel.filter(function(r) { return !jaarFilter || String(r.jaar) === jaarFilter; });
+    var nummers = {};
+    indJaar.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var totUren = 0;
+    indJaar.forEach(function(r) { totUren += App._tijdNaarUren(r.tijd); });
+    totUren = Math.round(totUren * 10) / 10;
+    var personenLijst = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+    ['personen','acties','uren'].forEach(function(key) {
+      App._dashIndClickMap['dash-blok1-n1::' + key] = { personen: personenLijst, msgs: {} };
+    });
+    var el = document.getElementById('dash-blok1-metrics');
+    if (!el) return;
+    var kaarten = [
+      { key: 'personen', getal: Object.keys(nummers).length, label: 'Personen bereikt',   sub: 'op jaarbasis', klasse: 'dash-ind-metric-groen'  },
+      { key: 'acties',   getal: indJaar.length,              label: 'Individuele acties', sub: 'op jaarbasis', klasse: 'dash-ind-metric-blauw'   },
+      { key: 'uren',     getal: totUren + 'u',               label: 'Totaal uren',        sub: 'op jaarbasis', klasse: 'dash-ind-metric-oranje'  },
+    ];
+    el.innerHTML = kaarten.map(function(k) {
+      return '<div class="dash-ind-metric ' + k.klasse + '" onclick="App._dashIndClickMetric1(\'' + k.key + '\')" style="cursor:pointer">' +
+        '<div class="dash-ind-metric-getal">' + k.getal + '</div>' +
+        '<div class="dash-ind-metric-label">' + k.label + '</div>' +
+        '<div class="dash-ind-metric-sub">' + k.sub + '</div>' +
+      '</div>';
+    }).join('');
+  },
+
+  /* ── BLOK 2: Profiel ── */
+  _dashIndBlok2: function(data) {
     var nummers = {};
     data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
     var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
 
-    var leeftijdVolgorde = ['-18','18-25','26-40','41-60','61-80','80+'];
-    var leeftijdTeller = App._telEnkel(per, 'leeftijd');
-    var leeftijdItems = leeftijdVolgorde
-      .filter(function(k) { return leeftijdTeller[k]; })
-      .map(function(k) { return { label: k, value: leeftijdTeller[k] }; });
-    for (var k in leeftijdTeller) {
-      if (leeftijdVolgorde.indexOf(k) === -1) leeftijdItems.push({ label: k, value: leeftijdTeller[k] });
-    }
-    App._renderBars('dash-ind-leeftijd', leeftijdItems, 'fill-groen', false);
+    var jonge = ['-18','18-25','26-40'];
+    var volgorde = ['-18','18-25','26-40','41-60','61-80','80+'];
+    var teller = {};
+    per.forEach(function(p) { var v = p.leeftijd || 'Onbekend'; teller[v] = (teller[v] || 0) + 1; });
+    var maxL = 0;
+    for (var k in teller) { if (teller[k] > maxL) maxL = teller[k]; }
+    if (!maxL) maxL = 1;
 
-    App._renderBars('dash-ind-inkomen',
-      App._sortObjCount(App._telMeervoud(per, 'inkomen')), 'fill-blauw', false);
+    var htmlL = '<div class="dash-bar-lijst">';
+    volgorde.concat(Object.keys(teller).filter(function(k) { return volgorde.indexOf(k) === -1; })).forEach(function(k) {
+      var v = teller[k] || 0;
+      if (!v) return;
+      var pct = Math.round((v / maxL) * 100);
+      var fillClass = jonge.indexOf(k) !== -1 ? 'fill-groen' : 'fill-blauw';
+      var mapKey = 'leeftijd-' + k;
+      var lKey = k;
+      App._dashIndClickMap['dash-blok2-n1::' + mapKey] = {
+        personen: per.filter(function(p) { return p.leeftijd === lKey; }), msgs: {}
+      };
+      htmlL += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok2-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<span class="dash-bl">' + App.esc(k) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + v + '</span></div>';
+    });
+    htmlL += '</div>';
+    var elL = document.getElementById('dash-blok2-leeftijd');
+    if (elL) elL.innerHTML = htmlL;
 
-    App._renderBars('dash-ind-woonsituatie',
-      App._sortObjCount(App._telEnkel(per, 'woonsituatie')), 'fill-oranje', false);
+    var woonsitVolgorde = ['Alleenstaand','Alleenstaand met kinderen','Samen','Gezin'];
+    var woonteller = {};
+    per.forEach(function(p) { var v = p.woonsituatie || 'Onbekend'; woonteller[v] = (woonteller[v] || 0) + 1; });
+    var maxW = 0;
+    for (var wk in woonteller) { if (woonteller[wk] > maxW) maxW = woonteller[wk]; }
+    if (!maxW) maxW = 1;
+    var allWoon = woonsitVolgorde.concat(Object.keys(woonteller).filter(function(k) { return woonsitVolgorde.indexOf(k) === -1; }));
 
-    App._renderBars('dash-ind-huisvesting',
-      App._sortObjCount(App._telMeervoud(per, 'huisvesting')), 'fill-paars', false);
+    var htmlW = '<div class="dash-bar-lijst">';
+    allWoon.forEach(function(k) {
+      var v = woonteller[k] || 0;
+      if (!v) return;
+      var pct = Math.round((v / maxW) * 100);
+      var mapKey = 'woon-' + k;
+      var wKey = k;
+      App._dashIndClickMap['dash-blok2-n1::' + mapKey] = {
+        personen: per.filter(function(p) { return p.woonsituatie === wKey; }), msgs: {}
+      };
+      htmlW += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok2-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<span class="dash-bl">' + App.esc(k) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf fill-paars" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + v + '</span></div>';
+    });
+    htmlW += '</div>';
+    var elW = document.getElementById('dash-blok2-gezin');
+    if (elW) elW.innerHTML = htmlW;
   },
 
+  /* ── BLOK 3: Eerste contact ── */
+  _dashIndBlok3: function(data) {
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+    var teller = {};
+    per.forEach(function(p) { var v = p.eersteContact || 'Onbekend'; teller[v] = (teller[v] || 0) + 1; });
+    var items = App._sortObjCount(teller);
+    var maxV = items.length ? items[0].value : 1;
+    var html = '<div class="dash-bar-lijst">';
+    items.forEach(function(it, i) {
+      var pct = Math.round((it.value / maxV) * 100);
+      var mapKey = 'ec-' + i;
+      var ecLabel = it.label;
+      App._dashIndClickMap['dash-blok3-n1::' + mapKey] = {
+        personen: per.filter(function(p) { return (p.eersteContact || 'Onbekend') === ecLabel; }), msgs: {}
+      };
+      html += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok3-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<span class="dash-bl">' + App.esc(it.label) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf fill-oranje" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + it.value + '</span></div>';
+    });
+    html += '</div>';
+    var el = document.getElementById('dash-blok3-content');
+    if (el) el.innerHTML = items.length ? html : '<div class="dash-leeg">Geen data.</div>';
+  },
+
+  /* ── BLOK 4: Kwetsbaarheid ── */
+  _dashIndBlok4: function(data) {
+    var kwetsbaarInkomen  = ['Leefloon','Geen inkomen','Invaliditeit','Werkloosheid'];
+    var kwetsbaarHuisvest = ['Dak/Thuisloos','Begeleid wonen','Housing First','RCK'];
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+    var domPerPer = {};
+    data.ind.forEach(function(r) {
+      if (!domPerPer[r.persoonNummer]) domPerPer[r.persoonNummer] = {};
+      (r.levensdomein || []).forEach(function(d) { if (d) domPerPer[r.persoonNummer][d] = true; });
+    });
+    function getScore(p) {
+      var sc = 0;
+      var ink = Array.isArray(p.inkomen) ? p.inkomen : (p.inkomen ? [p.inkomen] : []);
+      if (ink.some(function(v) { return kwetsbaarInkomen.indexOf(v) !== -1; })) sc++;
+      var huis = Array.isArray(p.huisvesting) ? p.huisvesting : (p.huisvesting ? [p.huisvesting] : []);
+      if (huis.some(function(v) { return kwetsbaarHuisvest.indexOf(v) !== -1; })) sc++;
+      if (Object.keys(domPerPer[p.volgnummer] || {}).length >= 3) sc++;
+      return sc;
+    }
+    var dist = { '0': [], '1': [], '2': [], '3': [] };
+    per.forEach(function(p) { dist[String(getScore(p))].push(p); });
+    var kleuren = ['fill-groen','fill-oranje','fill-rood','fill-rood'];
+    var labels  = ['Score 0 — niet kwetsbaar','Score 1 — licht kwetsbaar','Score 2 — matig kwetsbaar','Score 3 — hoog kwetsbaar'];
+    var maxCount = 0;
+    ['0','1','2','3'].forEach(function(k) { if (dist[k].length > maxCount) maxCount = dist[k].length; });
+    if (!maxCount) maxCount = 1;
+    var html = '<div class="dash-bar-lijst">';
+    ['0','1','2','3'].forEach(function(k, i) {
+      var v = dist[k].length;
+      if (!v) return;
+      var pct = Math.round((v / maxCount) * 100);
+      var mapKey = 'kwets-' + k;
+      var kScore = k;
+      App._dashIndClickMap['dash-blok4-n1::' + mapKey] = {
+        personen: dist[k],
+        msgs: dist[k].reduce(function(acc, p) { acc[p.volgnummer] = 'Score ' + kScore + '/3'; return acc; }, {})
+      };
+      html += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok4-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<span class="dash-bl">' + App.esc(labels[i]) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf ' + kleuren[i] + '" style="width:' + pct + '%"></div></div>' +
+        '<span class="dash-bv">' + v + '</span></div>';
+    });
+    html += '</div>';
+    var elC = document.getElementById('dash-blok4-content');
+    if (elC) elC.innerHTML = per.length ? html : '<div class="dash-leeg">Geen data.</div>';
+    var elL = document.getElementById('dash-blok4-legenda');
+    if (elL) elL.innerHTML = 'Criteria: <strong>Inkomen</strong> (leefloon · geen · invaliditeit · werkloosheid) · ' +
+      '<strong>Huisvesting</strong> (dak/thuisloos · begeleid wonen · Housing First · RCK) · ' +
+      '<strong>≥3 levensdomeinen</strong> in de geselecteerde periode';
+  },
+
+  /* ── BLOK 5: Status van het contact ── */
+  _dashIndBlok5: function(data) {
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var per = data.per.filter(function(p) { return nummers[p.volgnummer]; });
+    var groepen = { actief: [], uitBeeld: [], eenmalig: [] };
+    per.forEach(function(p) {
+      var s = App._dashIndStatus(p.volgnummer);
+      if (groepen[s]) groepen[s].push(p);
+    });
+    ['actief','uitBeeld','eenmalig'].forEach(function(key) {
+      App._dashIndClickMap['dash-blok5-n1::' + key] = { personen: groepen[key], msgs: {} };
+    });
+    var el = document.getElementById('dash-blok5-metrics');
+    if (!el) return;
+    var kaarten = [
+      { key: 'actief',   getal: groepen.actief.length,   label: 'Actief',    sub: 'laatste actie < 6 maanden', klasse: 'dash-ind-metric-groen'  },
+      { key: 'uitBeeld', getal: groepen.uitBeeld.length, label: 'Uit beeld', sub: 'laatste actie ≥ 6 maanden', klasse: 'dash-ind-metric-rood'   },
+      { key: 'eenmalig', getal: groepen.eenmalig.length, label: 'Eenmalig',  sub: 'slechts 1 actie ooit',      klasse: 'dash-ind-metric-oranje' },
+    ];
+    el.innerHTML = kaarten.map(function(k) {
+      return '<div class="dash-ind-metric ' + k.klasse + '" onclick="App._dashIndClickMetric5(\'' + k.key + '\')" style="cursor:pointer">' +
+        '<div class="dash-ind-metric-getal">' + k.getal + '</div>' +
+        '<div class="dash-ind-metric-label">' + k.label + '</div>' +
+        '<div class="dash-ind-metric-sub">' + k.sub + '</div>' +
+      '</div>';
+    }).join('');
+  },
+
+  /* ── BLOK 6: Intensiteit (Top 20, direct N2) ── */
+  _dashIndBlok6: function(data) {
+    var scores = {};
+    data.ind.forEach(function(r) {
+      if (!scores[r.persoonNummer]) scores[r.persoonNummer] = { acties: 0, uren: 0 };
+      scores[r.persoonNummer].acties++;
+      scores[r.persoonNummer].uren += App._tijdNaarUren(r.tijd);
+    });
+    var nummers = {};
+    data.ind.forEach(function(r) { nummers[r.persoonNummer] = true; });
+    var top20 = data.per.filter(function(p) { return nummers[p.volgnummer]; })
+      .map(function(p) {
+        var s = scores[p.volgnummer] || { acties: 0, uren: 0 };
+        return { p: p, acties: s.acties, uren: Math.round(s.uren * 10) / 10 };
+      })
+      .sort(function(a, b) { return b.acties - a.acties || b.uren - a.uren; })
+      .slice(0, 20);
+    var el = document.getElementById('dash-blok6-content');
+    if (!el) return;
+    if (!top20.length) { el.innerHTML = '<div class="dash-leeg">Geen data.</div>'; return; }
+    var maxActies = top20[0].acties || 1;
+    var html = '<div class="dash-bar-lijst">';
+    top20.forEach(function(it, i) {
+      var init = App._dashIndInit(it.p);
+      var kleur = App._dashIndAvatarKleur(init);
+      var pct = Math.round((it.acties / maxActies) * 100);
+      var opacity = Math.max(0.4, 1 - i * 0.04);
+      html += '<div class="dash-bi" onclick="App._dashIndOpenN2Direct(\'dash-blok6-n2\',' + it.p.volgnummer + ')" style="cursor:pointer;align-items:center;gap:8px">' +
+        '<span style="font-size:0.68rem;color:var(--zacht);width:18px;text-align:right;flex-shrink:0">' + (i + 1) + '</span>' +
+        '<div class="dash-ind-avatar" style="background:' + kleur + ';opacity:' + opacity + ';flex-shrink:0">' + App.esc(init) + '</div>' +
+        '<span class="dash-bl" style="flex:1">' + App.esc(init) + '</span>' +
+        '<div class="dash-bt" style="flex:2"><div class="dash-bf fill-paars" style="width:' + pct + '%;opacity:' + opacity + '"></div></div>' +
+        '<span class="dash-bv">' + it.acties + ' act. · ' + it.uren + 'u</span>' +
+      '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  },
+
+  /* ── BLOK 7: Levensdomeinen heatmap ── */
+  _dashIndBlok7: function(data) {
+    var domTeller = {};
+    data.ind.forEach(function(r) {
+      (r.levensdomein || []).forEach(function(d) {
+        if (!d) return;
+        if (!domTeller[d]) domTeller[d] = { acties: 0, uren: 0, personen: {} };
+        domTeller[d].acties++;
+        domTeller[d].uren += App._tijdNaarUren(r.tijd);
+        domTeller[d].personen[r.persoonNummer] = true;
+      });
+    });
+    var items = [];
+    for (var d in domTeller) {
+      if (!domTeller.hasOwnProperty(d)) continue;
+      var it = domTeller[d];
+      var nPer = Object.keys(it.personen).length;
+      items.push({ label: d, acties: it.acties, uren: Math.round(it.uren * 10) / 10,
+        gem: nPer ? Math.round((it.uren / nPer) * 10) / 10 : 0, nPer: nPer });
+    }
+    items.sort(function(a, b) { return b.acties - a.acties; });
+    var el = document.getElementById('dash-blok7-content');
+    if (!el) return;
+    if (!items.length) { el.innerHTML = '<div class="dash-leeg">Geen data.</div>'; return; }
+    var maxA = items[0].acties || 1;
+    var maxU = Math.max.apply(null, items.map(function(it) { return it.uren; })) || 1;
+    var html = '<div style="overflow-x:auto"><table class="dash-hm" style="width:100%"><thead><tr>' +
+      '<th style="text-align:left">Levensdomein</th><th>Acties</th><th>Uren</th><th>Gem u/per</th><th>Personen</th>' +
+      '</tr></thead><tbody>';
+    items.forEach(function(it, i) {
+      var mapKey = 'dom-' + i;
+      var domLabel = it.label;
+      App._dashIndClickMap['dash-blok7-n1::' + mapKey] = {
+        personen: data.per.filter(function(p) {
+          return data.ind.some(function(r) {
+            return r.persoonNummer === p.volgnummer && (r.levensdomein || []).indexOf(domLabel) !== -1;
+          });
+        }),
+        msgs: {}
+      };
+      var pctA = Math.round((it.acties / maxA) * 100);
+      var pctU = Math.round((it.uren / maxU) * 100);
+      var gA = Math.round(220 - pctA * 1.4);
+      var gU = Math.round(220 - pctU * 1.4);
+      html += '<tr onclick="App._dashIndOpenN1(\'dash-blok7-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<td style="font-size:0.78rem">' + App.esc(it.label) + '</td>' +
+        '<td><span class="dash-hmc" style="background:rgb(' + gA + ',' + Math.round(gA * 0.85) + ',' + gA + ')">' + it.acties + '</span></td>' +
+        '<td><span class="dash-hmc" style="background:rgb(' + gU + ',' + gU + ',' + Math.round(gU * 0.7) + ')">' + it.uren + 'u</span></td>' +
+        '<td style="text-align:center;font-size:0.78rem">' + it.gem + 'u</td>' +
+        '<td style="text-align:center;font-size:0.78rem">' + it.nPer + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  },
+
+  /* ── BLOK 8: Methodiek ── */
+  _dashIndBlok8: function(data) {
+    var teller = {};
+    data.ind.forEach(function(r) {
+      (r.methodiek || []).forEach(function(m) { if (m) teller[m] = (teller[m] || 0) + 1; });
+    });
+    var items = App._sortObjCount(teller);
+    var el = document.getElementById('dash-blok8-content');
+    if (!el) return;
+    if (!items.length) { el.innerHTML = '<div class="dash-leeg">Geen data.</div>'; return; }
+    var maxV = items[0].value || 1;
+    var html = '<div class="dash-bar-lijst">';
+    items.forEach(function(it, i) {
+      var pct = Math.round((it.value / maxV) * 100);
+      var opacity = Math.max(0.35, 1 - i * 0.07);
+      var mapKey = 'meth-' + i;
+      var methLabel = it.label;
+      App._dashIndClickMap['dash-blok8-n1::' + mapKey] = {
+        personen: data.per.filter(function(p) {
+          return data.ind.some(function(r) {
+            return r.persoonNummer === p.volgnummer && (r.methodiek || []).indexOf(methLabel) !== -1;
+          });
+        }),
+        msgs: {}
+      };
+      html += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok8-n1\',\'' + mapKey + '\')" style="cursor:pointer">' +
+        '<span class="dash-bl">' + App.esc(it.label) + '</span>' +
+        '<div class="dash-bt"><div class="dash-bf fill-paars" style="width:' + pct + '%;opacity:' + opacity + '"></div></div>' +
+        '<span class="dash-bv">' + it.value + '</span></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  },
+
+  /* ── BLOK 9: Vindplaats ── */
+  _dashIndBlok9: function(data) {
+    var freq = {}, urenMap = {};
+    data.ind.forEach(function(r) {
+      (r.vindplaats || []).forEach(function(v) {
+        if (!v) return;
+        freq[v] = (freq[v] || 0) + 1;
+        urenMap[v] = (urenMap[v] || 0) + App._tijdNaarUren(r.tijd);
+      });
+    });
+    var freqItems = App._sortObjCount(freq);
+    var urenItems = [];
+    for (var k in urenMap) {
+      if (urenMap.hasOwnProperty(k)) urenItems.push({ label: k, value: Math.round(urenMap[k] * 10) / 10 });
+    }
+    urenItems.sort(function(a, b) { return b.value - a.value; });
+
+    var vpNummers = {};
+    data.ind.forEach(function(r) {
+      (r.vindplaats || []).forEach(function(v) {
+        if (!v) return;
+        if (!vpNummers[v]) vpNummers[v] = {};
+        vpNummers[v][r.persoonNummer] = true;
+      });
+    });
+
+    function buildKeys(panelId, suffix, items) {
+      return items.map(function(it, i) {
+        var mapKey = suffix + '-' + i;
+        var vpLabel = it.label;
+        var nrs = vpNummers[vpLabel] || {};
+        App._dashIndClickMap[panelId + '::' + mapKey] = {
+          personen: Object.keys(nrs).map(function(nr) { return App._dashIndPM[Number(nr)]; }).filter(Boolean),
+          msgs: {}
+        };
+        return mapKey;
+      });
+    }
+
+    var freqKeys = buildKeys('dash-blok9-n1', 'freq', freqItems);
+    var urenKeys = buildKeys('dash-blok9-n1', 'uren', urenItems);
+    var maxF = freqItems.length ? freqItems[0].value : 1;
+    var maxU = urenItems.length ? urenItems[0].value : 1;
+
+    function maakBarsHtml(items, keys, maxV, fillClass, suffix) {
+      if (!items.length) return '<div class="dash-leeg">Geen data.</div>';
+      var h = '<div class="dash-bar-lijst">';
+      items.forEach(function(it, i) {
+        var pct = Math.round((it.value / maxV) * 100);
+        h += '<div class="dash-bi" onclick="App._dashIndOpenN1(\'dash-blok9-n1\',\'' + keys[i] + '\')" style="cursor:pointer">' +
+          '<span class="dash-bl">' + App.esc(it.label) + '</span>' +
+          '<div class="dash-bt"><div class="dash-bf ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
+          '<span class="dash-bv">' + it.value + (suffix === 'uren' ? 'u' : '') + '</span></div>';
+      });
+      h += '</div>';
+      return h;
+    }
+
+    var elF = document.getElementById('dash-blok9-freq');
+    if (elF) elF.innerHTML = maakBarsHtml(freqItems, freqKeys, maxF, 'fill-groen', 'freq');
+    var elU = document.getElementById('dash-blok9-uren');
+    if (elU) elU.innerHTML = maakBarsHtml(urenItems, urenKeys, maxU, 'fill-blauw', 'uren');
+  },
+
+  /* ══ EINDE INDIVIDUEEL v2.9.4 ══ */
+
+  /* ══ EINDE INDIVIDUEEL v2.9.4 — legacy removed ══ */
   _dashClusterBereik: function(d) {
     var teller = {};
     d.col.forEach(function(r) {

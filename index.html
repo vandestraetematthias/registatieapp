@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.9.3">
+<link rel="stylesheet" href="style.css?v=2.9.4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -1418,198 +1418,104 @@
       </div>
     </div>
 
-    <div class="dash-g2">
-      <div class="dash-kaart">
-        <div class="dash-kt">Top 20 — Meeste uren</div>
-        <div class="dash-ks">Uren individuele begeleiding</div>
-        <div id="dash-top20"></div>
-      </div>
-      <div class="dash-kaart">
-        <div class="dash-kt">Top 20 — Meeste acties</div>
-        <div class="dash-ks">Aantal geregistreerde acties</div>
-        <div id="dash-top20-acties"></div>
-      </div>
-    </div>
-
-    <div class="dash-g2">
-      <div class="dash-kaart">
-        <div class="dash-kt">Vindplaatsen — Contacten</div>
-        <div class="dash-ks">Aantal registraties per vindplaats</div>
-        <div id="dash-vp-contacten"></div>
-      </div>
-      <div class="dash-kaart">
-        <div class="dash-kt">Vindplaatsen — Uren</div>
-        <div class="dash-ks">Tijdsinvestering per vindplaats</div>
-        <div id="dash-vp-uren"></div>
-      </div>
-    </div>
-
-    <div class="dash-kaart-full">
-      <div class="dash-kt">Levensdomeinen heatmap</div>
-      <div class="dash-ks">Frequentie (groen) en uren (blauw) per levensdomein</div>
-      <div id="dash-levensdomeinen"></div>
-    </div>
-
-    <div class="dash-g2">
-      <div class="dash-kaart">
-        <div class="dash-kt">Methodiek</div>
-        <div class="dash-ks">Gebruikte methodieken</div>
-        <div id="dash-methodiek-ind"></div>
-      </div>
-      <div class="dash-kaart">
-        <div class="dash-kt">Toeleiding</div>
-        <div class="dash-ks">Doorverwijzingen per organisatie</div>
-        <div id="dash-toeleiding"></div>
-      </div>
-    </div>
-    <div id="dash-toeleiding-ratio" class="dash-ratio" style="margin-bottom:10px"></div>
-
-    <!-- ══ BLOK 8: KWETSBAARHEID & NOOD ══ -->
+    <!-- BLOK 1: TOTAAL BEREIK -->
     <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 8 — Kwetsbaarheid &amp; nood</div>
-      <div class="dash-ks">Kwetsbaarheidsindex per persoon (score 0–3)</div>
+      <div class="dash-kt">Blok 1 — Totaal bereik op jaarbasis</div>
+      <div class="dash-ks">Klik op een kaart voor de persoonslijst</div>
       <div class="dash-divider"></div>
-      <div class="dash-g2">
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Verdeling scores</div>
-          <div id="dash-ind-kwets-dist"></div>
-          <div id="dash-ind-kwets-legenda" style="margin-top:10px;font-size:0.72rem;color:var(--zacht);line-height:1.8"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Top 10 — Hoogste kwetsbaarheid</div>
-          <div id="dash-ind-kwets-top10"></div>
-        </div>
-      </div>
+      <div id="dash-blok1-metrics" class="dash-g3" style="gap:10px;margin-bottom:0"></div>
+      <div id="dash-blok1-n1" class="dash-ind-drill-panel" style="display:none"></div>
     </div>
 
-    <!-- ══ BLOK 7: SAMENWERKING ══ -->
+    <!-- BLOK 2: PROFIEL -->
     <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 7 — Samenwerking</div>
-      <div class="dash-ks">Gekend bij collega's en overlap</div>
-      <div class="dash-divider"></div>
-      <div class="dash-g2">
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Gekend bij — verdeling</div>
-          <div id="dash-ind-gekend-bar"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Aantal collega's per persoon</div>
-          <div id="dash-ind-gekend-spread"></div>
-        </div>
-      </div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Overlapmatrix — hoeveel personen zijn bij beide collega's gekend?</div>
-      <div id="dash-ind-overlap"></div>
-    </div>
-
-    <!-- ══ BLOK 6: EVOLUTIE IN TIJD ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 6 — Evolutie in tijd</div>
-      <div class="dash-ks">Groei en activiteit per maand</div>
-      <div class="dash-divider"></div>
-      <div class="dash-g2">
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Nieuwe personen per maand</div>
-          <div id="dash-ind-nieuwe-per-maand"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Acties per maand — huidig vs vorig jaar</div>
-          <div id="dash-ind-acties-per-maand"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ BLOK 5: INTENSITEIT PER PERSOON ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 5 — Intensiteit per persoon</div>
-      <div class="dash-ks">Activiteitsstatus en sluimerende contacten</div>
-      <div class="dash-divider"></div>
-      <div class="dash-g2">
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Top 20 — Meeste uren</div>
-          <div id="dash-ind-top20-status"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Top 20 — Meeste acties</div>
-          <div id="dash-ind-top20-acties-status"></div>
-        </div>
-      </div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">
-        Sluimerende contacten
-        <span style="font-size:0.75rem;color:var(--zacht);font-weight:400"> — minstens 1 actie, geen contact de laatste 6 maanden</span>
-      </div>
-      <div id="dash-ind-sluimerend"></div>
-    </div>
-
-    <!-- ══ BLOK 4: TOELEIDING & NETWERK ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 4 — Toeleiding &amp; netwerk</div>
-      <div class="dash-ks">Doorverwijzingen en netwerkverbindingen</div>
-      <div class="dash-divider"></div>
-      <div id="dash-ind-toel-ratio" class="dash-ratio" style="margin-bottom:12px"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Doorverwijzingen per organisatie</div>
-      <div id="dash-ind-toeleiding"></div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Kruistabel — Toeleiding per levensdomein</div>
-      <div style="overflow-x:auto"><div id="dash-ind-toel-kruis"></div></div>
-    </div>
-
-    <!-- ══ BLOK 3: WAT DOE JE? ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 3 — Wat doe je?</div>
-      <div class="dash-ks">Levensdomeinen en methodiek per actie</div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Levensdomeinen — contacten, uren en gem. tijdsinvestering</div>
-      <div id="dash-ind-levensdomeinen"></div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Top 10 — combinaties levensdomein + methodiek</div>
-      <div id="dash-ind-combo-lm"></div>
-    </div>
-
-    <!-- ══ BLOK 2: HOE KOM JE BIJ MENSEN? ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 2 — Hoe kom je bij mensen?</div>
-      <div class="dash-ks">Vindplaatsen en eerste contact van personen</div>
-      <div class="dash-divider"></div>
-      <div class="dash-g2">
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Vindplaatsen — Frequentie</div>
-          <div id="dash-ind-vp-freq"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Vindplaatsen — Uren</div>
-          <div id="dash-ind-vp-uren"></div>
-        </div>
-      </div>
-      <div class="dash-divider"></div>
-      <div class="dash-kt" style="margin-bottom:6px">Eerste contact — Hoe komen personen binnen?</div>
-      <div id="dash-ind-eerste"></div>
-    </div>
-
-    <!-- ══ BLOK 1: WIE BEREIK JE? ══ -->
-    <div class="dash-kaart-full" style="margin-bottom:10px">
-      <div class="dash-kt">Blok 1 — Wie bereik je?</div>
-      <div class="dash-ks">Profiel van personen met acties in de geselecteerde periode</div>
+      <div class="dash-kt">Blok 2 — Profiel: leeftijd en gezinssituatie</div>
+      <div class="dash-ks">Klik op een balk voor de persoonslijst</div>
       <div class="dash-divider"></div>
       <div class="dash-g2">
         <div>
           <div class="dash-kt" style="margin-bottom:6px">Leeftijdsverdeling</div>
-          <div id="dash-ind-leeftijd"></div>
+          <div id="dash-blok2-leeftijd"></div>
         </div>
         <div>
-          <div class="dash-kt" style="margin-bottom:6px">Inkomenssituatie</div>
-          <div id="dash-ind-inkomen"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Woonsituatie</div>
-          <div id="dash-ind-woonsituatie"></div>
-        </div>
-        <div>
-          <div class="dash-kt" style="margin-bottom:6px">Huisvestingstype</div>
-          <div id="dash-ind-huisvesting"></div>
+          <div class="dash-kt" style="margin-bottom:6px">Gezinssituatie</div>
+          <div id="dash-blok2-gezin"></div>
         </div>
       </div>
+      <div id="dash-blok2-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 3: EERSTE CONTACT -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 3 — Eerste contact</div>
+      <div class="dash-ks">Hoe komen personen bij ons terecht? Klik voor persoonslijst.</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok3-content"></div>
+      <div id="dash-blok3-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 4: KWETSBAARHEID -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 4 — Kwetsbaarheid</div>
+      <div class="dash-ks">Score 0–3 per persoon. Klik op een score voor de persoonslijst.</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok4-content"></div>
+      <div id="dash-blok4-legenda" style="margin-top:10px;font-size:0.72rem;color:var(--zacht);line-height:1.8"></div>
+      <div id="dash-blok4-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 5: STATUS VAN HET CONTACT -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 5 — Status van het contact</div>
+      <div class="dash-ks">Klik op een kaart voor de persoonslijst</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok5-metrics" class="dash-g3" style="gap:10px;margin-bottom:0"></div>
+      <div id="dash-blok5-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 6: INTENSITEIT -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 6 — Intensiteit per persoon</div>
+      <div class="dash-ks">Top 20 op aantal acties. Klik voor volledig dossier.</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok6-content"></div>
+      <div id="dash-blok6-n2" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 7: LEVENSDOMEINEN -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 7 — Levensdomeinen heatmap</div>
+      <div class="dash-ks">Contacten, uren en gem. tijdsinvestering per domein. Klik voor persoonslijst.</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok7-content"></div>
+      <div id="dash-blok7-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 8: METHODIEK -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 8 — Methodiek</div>
+      <div class="dash-ks">Gebruikte methodieken. Klik voor persoonslijst.</div>
+      <div class="dash-divider"></div>
+      <div id="dash-blok8-content"></div>
+      <div id="dash-blok8-n1" class="dash-ind-drill-panel" style="display:none"></div>
+    </div>
+
+    <!-- BLOK 9: VINDPLAATS -->
+    <div class="dash-kaart-full" style="margin-bottom:10px">
+      <div class="dash-kt">Blok 9 — Vindplaats</div>
+      <div class="dash-ks">Contacten en uren per vindplaats. Klik voor persoonslijst.</div>
+      <div class="dash-divider"></div>
+      <div class="dash-g2">
+        <div>
+          <div class="dash-kt" style="margin-bottom:6px">Contacten per vindplaats</div>
+          <div id="dash-blok9-freq"></div>
+        </div>
+        <div>
+          <div class="dash-kt" style="margin-bottom:6px">Uren per vindplaats</div>
+          <div id="dash-blok9-uren"></div>
+        </div>
+      </div>
+      <div id="dash-blok9-n1" class="dash-ind-drill-panel" style="display:none"></div>
     </div>
 
     <div class="dash-sec-kop"><span class="dash-badge blauw-badge">🏘 Collectief</span></div>
@@ -1707,11 +1613,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.9.3"></script>
+<script src="app.js?v=2.9.4"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.9.3';
+    var CURRENT_VERSION = '2.9.4';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1758,6 +1664,6 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.3</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.4</footer>
 </body>
 </html>
