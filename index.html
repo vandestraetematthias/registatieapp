@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=2.9.6">
+<link rel="stylesheet" href="style.css?v=2.9.7">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -529,6 +529,10 @@
           <div class="fiets-gps-sam" id="ia-fiets-gps-sam" style="display:none">
             📍 GPS bijgehouden: <strong id="ia-fiets-gps-km-lbl">0,0</strong> km
           </div>
+          <button type="button" class="fiets-stop-rit-btn" id="ia-fiets-stop-rit"
+                  onclick="App.stopGps('ia')" style="display:none">
+            🛑 Stop rit &amp; Verwerk
+          </button>
           <div class="vraag-label" style="margin-bottom:6px">Route</div>
           <div id="ia-fiets-stops"></div>
           <div style="display:flex;gap:8px;margin:8px 0 4px">
@@ -813,6 +817,10 @@
           <div class="fiets-gps-sam" id="ca-fiets-gps-sam" style="display:none">
             📍 GPS bijgehouden: <strong id="ca-fiets-gps-km-lbl">0,0</strong> km
           </div>
+          <button type="button" class="fiets-stop-rit-btn" id="ca-fiets-stop-rit"
+                  onclick="App.stopGps('ca')" style="display:none">
+            🛑 Stop rit &amp; Verwerk
+          </button>
           <div class="vraag-label" style="margin-bottom:6px">Route</div>
           <div id="ca-fiets-stops"></div>
           <div style="display:flex;gap:8px;margin:8px 0 4px">
@@ -1770,11 +1778,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=2.9.6"></script>
+<script src="app.js?v=2.9.7"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '2.9.6';
+    var CURRENT_VERSION = '2.9.7';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1821,6 +1829,6 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.6</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v2.9.7</footer>
 </body>
 </html>

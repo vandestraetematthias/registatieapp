@@ -1213,6 +1213,19 @@ tr:nth-child(even) td { background: #fafaf9; }
   font-size: 0.78rem; font-weight: 600; cursor: pointer;
 }
 
+/* Stop rit & Verwerk knop (stap 3) */
+.fiets-stop-rit-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 11px 16px; border-radius: 12px; margin-bottom: 10px;
+  border: 2px solid var(--rood); color: #fff; background: var(--rood);
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  animation: pulse-red 1.5s ease-in-out infinite;
+}
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .75; }
+}
+
 /* GPS samenvatting in stap 3 */
 .fiets-gps-sam {
   padding: 8px 12px; background: var(--groen-licht); border-radius: 10px;
