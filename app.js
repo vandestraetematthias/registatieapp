@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '2.9.7';
+var APP_VERSION = '3.0.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -127,7 +127,7 @@ var DB = {
     DB._unsubs.push(
       DB._col('fietsritten').onSnapshot(function(snap) {
         DB._fietsritten = snap.docs.map(function(d) { return d.data(); });
-        if (State.huidigePagina === 'pg-fiets-logboek') App.renderFietsLogboek();
+        if (State.huidigePagina === 'pg-fiets-gps') App.renderFietsGps();
       }, function(e) { console.error('fietsritten listener:', e); })
     );
   },
@@ -259,7 +259,7 @@ var App = {
       'pg-mod-logistiek':'pg-collectief-start','pg-mod-overleg':'pg-collectief-start','pg-mod-activiteit':'pg-collectief-start',
       'pg-jaarplan':'pg-jaarplan','pg-rapport-personen':'pg-jaarplan','pg-rapport-individueel':'pg-jaarplan',
       'pg-rapport-collectief':'pg-jaarplan','pg-jaarplan-mod':'pg-jaarplan','pg-persoon-detail':'pg-jaarplan',
-      'pg-fiets-logboek':'pg-jaarplan',
+      'pg-fiets-gps':'pg-jaarplan',
       'pg-archief':'pg-archief',
       'pg-dashboard':'pg-dashboard'
     };
@@ -282,7 +282,7 @@ var App = {
     if (pagina === 'pg-col-actie-wiz')     App.resetCa();
     if (pagina === 'pg-jaarplan-mod')      App.renderJaarplan();
     if (pagina === 'pg-dashboard')         App.renderDashboard();
-    if (pagina === 'pg-fiets-logboek')     App.renderFietsLogboek();
+    if (pagina === 'pg-fiets-gps')         App.renderFietsGps();
   },
 
   /* ── UI HELPERS ── */
@@ -469,7 +469,7 @@ var App = {
         (c.module
           ? '<button onclick="App.laadModuleBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>'
           : '<button onclick="App.laadCaBewerk(\'' + c.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bewerk</button>') +
-        '<button onclick="App.nav(\'pg-rapport-collectief\')" style="background:var(--blauw);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Bekijk</button>' +
+        '<button onclick="App.verwijderCa(\'' + c.id + '\',\'' + App.esc(c.naamVanDeActie || '') + '\')" style="background:var(--rood);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">🗑 Verwijder</button>' +
         '<button onclick="App.archiveerRecord(\'' + c.id + '\',\'collectief\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-weight:600">Archiveer</button>' +
         '</div></div>';
     });
@@ -716,7 +716,7 @@ var App = {
       return;
     }
     State.iaStap = n;
-    if (n === 3) App._vulFietsSamenvatting('ia');
+    // fiets-sectie verwijderd in v3.0.0
     [1,2,3].forEach(function(i) {
       var s = document.getElementById('ia-s' + i);
       if (s) s.style.display = i === n ? 'block' : 'none';
@@ -888,7 +888,7 @@ var App = {
       if (!maand) { App.toast('Selecteer een maand.'); return; }
     }
     State.caStap = n;
-    if (n === 3) App._vulFietsSamenvatting('ca');
+    // fiets-sectie verwijderd in v3.0.0
     [1,2,3].forEach(function(i) {
       var s = document.getElementById('ca-s' + i);
       if (s) s.style.display = i === n ? 'block' : 'none';
@@ -1120,7 +1120,9 @@ var App = {
     lijst.forEach(function(item, i) {
       if (isUg) {
         var bonKnop = '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--groen);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:600">' +
-          '📷 Foto/Bewijs<input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>';
+          '📷 Foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>' +
+          '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--blauw);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:600;margin-left:4px">' +
+          '📄 Scan<input type="file" accept="image/*,application/pdf" style="display:none" onchange="App._uploadBon(\'' + prefix + '\',' + i + ',this)"></label>';
         var bonLink = item.bonUrl ? '<span onclick="App.openLightbox(this.dataset.url)" data-url="' + App.esc(item.bonUrl) + '" title="Bekijk bewijs" style="font-size:1.3rem;cursor:pointer;margin-right:6px">🖼️</span>' : '';
         html += '<div class="kostlijn ug">' +
           '<div><div class="col-lbl">Beschrijving</div><input type="text" value="' + App.esc(item.beschrijving) + '" oninput="App._kostUpdate(\'' + prefix + '\','+i+',\'beschrijving\',this.value)"></div>' +
@@ -4329,505 +4331,372 @@ _collectProjectFotos: function(naam) {
   },
 
   /* ══════════════════════════════════════════
-     FIETSRITTEN — v2.9.5
+     FIETSRITTEN v3.0.0 — GPS & LOGBOEK
   ══════════════════════════════════════════ */
 
-  // GPS state
-  _gpsWatchId:     null,
-  _gpsRoute:       [],
-  _gpsTotaalKm:    0,
-  _fietsGpsActief: false,
-  _fietsGpsPrefix: '',
-  _wakeLock:       null,
-  _fietsStops:     { ia: ['',''], ca: ['',''] },
+  // State
+  _gpsLbWatchId:        null,
+  _gpsLbRoute:          [],
+  _gpsLbKm:             0,
+  _gpsLbActief:         false,
+  _gpsLbWakeLock:       null,
+  _gpsLbBest:           [],
+  _gpsLbRit:            null,
+  _gpsLbGekozenPersoon: null,
+  _gpsLbGekozenActie:   null,
+  _gpsLbRedenStr:       '',
+  _gpsLbRouteKm:        0,
+  _gpsLbKoppelType:     'ia',
 
-  // Haversine — geeft km tussen twee coördinaten
   _haversine: function(lat1, lon1, lat2, lon2) {
     var R = 6371;
     var dLat = (lat2 - lat1) * Math.PI / 180;
     var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   },
 
-  // localStorage: adressuggesties
-  _slaAdresOp: function(adres) {
-    if (!adres || adres.trim().length < 3) return;
-    var lijst = App._getAdresSuggesties();
-    lijst = lijst.filter(function(a) { return a !== adres; });
-    lijst.unshift(adres);
-    try { localStorage.setItem('bwv_adressen', JSON.stringify(lijst.slice(0, 20))); } catch(e) {}
-  },
-  _getAdresSuggesties: function() {
-    try { return JSON.parse(localStorage.getItem('bwv_adressen') || '[]'); } catch(e) { return []; }
-  },
-  _getFietsFavs: function() {
-    var std = [
-      { naam: 'Buurthuis Venning', adres: 'Calvarieberg 4, Leuven' },
-      { naam: 'Stadhuis Leuven',   adres: 'Grote Markt 1, Leuven'  }
-    ];
-    try { return JSON.parse(localStorage.getItem('bwv_fiets_favs') || 'null') || std; } catch(e) { return std; }
-  },
-
-  // Toon suggesties bij typen
-  _fietsInput: function(prefix, veld) {
-    var inputEl = document.getElementById(prefix + '-fiets-' + veld);
-    var sugEl   = document.getElementById(prefix + '-fiets-' + veld + '-sug');
-    if (!inputEl || !sugEl) return;
-    var val = inputEl.value.trim().toLowerCase();
-    var lijst = App._getAdresSuggesties();
-    var match = val
-      ? lijst.filter(function(a) { return a.toLowerCase().indexOf(val) !== -1; })
-      : lijst;
-    if (!match.length) { sugEl.style.display = 'none'; return; }
-    sugEl.innerHTML = match.slice(0, 6).map(function(a) {
-      return '<div class="fiets-sug-item" onclick="App._kiesSuggestie(\'' +
-        prefix + '\',\'' + veld + '\',\'' + a.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">' +
-        App.esc(a) + '</div>';
-    }).join('');
-    sugEl.style.display = 'block';
-  },
-  _kiesSuggestie: function(prefix, veld, adres) {
-    var inputEl = document.getElementById(prefix + '-fiets-' + veld);
-    var sugEl   = document.getElementById(prefix + '-fiets-' + veld + '-sug');
-    if (inputEl) inputEl.value = adres;
-    if (sugEl)   sugEl.style.display = 'none';
-  },
-
-  // Toggle de fiets-sectie open/dicht
-  toggleFiets: function(prefix) {
-    var inhoud = document.getElementById(prefix + '-fiets-inhoud');
-    var pijl   = document.getElementById(prefix + '-fiets-pijl');
-    if (!inhoud) return;
-    var open = inhoud.style.display !== 'none';
-    inhoud.style.display = open ? 'none' : 'block';
-    if (pijl) pijl.textContent = open ? '▼' : '▲';
-    if (!open) App._vulFietsFavs(prefix);
-  },
-
-  // Render favorieten-knoppen
-  _vulFietsFavs: function(prefix) {
-    var el = document.getElementById(prefix + '-fiets-favs');
-    if (!el) return;
-    var favs = App._getFietsFavs();
-    if (!favs.length) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="fiets-favs-lbl">Favorieten:</div>' +
-      favs.map(function(f) {
-        return '<button type="button" class="fiets-fav-btn" onclick="App._kiesFav(\'' +
-          prefix + '\',\'' + f.adres.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">' +
-          App.esc(f.naam) + '</button>';
-      }).join('');
-  },
-  _kiesFav: function(prefix, adres) {
-    var vanEl  = document.getElementById(prefix + '-fiets-van');
-    var naarEl = document.getElementById(prefix + '-fiets-naar');
-    if (vanEl && !vanEl.value) vanEl.value = adres;
-    else if (naarEl)           naarEl.value = adres;
-  },
-
-  // GPS tracking
-  toggleGps: function(prefix) {
-    if (App._fietsGpsActief) App.stopGps(prefix);
-    else                     App.startGps(prefix);
-  },
-  startGps: function(prefix) {
-    if (!navigator.geolocation) { App.toast('GPS niet beschikbaar op dit toestel'); return; }
-    App._gpsRoute      = [];
-    App._gpsTotaalKm   = 0;
-    App._fietsGpsActief = true;
-    App._fietsGpsPrefix = prefix;
-    var badge = document.getElementById('gps-badge');
-    if (badge) { badge.style.display = 'flex'; document.getElementById('gps-badge-km').textContent = '0,0'; }
-    var btn = document.getElementById(prefix + '-fiets-gps-btn');
-    if (btn) { btn.textContent = '⏹ GPS stoppen'; btn.classList.add('actief'); }
-    var startBtn = document.getElementById(prefix + '-gps-start-btn');
-    if (startBtn) { startBtn.classList.add('actief'); startBtn.textContent = '⏹ Fietsrit stoppen'; }
-    var teller = document.getElementById(prefix + '-gps-km-teller');
-    if (teller) teller.style.display = 'flex';
-    // Wake Lock: voorkom dat scherm/browser slaapt tijdens GPS
-    if ('wakeLock' in navigator) {
-      navigator.wakeLock.request('screen').then(function(lock) {
-        App._wakeLock = lock;
-        lock.addEventListener('release', function() { App._wakeLock = null; });
-      }).catch(function() {});
-    } else {
-      App.toast('Tip: houd je browser op de voorgrond tijdens de rit voor accurate GPS-meting.', false, true);
+  renderFietsGps: function() {
+    App.gpsLbTab(1);
+    App._gpsLbRenderBest();
+    var datEl = document.getElementById('gps-lb-datum');
+    if (datEl && !datEl.value) {
+      var nu = new Date();
+      datEl.value = nu.getFullYear() + '-' +
+        String(nu.getMonth()+1).padStart(2,'0') + '-' +
+        String(nu.getDate()).padStart(2,'0');
     }
-    App.toast('GPS-meting gestart\u2026', true);
-    App._gpsWatchId = navigator.geolocation.watchPosition(
+    App.renderFietsLogboek();
+  },
+
+  gpsLbTab: function(n) {
+    [1,2,3].forEach(function(i) {
+      var btn   = document.getElementById('gps-lb-tab-' + i);
+      var panel = document.getElementById('gps-lb-panel-' + i);
+      if (btn)   btn.classList.toggle('actief', i === n);
+      if (panel) panel.style.display = i === n ? '' : 'none';
+    });
+    if (n === 2) App.renderFietsLogboek();
+  },
+
+  _gpsLbStartGps: function() {
+    if (App._gpsLbActief) { App._gpsLbStopGps(); return; }
+    if (!navigator.geolocation) { App.toast('GPS niet beschikbaar op dit toestel'); return; }
+    App._gpsLbRoute = [];
+    App._gpsLbKm    = 0;
+    App._gpsLbActief = true;
+    var btn     = document.getElementById('gps-lb-gps-btn');
+    var display = document.getElementById('gps-lb-km-display');
+    if (btn)     btn.textContent = '\u23f9 Stop GPS-rit';
+    if (display) display.style.display = '';
+    if (navigator.wakeLock) {
+      navigator.wakeLock.request('screen')
+        .then(function(wl) { App._gpsLbWakeLock = wl; })
+        .catch(function() {});
+    }
+    App._gpsLbWatchId = navigator.geolocation.watchPosition(
       function(pos) {
         var lat = pos.coords.latitude, lon = pos.coords.longitude;
-        if (App._gpsRoute.length) {
-          var prev = App._gpsRoute[App._gpsRoute.length - 1];
+        if (App._gpsLbRoute.length) {
+          var prev = App._gpsLbRoute[App._gpsLbRoute.length - 1];
           var d = App._haversine(prev.lat, prev.lon, lat, lon);
-          if (d > 0.02) {
-            App._gpsTotaalKm += d;
-            var b = document.getElementById('gps-badge-km');
-            if (b) b.textContent = App._gpsTotaalKm.toFixed(1).replace('.', ',');
-            var wizKm = document.getElementById(App._fietsGpsPrefix + '-gps-km-val');
-            if (wizKm) wizKm.textContent = App._gpsTotaalKm.toFixed(1).replace('.', ',');
-          }
+          if (d > 0.02) App._gpsLbKm += d;
         }
-        App._gpsRoute.push({ lat: lat, lon: lon });
+        App._gpsLbRoute.push({ lat: lat, lon: lon });
+        var valEl = document.getElementById('gps-lb-km-val');
+        if (valEl) valEl.textContent = App._gpsLbKm.toFixed(1).replace('.', ',');
       },
-      function(err) { App.toast('GPS fout: ' + err.message); App.stopGps(prefix); },
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
+      function(err) { App.toast('GPS fout: ' + err.message); App._gpsLbActief = false; },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
     );
   },
-  stopGps: function(prefix) {
-    if (App._gpsWatchId !== null) {
-      navigator.geolocation.clearWatch(App._gpsWatchId);
-      App._gpsWatchId = null;
+
+  _gpsLbStopGps: function() {
+    if (App._gpsLbWatchId !== null) {
+      navigator.geolocation.clearWatch(App._gpsLbWatchId);
+      App._gpsLbWatchId = null;
     }
-    if (App._wakeLock) { App._wakeLock.release(); App._wakeLock = null; }
-    App._fietsGpsActief = false;
-    var badge = document.getElementById('gps-badge');
-    if (badge) badge.style.display = 'none';
-    var btn = document.getElementById(prefix + '-fiets-gps-btn');
-    if (btn) { btn.textContent = '📍 GPS starten'; btn.classList.remove('actief'); }
-    var startBtn = document.getElementById(prefix + '-gps-start-btn');
-    var km = App._gpsTotaalKm;
-    if (startBtn) {
-      startBtn.classList.remove('actief');
-      startBtn.textContent = km > 0
-        ? '🚲 Rit klaar: ' + km.toFixed(1).replace('.', ',') + ' km bijgehouden'
-        : '🚲 Start fietsrit';
+    App._gpsLbActief = false;
+    if (App._gpsLbWakeLock) {
+      App._gpsLbWakeLock.release().catch(function() {});
+      App._gpsLbWakeLock = null;
     }
-    var teller = document.getElementById(prefix + '-gps-km-teller');
-    if (teller) teller.style.display = 'none';
-    var stopRit = document.getElementById(prefix + '-fiets-stop-rit');
-    if (stopRit) stopRit.style.display = 'none';
-    if (App._gpsTotaalKm > 0) {
-      var kmEl = document.getElementById(prefix + '-fiets-km');
-      if (kmEl) { kmEl.value = App._gpsTotaalKm.toFixed(1); App._fietsKmInput(prefix); }
-      App._fietsAutoOpmerking(prefix);
-      App.toast('GPS gestopt \u2014 ' + App._gpsTotaalKm.toFixed(1).replace('.', ',') + ' km', true);
-    } else {
-      App.toast('GPS gestopt \u2014 geen beweging geregistreerd');
+    var btn     = document.getElementById('gps-lb-gps-btn');
+    var display = document.getElementById('gps-lb-km-display');
+    if (btn)     btn.textContent = '\ud83d\udeb2 Start GPS-rit';
+    if (display) display.style.display = 'none';
+    var km = Math.round(App._gpsLbKm * 10) / 10;
+    if (km > 0) {
+      var kmEl = document.getElementById('gps-lb-km-manueel');
+      if (kmEl) kmEl.value = km;
+      App.toast('GPS gestopt: ' + km.toString().replace('.', ',') + ' km', true);
     }
   },
 
-  // Geocoding via Nominatim + routering via OSRM
-  berekenAfstand: function(prefix) {
-    var stops = App._fietsStops[prefix] || ['', ''];
-    // Sync DOM inputs to state first
-    stops = stops.map(function(v, i) {
-      var el = document.getElementById(prefix + '-fiets-stop-' + i);
-      return el ? el.value.trim() : v;
-    });
-    App._fietsStops[prefix] = stops;
-    var van  = stops[0] || '';
-    var naar = stops[stops.length - 1] || '';
-    if (!van || !naar) { App.toast('Vul Van \u00e9n Naar in'); return; }
-    var btn = document.getElementById(prefix + '-fiets-bereken');
-    if (btn) btn.textContent = '\u23f3 Berekenen\u2026';
-    var _vulKm = function(km, label) {
-      var kmEl = document.getElementById(prefix + '-fiets-km');
-      if (kmEl) { kmEl.value = km; App._fietsKmInput(prefix); }
-      App._slaAdresOp(van); App._slaAdresOp(naar);
-      App._fietsAutoOpmerking(prefix);
-      if (btn) btn.textContent = '\ud83d\uddfa Bereken route';
-      App.toast(label, true);
-    };
-    var _berekenFout = function(reden) {
-      if (btn) btn.textContent = '\ud83d\uddfa Bereken route';
-      App.toast('Afstandsberekening mislukt: ' + reden + '. Controleer internet of vul km handmatig in.');
-    };
-    App._nominatim(van, function(vanC) {
-      if (!vanC) { _berekenFout('adres "' + van + '" niet gevonden'); return; }
-      App._nominatim(naar, function(naarC) {
-        if (!naarC) { _berekenFout('adres "' + naar + '" niet gevonden'); return; }
-        var osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
-          vanC.lon + ',' + vanC.lat + ';' + naarC.lon + ',' + naarC.lat + '?overview=false';
-        fetch(osrmUrl)
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.code === 'Ok' && data.routes && data.routes.length) {
-              var km = Math.round(data.routes[0].distance / 100) / 10;
-              _vulKm(km, km.toString().replace('.', ',') + ' km berekend (route)');
-            } else {
-              var km = Math.round(App._haversine(vanC.lat, vanC.lon, naarC.lat, naarC.lon) * 1.2 * 10) / 10;
-              _vulKm(km, '\u26a0\ufe0f Schatting (vogelvlucht \u00d71,2): ' + km.toString().replace('.', ',') + ' km \u2014 controleer handmatig');
-            }
-          })
-          .catch(function() {
-            var km = Math.round(App._haversine(vanC.lat, vanC.lon, naarC.lat, naarC.lon) * 1.2 * 10) / 10;
-            _vulKm(km, '\u26a0\ufe0f Offline schatting: ' + km.toString().replace('.', ',') + ' km \u2014 controleer handmatig');
-          });
-      });
-    });
-  },
-  _nominatim: function(adres, cb) {
-    var url = 'https://nominatim.openstreetmap.org/search?q=' +
-      encodeURIComponent(adres) + '&format=json&limit=1&countrycodes=be';
-    fetch(url, { headers: { 'Accept-Language': 'nl', 'User-Agent': 'BuurtwerkVenning/2.9.5' } })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { cb(d && d.length ? { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) } : null); })
-      .catch(function() { cb(null); });
-  },
-
-  // Update totaal wanneer km-veld wijzigt
-  _fietsKmInput: function(prefix) {
-    var kmEl     = document.getElementById(prefix + '-fiets-km');
-    var totEl    = document.getElementById(prefix + '-fiets-totaal');
-    var slaEl    = document.getElementById(prefix + '-fiets-sla');
-    var opmWrap  = document.getElementById(prefix + '-fiets-opm-wrap');
-    if (!kmEl) return;
-    var km = parseFloat(kmEl.value) || 0;
-    var tot = km * 0.2287;
-    if (totEl) totEl.textContent = '\u20ac\u00a0' + tot.toFixed(2).replace('.', ',');
-    if (slaEl)   slaEl.style.display   = km > 0 ? 'block' : 'none';
-    if (opmWrap) opmWrap.style.display = km > 0 ? 'block' : 'none';
-  },
-
-  // Auto-genereer Rydoo-opmerking
-  _fietsAutoOpmerking: function(prefix) {
-    var opmEl = document.getElementById(prefix + '-fiets-opm');
-    if (!opmEl || opmEl.value) return;
-    var delen = [];
-    if (prefix === 'ia') {
-      delen.push('Individuele actie');
-      // Initialen persoon
-      if (State.gekozenPersoon) {
-        var p = State.gekozenPersoon;
-        var init = ((p.voornaam || '').charAt(0).toUpperCase() || '?') + '.' +
-                   ((p.familienaam || '').charAt(0).toUpperCase() || '?') + '.';
-        delen.push(init);
-      }
-      // Extra info
-      var extraEl = document.getElementById('ia-extra');
-      var extra = extraEl ? extraEl.value.trim() : '';
-      if (extra) delen.push(extra);
-      // Levensdomeinen
-      var leven = App.getKeuzes('ia-leven');
-      if (leven.length) delen.push(leven.join(', '));
-      // Vindplaatsen
-      var vind = App.getKeuzes('ia-vindplaats');
-      if (vind.length) delen.push(vind.join(', '));
-      // Bestemming (adres persoon of Naar-stop)
-      var stops = App._fietsStops['ia'] || [];
-      var naar = stops[stops.length - 1] || (State.gekozenPersoon ? State.gekozenPersoon.adres : '');
-      if (naar) delen.push(naar);
-    } else {
-      delen.push('Collectieve actie');
-      // Naam actie
-      var caEl = document.getElementById('ca-naam');
-      var actieNaam = (caEl ? caEl.value.trim() : '') || (State.huidigActie || '');
-      if (actieNaam) delen.push(actieNaam);
-      // Cluster (geeft context over type activiteit)
-      var cluster = App.getKeuzes('ca-cluster');
-      if (cluster.length) delen.push(cluster.join(', '));
-      // Thema
-      var thema = App.getKeuzes('ca-thema');
-      if (thema.length) delen.push(thema.join(', '));
-    }
-    opmEl.value = delen.join(' \u2014 ');
-  },
-
-  // Sla rit op in Firestore
-  slaFietsRitOp: function(prefix) {
-    var kmEl  = document.getElementById(prefix + '-fiets-km');
-    var opmEl = document.getElementById(prefix + '-fiets-opm');
-    var km = parseFloat(kmEl ? kmEl.value : 0) || 0;
-    if (km <= 0) { App.toast('Vul een geldige afstand in'); return; }
-    // Lees stops uit DOM (meest actuele waarden)
-    var stops = App._fietsStops[prefix] || ['', ''];
-    stops = stops.map(function(v, i) {
-      var el = document.getElementById(prefix + '-fiets-stop-' + i);
-      return el ? el.value.trim() : v;
-    });
-    var van  = stops[0] || '';
-    var naar = stops[stops.length - 1] || '';
-    var via  = stops.slice(1, stops.length - 1).filter(Boolean).join(' \u2192 ');
-    var opm  = opmEl ? opmEl.value.trim() : '';
-    stops.forEach(function(a) { App._slaAdresOp(a); });
-    var nu = new Date();
-    var dag    = ('0' + nu.getDate()).slice(-2);
-    var maandN = ('0' + (nu.getMonth() + 1)).slice(-2);
-    var maandNamen = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
-    var rit = {
-      id:        uuid(),
-      datum:     nu.toISOString(),
-      datumRit:  dag + '/' + maandN + '/' + nu.getFullYear(),
-      van:       van,
-      naar:      naar,
-      via:       via,
-      afstand:   Math.round(km * 10) / 10,
-      tarief:    0.2287,
-      totaal:    Math.round(km * 0.2287 * 100) / 100,
-      opmerking: opm,
-      type:      App._fietsGpsActief ? 'gps' : 'manueel',
-      categorie: prefix === 'ia' ? 'individueel' : 'collectief',
-      actieRef:  prefix === 'ia'
-        ? (State.gekozenPersoon ? '#' + State.gekozenPersoon.volgnummer : '')
-        : (State.huidigActie || ''),
-      jaar:   nu.getFullYear(),
-      maand:  maandNamen[nu.getMonth()],
-      status: 'actief'
-    };
-    DB.slaFietsOp(DB._fietsritten.concat([rit]));
-    var badge = document.getElementById(prefix + '-fiets-badge');
-    if (badge) { badge.textContent = '\u2713'; badge.style.display = 'inline'; }
-    App._resetFietsSectie(prefix);
-    App.toast('\ud83d\udeb4 Rit opgeslagen \u2014 ' + rit.afstand + ' km \u2014 \u20ac' + rit.totaal.toFixed(2).replace('.', ','), true);
-  },
-
-  _resetFietsSectie: function(prefix) {
-    // Reset stops state en DOM
-    App._fietsStops[prefix] = ['', ''];
-    var stopsEl = document.getElementById(prefix + '-fiets-stops');
-    if (stopsEl) stopsEl.innerHTML = '';
-    var sam = document.getElementById(prefix + '-fiets-gps-sam');
-    if (sam) sam.style.display = 'none';
-    var stopRit = document.getElementById(prefix + '-fiets-stop-rit');
-    if (stopRit) stopRit.style.display = 'none';
-    // Reset GPS widget in stap 1
-    var startBtn = document.getElementById(prefix + '-gps-start-btn');
-    if (startBtn) { startBtn.classList.remove('actief'); startBtn.textContent = '\ud83d\udeb2 Start fietsrit'; }
-    var teller = document.getElementById(prefix + '-gps-km-teller');
-    if (teller) teller.style.display = 'none';
-    // Reset km / opmerking / sla
-    var kmEl = document.getElementById(prefix + '-fiets-km');
-    if (kmEl) kmEl.value = '';
-    var totEl = document.getElementById(prefix + '-fiets-totaal');
-    if (totEl) totEl.textContent = '\u20ac\u00a0' + '0,00';
-    var opmEl = document.getElementById(prefix + '-fiets-opm');
-    if (opmEl) opmEl.value = '';
-    var slaEl = document.getElementById(prefix + '-fiets-sla');
-    if (slaEl) slaEl.style.display = 'none';
-    var opmW = document.getElementById(prefix + '-fiets-opm-wrap');
-    if (opmW) opmW.style.display = 'none';
-    var inhoud = document.getElementById(prefix + '-fiets-inhoud');
-    if (inhoud) inhoud.style.display = 'none';
-    var pijl = document.getElementById(prefix + '-fiets-pijl');
-    if (pijl) pijl.textContent = '\u25bc';
-  },
-
-  // ── Multi-stop route helpers ──────────────────────────────────
-  _vulFietsSamenvatting: function(prefix) {
-    if (!App._fietsStops[prefix] || App._fietsStops[prefix].length < 2) {
-      App._fietsStops[prefix] = ['', ''];
-    }
-    App._fietsRenderStops(prefix);
-    App._vulFietsFavs(prefix);
-    // Als GPS actief was voor dit prefix: vul km in en toon samenvatting
-    if (App._fietsGpsPrefix === prefix) {
-      var inhoud = document.getElementById(prefix + '-fiets-inhoud');
-      var pijl   = document.getElementById(prefix + '-fiets-pijl');
-      var sam    = document.getElementById(prefix + '-fiets-gps-sam');
-      var samKm  = document.getElementById(prefix + '-fiets-gps-km-lbl');
-      var stopRit = document.getElementById(prefix + '-fiets-stop-rit');
-      if (App._fietsGpsActief) {
-        // GPS nog lopende: open sectie, toon stop-knop
-        if (inhoud) inhoud.style.display = 'block';
-        if (pijl)   pijl.textContent = '\u25b2';
-        if (stopRit) stopRit.style.display = 'block';
-        if (sam && App._gpsTotaalKm > 0) {
-          sam.style.display = 'block';
-          if (samKm) samKm.textContent = App._gpsTotaalKm.toFixed(1).replace('.', ',');
-        }
-      } else if (App._gpsTotaalKm > 0) {
-        // GPS al gestopt, km beschikbaar
-        var kmEl = document.getElementById(prefix + '-fiets-km');
-        if (kmEl && !kmEl.value) {
-          kmEl.value = App._gpsTotaalKm.toFixed(1);
-          App._fietsKmInput(prefix);
-        }
-        if (sam)   sam.style.display = 'block';
-        if (samKm) samKm.textContent = App._gpsTotaalKm.toFixed(1).replace('.', ',');
-        if (inhoud) inhoud.style.display = 'block';
-        if (pijl)   pijl.textContent = '\u25b2';
-      }
-    }
-    App._fietsAutoVulbestemming(prefix);
-  },
-
-  _fietsRenderStops: function(prefix) {
-    var container = document.getElementById(prefix + '-fiets-stops');
+  _gpsLbRenderBest: function() {
+    var container = document.getElementById('gps-lb-best-lijst');
     if (!container) return;
-    var stops = App._fietsStops[prefix] || ['', ''];
-    var html = '';
-    stops.forEach(function(val, idx) {
-      var label = idx === 0 ? 'Van' : (idx === stops.length - 1 ? 'Naar' : ('Via ' + idx));
-      var toonDel = idx > 0 && idx < stops.length - 1;
-      html += '<div class="fiets-stop-rij">';
-      html += '<div class="fiets-stop-label">' + label + '</div>';
-      html += '<div class="fiets-input-wrap">';
-      html += '<input type="text" id="' + prefix + '-fiets-stop-' + idx + '" class="fiets-input"';
-      html += ' value="' + App.esc(val) + '" placeholder="Adres\u2026"';
-      html += ' oninput="App._fietsInput2(\'' + prefix + '\',' + idx + ')"';
-      html += ' autocomplete="off">';
-      html += '<div id="' + prefix + '-fiets-stop-' + idx + '-sug" class="fiets-sug" style="display:none"></div>';
-      html += '</div>';
-      if (toonDel) {
-        html += '<button type="button" class="fiets-stop-del-btn" onclick="App._fietsVerwijderStop(\'' + prefix + '\',' + idx + ')">&#10005;</button>';
-      }
-      html += '</div>';
-    });
-    container.innerHTML = html;
-  },
-
-  _fietsInput2: function(prefix, idx) {
-    var inputEl = document.getElementById(prefix + '-fiets-stop-' + idx);
-    var sugEl   = document.getElementById(prefix + '-fiets-stop-' + idx + '-sug');
-    if (!inputEl || !sugEl) return;
-    if (App._fietsStops[prefix]) App._fietsStops[prefix][idx] = inputEl.value;
-    var val   = inputEl.value.trim().toLowerCase();
-    var lijst = App._getAdresSuggesties();
-    var favs  = App._getFietsFavs().map(function(f) { return f.adres; });
-    var alles = favs.concat(lijst.filter(function(a) { return favs.indexOf(a) === -1; }));
-    var match = val ? alles.filter(function(a) { return a.toLowerCase().indexOf(val) !== -1; }) : alles;
-    if (!match.length) { sugEl.style.display = 'none'; return; }
-    sugEl.innerHTML = match.slice(0, 5).map(function(a) {
-      return '<div class="fiets-sug-item" onclick="App._kiesSuggestie2(\'' + prefix + '\',' + idx + ',\'' + App.esc(a) + '\')">' + App.esc(a) + '</div>';
+    if (!App._gpsLbBest.length) {
+      container.innerHTML = '<div style="color:var(--zacht);font-size:0.85rem;margin-bottom:8px">Geen bestemmingen. Voeg er een toe.</div>';
+      return;
+    }
+    container.innerHTML = App._gpsLbBest.map(function(b, i) {
+      var lbl = i === 0 ? 'Van' : (i === App._gpsLbBest.length - 1 ? 'Naar' : 'Via');
+      return '<div class="gps-lb-seg-rij">' +
+        '<span class="gps-lb-seg-lbl">' + lbl + '</span>' +
+        '<input type="text" class="gps-lb-adres-inp" id="gps-lb-best-' + i + '" value="' + App.esc(b) + '" ' +
+          'oninput="App._gpsLbSyncBest(' + i + ',this.value)" placeholder="Adres...">' +
+        '<button class="gps-lb-seg-del" onclick="App._gpsLbVerwijderBest(' + i + ')">&#x2715;</button>' +
+        '</div>';
     }).join('');
-    sugEl.style.display = 'block';
-  },
-
-  _kiesSuggestie2: function(prefix, idx, adres) {
-    var inputEl = document.getElementById(prefix + '-fiets-stop-' + idx);
-    var sugEl   = document.getElementById(prefix + '-fiets-stop-' + idx + '-sug');
-    if (inputEl) inputEl.value = adres;
-    if (sugEl)   sugEl.style.display = 'none';
-    if (App._fietsStops[prefix]) App._fietsStops[prefix][idx] = adres;
-  },
-
-  _fietsVoegStopToe: function(prefix) {
-    var stops = App._fietsStops[prefix] || ['', ''];
-    stops.splice(stops.length - 1, 0, '');
-    App._fietsStops[prefix] = stops;
-    App._fietsRenderStops(prefix);
-  },
-
-  _fietsVerwijderStop: function(prefix, idx) {
-    var stops = App._fietsStops[prefix] || ['', ''];
-    stops.splice(idx, 1);
-    App._fietsStops[prefix] = stops;
-    App._fietsRenderStops(prefix);
-  },
-
-  _fietsAutoVulbestemming: function(prefix) {
-    var stops = App._fietsStops[prefix] || ['', ''];
-    var naarIdx = stops.length - 1;
-    if (stops[naarIdx]) return; // niet overschrijven
-    var bestemming = '';
-    if (prefix === 'ia' && State.gekozenPersoon) {
-      bestemming = State.gekozenPersoon.adres || '';
-    } else if (prefix === 'ca') {
-      var caEl = document.getElementById('ca-naam');
-      bestemming = caEl ? caEl.value.trim() : '';
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      App._gpsLbBest.forEach(function(b, i) {
+        var inp = document.getElementById('gps-lb-best-' + i);
+        if (inp && !inp._acInited) {
+          inp._acInited = true;
+          var ac = new google.maps.places.Autocomplete(inp, {
+            types: ['geocode'],
+            componentRestrictions: { country: 'be' }
+          });
+          (function(idx, autocomplete) {
+            autocomplete.addListener('place_changed', function() {
+              var place = autocomplete.getPlace();
+              if (place && place.formatted_address) App._gpsLbSyncBest(idx, place.formatted_address);
+            });
+          })(i, ac);
+        }
+      });
     }
-    if (!bestemming) return;
-    stops[naarIdx] = bestemming;
-    // Vul Van met eerste favoriet als leeg
-    if (!stops[0]) {
-      var favs = App._getFietsFavs();
-      if (favs.length) stops[0] = favs[0].adres;
+  },
+
+  _gpsLbInitAutocomplete: function() {},
+
+  _gpsLbVoegBestemmingToe: function() {
+    if (App._gpsLbBest.length === 0) App._gpsLbBest = ['', ''];
+    else App._gpsLbBest.splice(App._gpsLbBest.length - 1, 0, '');
+    App._gpsLbRenderBest();
+  },
+
+  _gpsLbVerwijderBest: function(idx) {
+    App._gpsLbBest.splice(idx, 1);
+    if (App._gpsLbBest.length < 2) App._gpsLbBest = ['', ''];
+    App._gpsLbRenderBest();
+  },
+
+  _gpsLbSyncBest: function(idx, val) {
+    App._gpsLbBest[idx] = val;
+  },
+
+  _gpsLbBerekenRoute: function() {
+    var best = App._gpsLbBest.filter(function(b) { return b.trim(); });
+    if (best.length < 2) { App.toast('Voeg minstens vertrek en bestemming in'); return; }
+    if (typeof google === 'undefined' || !google.maps) { App.toast('Google Maps niet beschikbaar'); return; }
+    var service  = new google.maps.DistanceMatrixService();
+    var segments = [];
+    for (var i = 0; i < best.length - 1; i++) segments.push({ from: best[i], to: best[i+1] });
+    var pending = segments.length;
+    var results = new Array(segments.length);
+    segments.forEach(function(seg, idx) {
+      service.getDistanceMatrix(
+        { origins: [seg.from], destinations: [seg.to], travelMode: 'BICYCLING' },
+        function(resp, status) {
+          if (status === 'OK' && resp.rows[0].elements[0].status === 'OK') {
+            results[idx] = resp.rows[0].elements[0].distance.value / 1000;
+          } else {
+            results[idx] = 0;
+          }
+          pending--;
+          if (pending === 0) {
+            var km = 0;
+            results.forEach(function(d) { km += d; });
+            km = Math.round(km * 10) / 10;
+            App._gpsLbToonRoute(km);
+          }
+        }
+      );
+    });
+  },
+
+  _gpsLbToonRoute: function(km) {
+    var el = document.getElementById('gps-lb-result-km');
+    if (el) {
+      el.style.display = '';
+      el.textContent = '\ud83d\uddfa Berekende afstand: ' + km.toString().replace('.', ',') + ' km (fiets)';
     }
-    App._fietsStops[prefix] = stops;
-    App._fietsRenderStops(prefix);
+    var kmEl = document.getElementById('gps-lb-km-manueel');
+    if (kmEl) kmEl.value = km;
+    App._gpsLbRouteKm = km;
+  },
+
+  _gpsLbManueelSla: function() {
+    var kmEl  = document.getElementById('gps-lb-km-manueel');
+    var datEl = document.getElementById('gps-lb-datum');
+    var km    = kmEl ? parseFloat(kmEl.value) : 0;
+    var datum = datEl ? datEl.value : '';
+    if (!km || km <= 0) { App.toast('Voer een geldige afstand in'); return; }
+    App._gpsLbSlaRitOp(km, 'manueel', datum);
+  },
+
+  _gpsLbSlaRitOp: function(km, type, datumOverride) {
+    var uid = _auth.currentUser ? _auth.currentUser.uid : null;
+    if (!uid) { App.toast('Niet ingelogd'); return; }
+    var nu = datumOverride ? new Date(datumOverride) : new Date();
+    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+    var id   = 'rit_' + Date.now();
+    var van  = App._gpsLbBest[0] || '';
+    var naar = App._gpsLbBest[App._gpsLbBest.length - 1] || '';
+    var via  = App._gpsLbBest.slice(1, -1).filter(Boolean).join(' \u2192 ');
+    var tarief = 0.2287;
+    var totaal = Math.round(km * tarief * 100) / 100;
+    var doc = {
+      id: id,
+      datum:    nu.toISOString().substring(0, 10),
+      datumRit: nu.toLocaleDateString('nl-BE'),
+      van: van, naar: naar, via: via,
+      afstand: km, tarief: tarief, totaal: totaal,
+      opmerking: '', type: type || 'manueel',
+      categorie: 'individueel', actieRef: '',
+      jaar: nu.getFullYear(), maand: maanden[nu.getMonth()],
+      status: 'open'
+    };
+    _db.collection('users').doc(uid).collection('fietsritten').doc(id).set(doc)
+      .then(function() {
+        App._gpsLbRit = doc;
+        App.toast('\u2714 Rit opgeslagen (' + km.toString().replace('.', ',') + ' km)', true);
+        App.gpsLbTab(3);
+        App._gpsLbKoppelRitInfo();
+      })
+      .catch(function(e) { App.toast('Fout: ' + e.message); });
+  },
+
+  _gpsLbKoppelRitInfo: function() {
+    var el = document.getElementById('gps-lb-koppel-rit-info');
+    if (!el || !App._gpsLbRit) return;
+    var r = App._gpsLbRit;
+    el.style.display = '';
+    el.textContent = '\ud83d\udeb2 ' + (r.afstand || 0).toFixed(1).replace('.', ',') + ' km \u2014 ' + (r.datumRit || '') + ' \u2014 koppelen aan:';
+  },
+
+  _gpsLbToggleKoppelType: function(type) {
+    App._gpsLbKoppelType = type;
+    ['ia','ca'].forEach(function(t) {
+      var btn = document.getElementById('gps-lb-koppel-type-' + t);
+      if (btn) btn.classList.toggle('actief', t === type);
+    });
+    var pw = document.getElementById('gps-lb-koppel-persoon-wrap');
+    var aw = document.getElementById('gps-lb-koppel-actie-wrap');
+    if (type === 'ia') {
+      if (pw) pw.style.display = ''; if (aw) aw.style.display = 'none';
+    } else {
+      if (pw) pw.style.display = 'none'; if (aw) aw.style.display = '';
+      App._gpsLbLaadActies();
+    }
+  },
+
+  _gpsLbZoekPersonen: function() {
+    var inp  = document.getElementById('gps-lb-koppel-persoon-inp');
+    var zoek = inp ? inp.value.trim().toLowerCase() : '';
+    var lijst = document.getElementById('gps-lb-koppel-persoon-lijst');
+    if (!lijst) return;
+    var gevonden = DB.personen.filter(function(p) {
+      var naam = ((p.voornaam || '') + ' ' + (p.familienaam || '')).toLowerCase();
+      return !zoek || naam.indexOf(zoek) !== -1;
+    }).slice(0, 8);
+    lijst.innerHTML = gevonden.map(function(p) {
+      return '<div class="gps-lb-persoon-rij" onclick="App._gpsLbKiesPersonen(\'' + p.id + '\')">' +
+        App.esc((p.voornaam || '') + ' ' + (p.familienaam || '')) + '</div>';
+    }).join('') || '<div style="color:var(--zacht);font-size:0.85rem">Geen resultaten</div>';
+  },
+
+  _gpsLbKiesPersonen: function(id) {
+    var p = DB.personen.find(function(x) { return x.id === id; });
+    if (!p) return;
+    App._gpsLbGekozenPersoon = p;
+    var inp = document.getElementById('gps-lb-koppel-persoon-inp');
+    if (inp) inp.value = (p.voornaam || '') + ' ' + (p.familienaam || '');
+    var lijst = document.getElementById('gps-lb-koppel-persoon-lijst');
+    if (lijst) lijst.innerHTML = '';
+    App._gpsLbGenReden();
+  },
+
+  _gpsLbLaadActies: function() {
+    var lijst = document.getElementById('gps-lb-koppel-actie-lijst');
+    if (!lijst) return;
+    var acties = DB.collectief.filter(function(c) { return c.status === 'actief' && !c.module; }).slice(0, 10);
+    lijst.innerHTML = acties.map(function(c) {
+      return '<div class="gps-lb-actie-rij" onclick="App._gpsLbKiesActie(\'' + c.id + '\')">' +
+        App.esc(c.naamVanDeActie || c.id) + '</div>';
+    }).join('') || '<div style="color:var(--zacht);font-size:0.85rem">Geen actieve acties</div>';
+  },
+
+  _gpsLbKiesActie: function(id) {
+    var c = DB.collectief.find(function(x) { return x.id === id; });
+    if (!c) return;
+    App._gpsLbGekozenActie = c;
+    App._gpsLbGenReden();
+  },
+
+  _gpsLbGenReden: function() {
+    var r = App._gpsLbRit;
+    if (!r) return;
+    var km = (r.afstand || 0).toFixed(1).replace('.', ',');
+    var reden = '';
+    if (App._gpsLbKoppelType === 'ia' && App._gpsLbGekozenPersoon) {
+      var p    = App._gpsLbGekozenPersoon;
+      var naam = ((p.voornaam || '') + ' ' + (p.familienaam || '')).trim();
+      reden = 'Individueel \u2014 ' + naam + ' \u2014 ' + (r.van || '') + ' \u2192 ' + (r.naar || '') + ' \u2014 ' + km + ' km';
+    } else if (App._gpsLbKoppelType === 'ca' && App._gpsLbGekozenActie) {
+      var a = App._gpsLbGekozenActie;
+      reden = 'Collectief \u2014 ' + App.esc(a.naamVanDeActie || '') + ' \u2014 ' + (r.van || '') + ' \u2192 ' + (r.naar || '') + ' \u2014 ' + km + ' km';
+    }
+    App._gpsLbRedenStr = reden;
+    var preview = document.getElementById('gps-lb-reden-preview');
+    var tekst   = document.getElementById('gps-lb-reden-tekst');
+    var slaBtn  = document.getElementById('gps-lb-koppel-sla');
+    if (reden) {
+      if (preview) preview.style.display = '';
+      if (tekst)   tekst.textContent = reden;
+      if (slaBtn)  slaBtn.style.display = '';
+    }
+  },
+
+  _gpsLbKoppel: function(id) {
+    var r = DB._fietsritten.find(function(x) { return x.id === id; });
+    if (!r) return;
+    App._gpsLbRit = r;
+    App.gpsLbTab(3);
+    App._gpsLbKoppelRitInfo();
+  },
+
+  _gpsLbKoppelSlaOp: function() {
+    var r = App._gpsLbRit;
+    if (!r || !App._gpsLbRedenStr) { App.toast('Geen rit of koppeling geselecteerd'); return; }
+    var uid = _auth.currentUser ? _auth.currentUser.uid : null;
+    if (!uid) { App.toast('Niet ingelogd'); return; }
+    var actieRef = App._gpsLbKoppelType === 'ca' && App._gpsLbGekozenActie ? App._gpsLbGekozenActie.id : '';
+    _db.collection('users').doc(uid).collection('fietsritten').doc(r.id).update({
+      opmerking: App._gpsLbRedenStr,
+      actieRef:  actieRef,
+      categorie: App._gpsLbKoppelType === 'ca' ? 'collectief' : 'individueel',
+      status:    'gekoppeld'
+    })
+    .then(function() {
+      App.toast('\u2714 Koppeling opgeslagen', true);
+      App._gpsLbRit = null; App._gpsLbGekozenPersoon = null;
+      App._gpsLbGekozenActie = null; App._gpsLbRedenStr = '';
+    })
+    .catch(function(e) { App.toast('Fout: ' + e.message); });
+  },
+
+  verwijderCa: function(id, naam) {
+    if (!confirm('Wil je "' + naam + '" definitief verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+    var uid = _auth.currentUser ? _auth.currentUser.uid : null;
+    if (!uid) { App.toast('Niet ingelogd'); return; }
+    _db.collection('users').doc(uid).collection('collectief').doc(id).delete()
+      .then(function() { App.toast('\u2714 Actie verwijderd', true); App.renderColStart(); })
+      .catch(function(e) { App.toast('Fout bij verwijderen: ' + e.message); });
   },
 
   // Logboek
@@ -4855,22 +4724,19 @@ _collectProjectFotos: function(naam) {
     var el = document.getElementById('fiets-logboek-tabel');
     if (!el) return;
     if (!ritten.length) {
-      el.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--zacht);padding:20px">Geen ritten gevonden.</td></tr>';
+      el.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--zacht);padding:20px">Geen ritten gevonden.</td></tr>';
       return;
     }
     el.innerHTML = ritten.map(function(r) {
+      var statusKlasse = r.status === 'gekoppeld' ? 'gps-lb-status-ok' : 'gps-lb-status-open';
+      var statusLabel  = r.status === 'gekoppeld' ? '\u2714 Gekoppeld' : 'Open';
+      var opm = (r.opmerking || '');
       return '<tr>' +
-        '<td>' + App.esc(r.datumRit || '\u2014') + App._fietsKopBtn(r.datumRit || '') + '</td>' +
-        '<td>' + App.esc(r.van  || '\u2014') + App._fietsKopBtn(r.van  || '') + '</td>' +
-        '<td>' + App.esc(r.naar || '\u2014') + App._fietsKopBtn(r.naar || '') + '</td>' +
-        '<td style="text-align:right">' + (r.afstand || 0).toFixed(1).replace('.', ',') +
-          App._fietsKopBtn(String(r.afstand || 0).replace('.', ',')) + '</td>' +
-        '<td style="text-align:right">0,2287' + App._fietsKopBtn('0.2287') + '</td>' +
-        '<td style="text-align:right;font-weight:700">\u20ac\u00a0' +
-          (r.totaal || 0).toFixed(2).replace('.', ',') +
-          App._fietsKopBtn((r.totaal || 0).toFixed(2)) + '</td>' +
-        '<td>' + App.esc(r.opmerking || '\u2014') + App._fietsKopBtn(r.opmerking || '') + '</td>' +
-        '<td><button class="fiets-del-btn" onclick="App._verwijderRit(\'' + r.id + '\')" title="Verwijderen">\ud83d\uddd1</button></td>' +
+        '<td>' + App.esc(r.datumRit || '\u2014') + '</td>' +
+        '<td style="text-align:right;font-weight:600">' + (r.afstand || 0).toFixed(1).replace('.', ',') + ' km' + App._fietsKopBtn((r.afstand || 0).toFixed(1)) + '</td>' +
+        '<td><span class="' + statusKlasse + '">' + statusLabel + '</span></td>' +
+        '<td class="gps-lb-reden-cel">' + (opm ? App.esc(opm) + App._fietsKopBtn(opm) : '<button class="gps-lb-koppel-btn" onclick="App._gpsLbKoppel(\'' + r.id + '\')">🔗 Koppelen</button>') + '</td>' +
+        '<td><button class="gps-lb-del-btn" onclick="App._verwijderRit(\'' + r.id + '\')" title="Verwijderen">\ud83d\uddd1</button></td>' +
       '</tr>';
     }).join('');
   },

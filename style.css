@@ -1051,252 +1051,192 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 @media (hover: hover) { .uitlog-btn:hover { border-color: var(--rood); color: var(--rood); } }
 
-/* ══ FIETSRITTEN v2.9.5 ══ */
+/* ══ FIETSRITTEN v3.0.0 — GPS & LOGBOEK ══ */
 
-/* GPS floating badge */
-.gps-badge {
-  position: fixed;
-  bottom: 76px;
-  right: 14px;
-  background: var(--groen);
-  color: #fff;
-  border-radius: 20px;
-  padding: 7px 14px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  animation: gpsPulse 1.6s ease-in-out infinite;
+/* Tabs */
+.gps-lb-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap;
 }
-@keyframes gpsPulse {
-  0%, 100% { transform: scale(1);    box-shadow: 0 4px 16px rgba(0,0,0,0.22); }
-  50%       { transform: scale(1.06); box-shadow: 0 6px 22px rgba(46,125,50,0.4); }
+.gps-lb-tab-btn {
+  padding: 8px 18px; border-radius: 8px; border: 1.5px solid var(--rand);
+  background: #fff; color: var(--zacht); font-family: 'Poppins', sans-serif;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.gps-lb-tab-btn.actief {
+  background: var(--groen); color: #fff; border-color: var(--groen);
 }
 
-/* Fiets sectie in wizard */
-.fiets-sectie {
-  margin: 20px 0 0;
-  border: 1.5px dashed var(--rand);
-  border-radius: 12px;
-  overflow: visible;
+/* GPS Start knop */
+.gps-lb-start-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 13px 18px; border-radius: 12px;
+  border: 2px dashed var(--groen); color: var(--groen);
+  background: var(--groen-licht); font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; transition: all .2s; font-family: 'Poppins', sans-serif;
+  margin-bottom: 10px;
 }
-.fiets-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: 'Poppins', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--tekst);
-  text-align: left;
-  border-radius: 12px;
-}
-.fiets-toggle-pijl { margin-left: auto; font-size: 0.72rem; color: var(--zacht); }
-.fiets-toggle-badge {
-  background: var(--groen); color: #fff;
-  border-radius: 10px; padding: 1px 7px;
-  font-size: 0.65rem; font-weight: 700;
-}
-.fiets-inhoud {
-  padding: 0 16px 16px;
-  border-top: 1px solid var(--rand);
-  margin-top: 0;
-}
-.fiets-rij { margin-bottom: 10px; }
-.fiets-input-wrap { position: relative; }
-.fiets-input {
-  width: 100%; padding: 9px 12px;
-  border: 1.5px solid var(--rand); border-radius: 8px;
-  font-family: 'Poppins', sans-serif; font-size: 0.85rem;
-  background: #fff; box-sizing: border-box;
-}
-.fiets-input:focus { outline: none; border-color: var(--blauw); }
+.gps-lb-start-btn:hover { background: var(--groen); color: #fff; border-style: solid; }
 
-/* Suggestie-dropdown */
-.fiets-sug {
-  position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-  background: #fff; border: 1.5px solid var(--rand);
-  border-radius: 0 0 8px 8px; z-index: 300;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  max-height: 180px; overflow-y: auto;
-}
-.fiets-sug-item {
-  padding: 9px 14px; font-size: 0.82rem;
-  cursor: pointer; border-bottom: 1px solid var(--rand);
-}
-.fiets-sug-item:last-child { border-bottom: none; }
-@media (hover: hover) { .fiets-sug-item:hover { background: var(--blauw-licht); } }
-
-/* Favorieten */
-.fiets-favs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.fiets-favs-lbl {
-  font-size: 0.65rem; color: var(--zacht); width: 100%;
-  font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-}
-.fiets-fav-btn {
-  font-size: 0.72rem; padding: 4px 11px;
-  background: var(--blauw-licht); color: var(--blauw);
-  border: 1px solid var(--blauw); border-radius: 14px;
-  cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600;
+/* KM display tijdens GPS */
+.gps-lb-km-display {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--groen-licht);
+  border-radius: 10px; font-size: 0.9rem; font-weight: 700;
+  color: var(--groen); margin-bottom: 10px;
 }
 
-/* Actie-knoppen (GPS / Bereken) */
-.fiets-actie-rij {
-  display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap;
+/* Samenvatting rij */
+.gps-lb-sam-rij {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
 }
-.fiets-btn-gps {
-  padding: 8px 14px; background: var(--groen-licht); color: var(--groen);
-  border: 1.5px solid var(--groen); border-radius: 8px;
-  font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; cursor: pointer;
-}
-.fiets-btn-gps.actief { background: var(--groen); color: #fff; }
-.fiets-btn-route {
-  padding: 8px 14px; background: var(--blauw-licht); color: var(--blauw);
-  border: 1.5px solid var(--blauw); border-radius: 8px;
-  font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; cursor: pointer;
-}
-.fiets-of-lbl { font-size: 0.75rem; color: var(--zacht); }
 
-/* Resultaat-balk */
-.fiets-result {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  background: var(--groen-licht); border: 1.5px solid var(--groen);
-  border-radius: 8px; padding: 10px 14px; margin: 10px 0;
-}
-.fiets-km-input {
-  width: 72px; padding: 6px 8px;
-  border: 1.5px solid var(--groen); border-radius: 6px;
-  font-family: 'Poppins', sans-serif; font-size: 1rem;
-  font-weight: 700; color: var(--groen); background: #fff; text-align: right;
-}
-.fiets-km-eenheid { font-size: 0.8rem; color: var(--zacht); }
-.fiets-totaal { font-size: 1.1rem; font-weight: 800; color: var(--groen); margin-left: auto; }
-
-/* Opslaan-knop */
-.fiets-sla-btn {
+/* Sla op knop */
+.gps-lb-sla-btn {
   width: 100%; margin-top: 12px; padding: 11px;
   background: var(--groen); color: #fff; border: none;
   border-radius: 8px; font-family: 'Poppins', sans-serif;
   font-size: 0.88rem; font-weight: 700; cursor: pointer;
 }
-@media (hover: hover) { .fiets-sla-btn:hover { filter: brightness(1.08); } }
+@media (hover: hover) { .gps-lb-sla-btn:hover { filter: brightness(1.08); } }
 
-/* GPS start widget (stap 1) */
-.fiets-gps-start { margin: 14px 0 0; }
-.fiets-gps-start-btn {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 11px 16px; border-radius: 12px;
-  border: 2px dashed var(--groen); color: var(--groen);
-  background: var(--groen-licht); font-size: 0.9rem; font-weight: 600;
-  cursor: pointer; transition: all .2s;
-}
-.fiets-gps-start-btn.actief {
-  border-style: solid; background: var(--groen); color: #fff;
-}
-.fiets-gps-km-teller {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; background: var(--groen-licht);
-  border-radius: 10px; font-size: 0.88rem; font-weight: 700;
-  color: var(--groen); margin-top: 6px;
-}
-.fiets-gps-stop-mini {
-  margin-left: auto; padding: 4px 12px; border-radius: 6px;
-  border: none; background: var(--rood); color: #fff;
-  font-size: 0.78rem; font-weight: 600; cursor: pointer;
-}
-
-/* Stop rit & Verwerk knop (stap 3) */
-.fiets-stop-rit-btn {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 11px 16px; border-radius: 12px; margin-bottom: 10px;
-  border: 2px solid var(--rood); color: #fff; background: var(--rood);
-  font-size: 0.9rem; font-weight: 700; cursor: pointer;
-  animation: pulse-red 1.5s ease-in-out infinite;
-}
-@keyframes pulse-red {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: .75; }
-}
-
-/* GPS samenvatting in stap 3 */
-.fiets-gps-sam {
-  padding: 8px 12px; background: var(--groen-licht); border-radius: 10px;
-  font-size: 0.85rem; color: var(--groen); margin-bottom: 10px;
-}
-
-/* Multi-stop route */
-.fiets-stop-rij {
-  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;
-}
-.fiets-stop-label {
-  min-width: 38px; font-size: 0.75rem; font-weight: 700;
-  color: var(--zacht); padding-top: 10px; text-transform: uppercase;
-  letter-spacing: .03em;
-}
-.fiets-stop-del-btn {
-  flex-shrink: 0; padding: 8px 10px; border: none; background: none;
-  color: var(--rood); font-size: 0.9rem; cursor: pointer; line-height: 1;
-}
-.fiets-extra-stop-btn {
-  padding: 6px 14px; border-radius: 8px;
+/* Toevoeg-knop */
+.gps-lb-add-btn {
+  padding: 7px 16px; border-radius: 8px; margin-top: 8px;
   border: 1.5px solid var(--blauw); color: var(--blauw);
   background: var(--blauw-licht); font-size: 0.82rem;
-  font-weight: 600; cursor: pointer;
-}
-.fiets-auto-btn {
-  padding: 6px 14px; border-radius: 8px;
-  border: 1.5px solid var(--oranje); color: var(--oranje);
-  background: var(--oranje-licht); font-size: 0.82rem;
-  font-weight: 600; cursor: pointer;
+  font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
 }
 
-/* Logboek */
-.fiets-log-teller {
-  font-size: 0.82rem; font-weight: 600; color: var(--zacht); margin-bottom: 4px;
+/* Bereken knop */
+.gps-lb-bereken-btn {
+  padding: 8px 18px; border-radius: 8px;
+  border: 1.5px solid var(--groen); color: var(--groen);
+  background: var(--groen-licht); font-size: 0.85rem;
+  font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif;
 }
-.fiets-log-tabel {
+
+/* Resultaat km */
+.gps-lb-result-km {
+  margin-top: 10px; padding: 10px 14px;
+  background: var(--groen-licht); border-radius: 8px;
+  font-size: 0.88rem; font-weight: 700; color: var(--groen);
+}
+
+/* Segment rij (adres invoer) */
+.gps-lb-seg-rij {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.gps-lb-seg-lbl {
+  min-width: 40px; font-size: 0.72rem; font-weight: 700;
+  color: var(--zacht); text-transform: uppercase; letter-spacing: .04em;
+}
+.gps-lb-adres-inp {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--rand);
+  border-radius: 7px; font-family: 'Poppins', sans-serif; font-size: 0.85rem;
+}
+.gps-lb-seg-del {
+  flex-shrink: 0; padding: 6px 10px; border: none; background: none;
+  color: var(--rood); font-size: 0.9rem; cursor: pointer;
+}
+
+/* Logboek tabel */
+.gps-lb-tabel {
   width: 100%; border-collapse: collapse; font-size: 0.78rem;
 }
-.fiets-log-tabel th {
+.gps-lb-tabel th {
   text-align: left; font-size: 0.63rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.05em;
   color: var(--zacht); border-bottom: 2px solid var(--rand);
   padding: 6px 8px; white-space: nowrap;
 }
-.fiets-log-tabel td {
-  padding: 8px 8px; border-bottom: 1px solid var(--rand); vertical-align: middle;
+.gps-lb-tabel td {
+  padding: 8px; border-bottom: 1px solid var(--rand); vertical-align: middle;
 }
-.fiets-log-tabel tr:last-child td { border-bottom: none; }
-@media (hover: hover) { .fiets-log-tabel tbody tr:hover td { background: var(--blauw-licht); } }
+.gps-lb-tabel tr:last-child td { border-bottom: none; }
+@media (hover: hover) { .gps-lb-tabel tbody tr:hover td { background: var(--blauw-licht); } }
 
+/* Status badges */
+.gps-lb-status-ok {
+  background: var(--groen); color: #fff;
+  border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700;
+}
+.gps-lb-status-open {
+  background: var(--oranje-licht); color: var(--oranje);
+  border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700;
+  border: 1px solid var(--oranje);
+}
+
+/* Reden cel */
+.gps-lb-reden-cel { max-width: 200px; word-break: break-word; font-size: 0.75rem; }
+
+/* Koppelen knop in tabel */
+.gps-lb-koppel-btn {
+  padding: 3px 10px; border-radius: 6px; border: 1.5px solid var(--blauw);
+  color: var(--blauw); background: var(--blauw-licht);
+  font-size: 0.72rem; font-weight: 600; cursor: pointer;
+}
+
+/* Verwijder knop in tabel */
+.gps-lb-del-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.82rem; opacity: 0.35; padding: 2px 4px;
+}
+@media (hover: hover) { .gps-lb-del-btn:hover { opacity: 1; } }
+
+/* Kopieer knop */
 .fiets-kop-btn {
   background: none; border: none; cursor: pointer;
   font-size: 0.75rem; opacity: 0.4; padding: 0 2px; vertical-align: middle;
 }
 @media (hover: hover) { .fiets-kop-btn:hover { opacity: 1; } }
-.fiets-del-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 0.82rem; opacity: 0.35; padding: 2px 4px;
-}
-@media (hover: hover) { .fiets-del-btn:hover { opacity: 1; } }
 
-/* Print — alleen logboek zichtbaar op A4 */
+/* Logboek teller */
+.fiets-log-teller {
+  font-size: 0.82rem; font-weight: 600; color: var(--zacht); margin-bottom: 4px;
+}
+
+/* Persoon/actie rijen in koppelen */
+.gps-lb-persoon-rij, .gps-lb-actie-rij {
+  padding: 7px 10px; cursor: pointer; border-radius: 6px;
+  margin-bottom: 4px; background: #f5f5f5; font-size: 0.85rem;
+  transition: background .15s;
+}
+@media (hover: hover) {
+  .gps-lb-persoon-rij:hover, .gps-lb-actie-rij:hover { background: var(--blauw-licht); }
+}
+
+/* Reden preview */
+.gps-lb-reden-preview {
+  margin-top: 14px; padding: 12px;
+  background: var(--groen-licht); border-radius: 10px;
+}
+
+/* Rit info rij */
+.gps-lb-rit-info-rij {
+  padding: 8px 12px; background: var(--blauw-licht);
+  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  color: var(--blauw); margin-bottom: 12px;
+}
+
+/* Koppel opslaan knop */
+.gps-lb-koppel-sla-btn {
+  width: 100%; margin-top: 14px; padding: 11px;
+  background: var(--groen); color: #fff; border: none;
+  border-radius: 8px; font-family: 'Poppins', sans-serif;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+}
+
+/* Print — logboek op A4 */
 @media print {
-  body > *:not(#pg-fiets-logboek) { display: none !important; }
-  #pg-fiets-logboek { display: block !important; position: static !important; }
+  body > *:not(#pg-fiets-gps) { display: none !important; }
+  #pg-fiets-gps { display: block !important; position: static !important; }
   .terug-link, .actie-rij, .filter-balk,
-  .fiets-kop-btn, .fiets-del-btn, .gps-badge { display: none !important; }
+  .fiets-kop-btn, .gps-lb-del-btn, .gps-lb-koppel-btn,
+  .gps-lb-tabs, #gps-lb-panel-1, #gps-lb-panel-3 { display: none !important; }
+  #gps-lb-panel-2 { display: block !important; }
   .kaart { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
-  .fiets-log-tabel { font-size: 9pt; }
-  .fiets-log-tabel th, .fiets-log-tabel td { padding: 4px 6px; }
+  .gps-lb-tabel { font-size: 9pt; }
+  .gps-lb-tabel th, .gps-lb-tabel td { padding: 4px 6px; }
 }
 
 /* ══ INDIVIDUEEL DASHBOARD v2.9.4 — drill-down ══ */

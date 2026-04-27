@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 2.9.7 | **Datum**: 2026-04-26
+**Versie**: 3.0.0 | **Datum**: 2026-04-27
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v2.9.7`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.0`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -133,10 +133,10 @@ Eén document per fietsrit (vergoeding). Pad: `users/{uid}/fietsritten`.
 | `opmerking` | string | Rydoo-tekst, bv. "Individueel — V.F." |
 | `type` | string | `'gps'` / `'route'` / `'manueel'` |
 | `categorie` | string | `'individueel'` / `'collectief'` |
-| `actieRef` | string | Naam van de gekoppelde actie (vrij) |
+| `actieRef` | string | ID van de gekoppelde collectieve actie |
 | `jaar` | number | Jaar van de rit |
 | `maand` | string | `Januari` … `December` |
-| `status` | string | `'actief'` / `'gearchiveerd'` |
+| `status` | string | `'open'` / `'gekoppeld'` / `'gearchiveerd'` |
 
 ---
 
@@ -166,7 +166,7 @@ Alle pagina's zijn `<div class="pagina" id="pg-*">`. Actieve pagina krijgt klass
 | `pg-jaarplan-mod` | Jaarplan module details |
 | `pg-persoon-detail` | Persoon bewerken / detail |
 | `pg-dashboard` | Dashboard (KPI + analyses) |
-| `pg-fiets-logboek` | Fietslogboek overzicht (filters, tabel, print, Excel) |
+| `pg-fiets-gps` | Fietsritten: 3 tabs (GPS & Invoer / Logboek / Koppelen) |
 
 **Bottom navigation** (`#bottom-nav`): knoppen met `data-page` naar pg-start, pg-individueel-start, pg-collectief-start, pg-jaarplan, pg-dashboard.
 
@@ -188,7 +188,7 @@ Sleutelmethoden:
 - `DB.slaPerOp(lijst)` / `slaIndOp(lijst)` / `slaColOp(lijst)` — Schrijft gewijzigde records naar Firestore
 - `DB.slaFietsOp(lijst)` — Schrijft fietsritten naar Firestore
 - `DB.fietsritten` — getter voor gecachte `_fietsritten` array
-- Fietsritten-listener start apart (telt NIET mee in `_laadGereed`), refresht `pg-fiets-logboek` bij wijziging
+- Fietsritten-listener start apart (telt NIET mee in `_laadGereed`), refresht `pg-fiets-gps` bij wijziging
 
 ### 5.2 Object `Auth` — authenticatie
 
@@ -241,58 +241,56 @@ Sleutelmethoden:
 - `App.exportBuurtwerkPDF()` — Jaarrapport PDF
 - `App.importCSVDialog()` — CSV import
 
-#### Fietsritten module (v2.9.5)
+#### Fietsritten module (v3.0.0) — Standalone pagina pg-fiets-gps
 
-**GPS en afstandsbepaling** (geen API-sleutel vereist):
-- `App.toggleGps(prefix)` / `startGps(prefix)` / `stopGps(prefix)` — Browser `navigator.geolocation.watchPosition()`, Haversine formula, km-badge update
-- `App.berekenAfstand(prefix)` — Nominatim geocoding → OSRM routeberekening; bij Nominatim-fout: duidelijke foutmelding + km-veld blijft leeg; bij OSRM-fout: Haversine × 1.2 met ⚠️ waarschuwing-toast
-- `App._nominatim(adres, cb)` — Nominatim API (`countrycodes=be`, vereiste `User-Agent` header)
-- `App._haversine(lat1,lon1,lat2,lon2)` — Afstand in km
+**Architectuur**: Volledig los van de wizards (ia/ca). Eigen pagina `pg-fiets-gps` met 3 tabs:
+1. **Tab 1 — GPS & Invoer**: GPS tracking starten/stoppen, route-adressen invullen, Google Maps afstand berekenen, manueel km + datum invoeren en opslaan
+2. **Tab 2 — Logboek**: Gefilterd overzicht van ritten (Datum, km, Status, Reden), print + Excel export
+3. **Tab 3 — Koppelen**: Gekoppeld een opgeslagen rit aan een individuele persoon of collectieve actie, Rydoo-opmerking genereren
 
-**GPS start in wizardstap 1** (v2.9.6+):
-- `ia-s1` en `ca-s1` hebben elk een `<div class="fiets-gps-start">` met:
-  - `{prefix}-gps-start-btn` — knop "🚲 Start fietsrit", wordt groen en toont "Rit klaar: X km" na stop
-  - `{prefix}-gps-km-teller` — live km-display in de wizard (verborgen totdat GPS loopt)
-- `startGps(prefix)` update ook de wizard-teller; `stopGps(prefix)` reset de widget
+**State-variabelen**:
+- `_gpsLbWatchId` — geolocation watch ID
+- `_gpsLbRoute` — array van {lat, lon} punten
+- `_gpsLbKm` — opgetelde kilometer teller
+- `_gpsLbActief` — boolean GPS loopt
+- `_gpsLbWakeLock` — Wake Lock API object
+- `_gpsLbBest` — array van adresstrings (Van, Via…, Naar)
+- `_gpsLbRit` — meest recent opgeslagen rit-document
+- `_gpsLbGekozenPersoon`, `_gpsLbGekozenActie` — geselecteerde koppeling
+- `_gpsLbRedenStr` — gegenereerde Rydoo-opmerking
+- `_gpsLbRouteKm` — afstand berekend via Google Maps
+- `_gpsLbKoppelType` — `'ia'` of `'ca'`
 
-**GPS floating badge**: `#gps-badge` — zichtbaar tijdens live tracking, toont lopende km.
+**Functies (nieuw)**:
+- `App.renderFietsGps()` — init GPS-pagina (tab 1 actief, datum default vandaag, renderFietsLogboek aanroepen)
+- `App.gpsLbTab(n)` — wissel tab 1/2/3
+- `App._gpsLbStartGps()` / `_gpsLbStopGps()` — GPS tracking (Wake Lock, Haversine 20m drempel, km naar invoerveld na stop)
+- `App._haversine(lat1,lon1,lat2,lon2)` — Haversine formula km
+- `App._gpsLbRenderBest()` — renders route-adres inputs met Google Places Autocomplete (BE)
+- `App._gpsLbVoegBestemmingToe()` / `_gpsLbVerwijderBest(idx)` / `_gpsLbSyncBest(idx, val)` — route beheer
+- `App._gpsLbBerekenRoute()` — Google Maps DistanceMatrixService (BICYCLING), per segment
+- `App._gpsLbToonRoute(km)` — toont resultaat, vult km-invoer
+- `App._gpsLbManueelSla()` — slaat manuele km + datum op
+- `App._gpsLbSlaRitOp(km, type, datumOverride)` — schrijft fietsrit naar Firestore, opent tab 3
+- `App._gpsLbKoppelRitInfo()` — toont rit-info in tab 3
+- `App._gpsLbToggleKoppelType(type)` — 'ia' / 'ca' wissel
+- `App._gpsLbZoekPersonen()` / `_gpsLbKiesPersonen(id)` — zoek + selecteer persoon
+- `App._gpsLbLaadActies()` / `_gpsLbKiesActie(id)` — laad + selecteer collectieve actie
+- `App._gpsLbGenReden()` — genereert Rydoo-tekst: `"Individueel — V.F. — Van → Naar — X,X km"` of `"Collectief — Actienaam — Van → Naar — X,X km"`
+- `App._gpsLbKoppelSlaOp()` — update Firestore: opmerking, actieRef, categorie, status `'gekoppeld'`
+- `App._gpsLbKoppel(id)` — laad specifieke rit vanuit logboek naar tab 3
+- `App.verwijderCa(id, naam)` — verwijdert collectieve actie definitief (confirm eerst)
 
-**Adressen en favorieten** (localStorage):
-- `App._slaAdresOp(adres)` / `_getAdresSuggesties()` — cache in `bwv_adressen`
-- `App._getFietsFavs()` — standaard: Buurthuis Venning + Stadhuis Leuven; opgeslagen in `bwv_fiets_favs`
-- `App._fietsInput(prefix, veld)` / `_kiesSuggestie(prefix, veld, adres)` — live dropdown
+**Google Maps API**: `AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc` — geladen als `async defer` script in `<head>` met `&libraries=places`.
 
-**Fietsvergoeding sectie in wizards** (stap 3):
-- Zowel `ia-s3` als `ca-s3` hebben `<div class="fiets-sectie">` met toggle-knop
-- **Multi-stop route** (v2.9.6): `{prefix}-fiets-stops` container gevuld door `_fietsRenderStops(prefix)`
-  - Stops opgeslagen in `App._fietsStops = { ia: ['',''], ca: ['',''] }`
-  - `_fietsVoegStopToe(prefix)` voegt tussenstop in voor Naar
-  - `_fietsVerwijderStop(prefix, idx)` verwijdert tussenstop
-  - `_fietsInput2(prefix, idx)` / `_kiesSuggestie2(prefix, idx, adres)` — suggesties per stop
-- **Auto-invulling** (v2.9.6): `_fietsAutoVulbestemming(prefix)`:
-  - IA: vult Naar met `State.gekozenPersoon.adres`; Van met eerste favoriet
-  - CA: vult Naar met actienaam (`ca-naam` veld)
-- `_vulFietsSamenvatting(prefix)` — aangeroepen vanuit `iaStap(3)` / `caStap(3)`:
-  - Rendert stops, vult favorieten, auto-vult bestemming
-  - Als GPS actief was: vult km in, toont GPS-samenvatting, opent sectie automatisch
-- Tarief: `0.2287` €/km
-- `berekenAfstand(prefix)` leest Van/Naar uit `_fietsStops` (niet meer uit vaste inputs)
-- `_fietsAutoOpmerking(prefix)` (v2.9.7) — bouwt context-rijke Rydoo-opmerking:
-  - IA: `Individuele actie — V.F. — [extra info] — [levensdomeinen] — [vindplaatsen] — [naar-adres]`
-  - CA: `Collectieve actie — [naam actie] — [cluster] — [thema]`
-  - Vult alleen in als het opmerkingsveld nog leeg is
-- `App.slaFietsRitOp(prefix)` — leest stops uit DOM, bouwt `via` uit tussenstops, slaat rit op
-- **Stop rit & Verwerk knop** (v2.9.7): `{prefix}-fiets-stop-rit` — rode pulserende knop in stap 3, zichtbaar zolang GPS loopt; stopt GPS definitief en verwerkt km
-- **GPS batterij-instellingen** (v2.9.7): `maximumAge: 15000`, minimale verplaatsing `0.02 km` (20m) vóór km-update
-
-**Logboek** (`pg-fiets-logboek`):
+**Logboek** (`pg-fiets-gps` Tab 2):
 - `App.renderFietsLogboek()` — rendert gefilterde tabel
-- Jaar/maand filters: `fiets-log-jaar`, `fiets-log-maand`
-- Kolommen: Datum, Van → Naar, km, Tarief, Totaal, Opmerking, Verwijder
-- Elke cel heeft copy-knop (`App.kopieerTekst(tekst)`)
-- `App.printLogboek()` — `window.print()` (A4 CSS verbergt alles behalve logboek)
-- `App.exportFietsExcel()` — XLSX export via SheetJS
-- `App._verwijderRit(id)` — verwijdert rit uit Firestore
+- Kolommen: Datum, km, Status (`open`/`gekoppeld`), Reden/Opmerking, Verwijder
+- Status `open` → toont "🔗 Koppelen" knop → `App._gpsLbKoppel(id)` → tab 3
+- Status `gekoppeld` → toont opmerking + copy-knop
+- `App.printLogboek()`, `App.exportFietsExcel()`, `App._verwijderRit(id)` — behouden
+
+**Navigatieknop**: `pg-jaarplan` → knop "🚲 Fietsritten" → `App.nav('pg-fiets-gps')`
 
 #### Dashboard (hoofdfuncties)
 - `App.renderDashboard()` — Triggert alle dashboard-renders
@@ -393,23 +391,28 @@ Score 0–3 per persoon, 1 punt per criterium:
 - Divider: `dash-divider`
 - Leeg: `dash-leeg`
 
-**Fietsritten CSS-klassen (v2.9.5–v2.9.7)**:
-- `gps-badge` — fixed positie (rechtsonder), groen, pulserende animatie tijdens GPS
-- `fiets-gps-start`, `fiets-gps-start-btn` — GPS widget in stap 1 (dashed groen, actief = gevuld groen)
-- `fiets-gps-km-teller`, `fiets-gps-stop-mini` — live km-teller in wizard + stop-knopje
-- `fiets-gps-sam` — GPS samenvatting blok in stap 3 (groen, toont bijgehouden km)
-- `fiets-sectie`, `fiets-toggle`, `fiets-inhoud` — inklapbare fietsvergoeding sectie
-- `fiets-stop-rit-btn` — rode pulserende "Stop rit & Verwerk" knop in stap 3 (`pulse-red` animatie)
-- `fiets-stop-rij`, `fiets-stop-label`, `fiets-stop-del-btn` — multi-stop route rijen
-- `fiets-extra-stop-btn` — blauw "+ Extra stop" knop
-- `fiets-auto-btn` — oranje "🔄 Vul bestemming in" knop
-- `fiets-input`, `fiets-sug`, `fiets-sug-item` — adresinvoer met dropdown suggesties
-- `fiets-favs`, `fiets-fav-btn` — favoriete adressen knoppen
-- `fiets-btn-route` — bereken route knop
-- `fiets-result`, `fiets-km-input`, `fiets-totaal` — resultaatbalk km × tarief
-- `fiets-sla-btn` — opslaan knop (verborgen tot km ingevuld)
-- `fiets-log-tabel`, `fiets-kop-btn`, `fiets-del-btn` — logboek tabel + knoppen
-- `@media print` — verbergt ALLES behalve `pg-fiets-logboek` (A4 afdruk)
+**Fietsritten CSS-klassen (v3.0.0, prefix `gps-lb-`)**:
+- `gps-lb-tabs`, `gps-lb-tab-btn` — tab-balk en tab-knoppen (`.actief` = groen gevuld)
+- `gps-lb-start-btn` — dashed groene GPS-startknop (hover → gevuld groen)
+- `gps-lb-km-display` — live km-display tijdens GPS (groen achtergrond)
+- `gps-lb-sam-rij` — flex rij voor km + datum manuele invoer
+- `gps-lb-sla-btn`, `gps-lb-koppel-sla-btn` — groene opslaan/koppel knoppen
+- `gps-lb-add-btn` — blauw "+ Bestemming toevoegen" knop
+- `gps-lb-bereken-btn` — groene "Bereken via Google Maps" knop
+- `gps-lb-result-km` — groene resultaat-balk met berekende afstand
+- `gps-lb-seg-rij`, `gps-lb-seg-lbl`, `gps-lb-adres-inp`, `gps-lb-seg-del` — route-segment rijen (Van/Via/Naar)
+- `gps-lb-tabel` — logboek tabel (5 kolommen: Datum, km, Status, Reden, Acties)
+- `gps-lb-status-ok` — groene pill voor "gekoppeld" status
+- `gps-lb-status-open` — oranje pill voor "open" status
+- `gps-lb-reden-cel` — tabelcel voor opmerking (max-width, word-break)
+- `gps-lb-koppel-btn` — blauw "🔗 Koppelen" knop in tabel
+- `gps-lb-del-btn` — verwijder knop in tabel
+- `fiets-kop-btn` — copy-knop (bewaard uit v2.x)
+- `fiets-log-teller` — teller tekst boven logboek (bewaard)
+- `gps-lb-persoon-rij`, `gps-lb-actie-rij` — klikbare rijen in koppelen-tab
+- `gps-lb-reden-preview` — groen achtergrondvak voor gegenereerde Rydoo-opmerking
+- `gps-lb-rit-info-rij` — blauw info-banneertje met rit-details in koppelen-tab
+- `@media print` — verbergt alles behalve `pg-fiets-gps` + panel 2 (logboek)
 
 **Drill-down klassen (v2.9.4)**:
 - `dash-ind-drill-panel` — container voor N1/N2
@@ -471,17 +474,24 @@ pg-dashboard
 1. `pg-col-actie-wiz` → `App.slaCaOp()` → hoofdactie (`module: null`)
 2. `pg-collectief-module` → `App.startModule(type)` → module-formulier → sub-record (`module: 'Logistiek'` etc.)
 
-### Fietsrit registreren
-1. Wizard stap 3 (IA of CA) → klik "🚲 Fietsvergoeding toevoegen" → sectie opent
-2. Van/Naar invullen (met adressuggesties of favorieten) → "Bereken route" (Nominatim + OSRM) of GPS-tracking
-3. Km wordt ingevuld → tarief × km = totaal automatisch → opmerking gegenereerd
-4. "Sla rit op" → `App.slaFietsRitOp(prefix)` → record in `users/{uid}/fietsritten`
-5. Sectie reset automatisch
+### Fietsrit registreren (v3.0.0)
+1. `pg-jaarplan` → "🚲 Fietsritten" → `App.nav('pg-fiets-gps')` → tab 1 actief
+2. **GPS**: klik "🚲 Start GPS-rit" → tracking start → km loopt live → "⏹ Stop GPS" → km vult invoerveld
+3. **Route**: adressen invoeren (Google Places Autocomplete) → "🗺 Bereken via Google Maps" → km ingevuld
+4. **Manueel**: km + datum invoeren
+5. "💾 Opslaan als rit" → `App._gpsLbManueelSla()` / `_gpsLbSlaRitOp()` → record in Firestore → tab 3
 
-### Fietslogboek bekijken
-1. `pg-jaarplan` → "🚲 Fietslogboek" knop → `App.nav('pg-fiets-logboek')`
-2. `App.renderFietsLogboek()` → jaar/maand filteren → tabel met alle ritten
-3. Per cel: copy-knop; volledig logboek: print (A4) of Excel export
+### Fietsrit koppelen (v3.0.0)
+1. Tab 3 (of via "🔗 Koppelen" knop in logboek) → rit-info getoond
+2. Kies type: Individueel → zoek persoon → selecteer; of Collectief → kies actie
+3. Rydoo-opmerking gegenereerd: `"Individueel — V.F. — Van → Naar — X km"`
+4. "🔗 Koppeling opslaan" → Firestore update: `opmerking`, `actieRef`, `status: 'gekoppeld'`
+
+### Fietslogboek bekijken (v3.0.0)
+1. `pg-fiets-gps` → tab 2 → `App.renderFietsLogboek()` → jaar/maand filteren
+2. Kolommen: Datum, km, Status (open/gekoppeld), Reden/Opmerking
+3. Open ritten: "🔗 Koppelen" knop; gekoppeld: opmerking + copy-knop
+4. Print (A4) of Excel export
 
 ### Dashboard refreshen
 1. `App.renderDashboard()` → `_dashData()` → alle render-functies
@@ -493,6 +503,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.0.0` | Fietsritten volledig herschreven: standalone `pg-fiets-gps` (3 tabs), Google Maps API, koppeling aan IA/CA, verwijder-CA knop, galerij + scan knoppen voor foto/bewijs |
 | `v2.9.7` | Stop rit & Verwerk knop, batterij-optimalisatie GPS, geavanceerde Rydoo-opmerking, foutafhandeling |
 | `v2.9.6` | GPS in wizardstap 1 met live km-teller, multi-stop route (+Extra stop), auto-invulling bestemming |
 | `v2.9.5` | Fietsritten module: GPS tracking, Nominatim/OSRM routeberekening, logboek, Rydoo-export |
