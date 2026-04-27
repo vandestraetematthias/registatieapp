@@ -259,7 +259,7 @@ var App = {
       'pg-mod-logistiek':'pg-collectief-start','pg-mod-overleg':'pg-collectief-start','pg-mod-activiteit':'pg-collectief-start',
       'pg-jaarplan':'pg-jaarplan','pg-rapport-personen':'pg-jaarplan','pg-rapport-individueel':'pg-jaarplan',
       'pg-rapport-collectief':'pg-jaarplan','pg-jaarplan-mod':'pg-jaarplan','pg-persoon-detail':'pg-jaarplan',
-      'pg-fiets-gps':'pg-jaarplan',
+      'pg-fiets-gps':'pg-fiets-gps',
       'pg-archief':'pg-archief',
       'pg-dashboard':'pg-dashboard'
     };
