@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.0.3 | **Datum**: 2026-04-28
+**Versie**: 3.0.4 | **Datum**: 2026-04-28
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.3`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.4`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -513,6 +513,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.0.4` | Bugfix `renderColStart`: module-subtitel toont nu datum+locatie/type/notitie i.p.v. herhaalde actienaam |
 | `v3.0.3` | Recente acties pg-start: modules zichtbaar, rijke meta per type, geen limiet |
 | `v3.0.2` | Bugfix: Google Maps callback-laadvolgorde, GPS maximumAge=0, error-UI reset |
 | `v3.0.1` | Chronologische sortering recente acties (aangemaakt + datum), galerij-knop foto-upload uitgebreid naar Logistiek en Overleg modules |

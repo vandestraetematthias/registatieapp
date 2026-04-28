@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.3';
+var APP_VERSION = '3.0.4';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -496,13 +496,30 @@ var App = {
       var type = c.module || '';
       var badge = badgeKleur[type] || 'badge-groen';
       var typeLabel = type || 'Actie';
-      var meta = (c.maand || '') + ' ' + (c.jaar || '');
-      if (!c.module) meta += ' — ' + (c.aantalBewoners || 0) + ' bewoners';
-      else meta += ' — ' + App.esc(c.naamVanDeActie || '');
+      var meta = '';
+      if (!c.module) {
+        meta = App.esc((c.maand || '') + ' ' + (c.jaar || '') + ' \u2014 ' + (c.aantalBewoners || 0) + ' bewoners');
+      } else {
+        var d = c.datum ? new Date(c.datum) : null;
+        var datStr = (d && !isNaN(d.getTime())) ? (('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear()) : '';
+        var subTitel = '';
+        if (c.module === 'Activiteit') {
+          subTitel = (datStr ? datStr + ' \u2014 ' : '') + (c.locatie || '');
+        } else if (c.module === 'Logistiek') {
+          var type0 = (c.uitlegType && c.uitlegType.length) ? c.uitlegType[0] : '';
+          subTitel = (datStr ? datStr + ' \u2014 ' : '') + type0;
+        } else if (c.module === 'Overleg') {
+          var notitie = c.notitie ? c.notitie.substring(0, 40) + (c.notitie.length > 40 ? '\u2026' : '') : '';
+          subTitel = (datStr ? datStr + ' \u2014 ' : '') + notitie;
+        } else {
+          subTitel = datStr;
+        }
+        meta = App.esc(subTitel);
+      }
       html += '<div class="mini-kaart">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
         '<div><div class="mini-kaart-naam">' + App.esc(c.module ? (typeLabel + ': ' + c.naamVanDeActie) : c.naamVanDeActie) + '</div>' +
-        '<div class="mini-kaart-meta">' + meta + '</div></div>' +
+        (meta ? '<div class="mini-kaart-meta">' + meta + '</div>' : '') + '</div>' +
         '<span class="mini-badge ' + badge + '">' + typeLabel + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
