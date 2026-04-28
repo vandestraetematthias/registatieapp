@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.1';
+var APP_VERSION = '3.0.2';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -4351,6 +4351,16 @@ _collectProjectFotos: function(naam) {
   _gpsLbRedenStr:       '',
   _gpsLbRouteKm:        0,
   _gpsLbKoppelType:     'ia',
+  _googleMapsGeladen:   false,
+
+  // Callback aangeroepen zodra Google Maps API volledig geladen is
+  initGoogleMaps: function() {
+    App._googleMapsGeladen = true;
+    // Als de gebruiker al op de fiets-GPS pagina staat, herrender de adresvelden
+    if (State.huidigePagina === 'pg-fiets-gps') {
+      App._gpsLbRenderBest();
+    }
+  },
 
   _haversine: function(lat1, lon1, lat2, lon2) {
     var R = 6371;
@@ -4403,17 +4413,35 @@ _collectProjectFotos: function(naam) {
     App._gpsLbWatchId = navigator.geolocation.watchPosition(
       function(pos) {
         var lat = pos.coords.latitude, lon = pos.coords.longitude;
-        if (App._gpsLbRoute.length) {
+        console.log('[GPS] positie:', lat, lon, '| route punten:', App._gpsLbRoute.length, '| km:', App._gpsLbKm.toFixed(3));
+        if (App._gpsLbRoute.length > 0) {
           var prev = App._gpsLbRoute[App._gpsLbRoute.length - 1];
           var d = App._haversine(prev.lat, prev.lon, lat, lon);
-          if (d > 0.02) App._gpsLbKm += d;
+          if (d > 0.02) {
+            App._gpsLbKm += d;
+            console.log('[GPS] afstand segment:', d.toFixed(3), 'km | totaal:', App._gpsLbKm.toFixed(3), 'km');
+          }
         }
         App._gpsLbRoute.push({ lat: lat, lon: lon });
         var valEl = document.getElementById('gps-lb-km-val');
-        if (valEl) valEl.textContent = App._gpsLbKm.toFixed(1).replace('.', ',');
+        if (valEl) {
+          valEl.textContent = App._gpsLbKm.toFixed(1).replace('.', ',');
+        } else {
+          console.warn('[GPS] gps-lb-km-val element niet gevonden');
+        }
       },
-      function(err) { App.toast('GPS fout: ' + err.message); App._gpsLbActief = false; },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
+      function(err) {
+        console.error('[GPS] fout:', err.code, err.message);
+        App.toast('GPS fout: ' + err.message);
+        // Reset UI volledig zodat gebruiker opnieuw kan starten
+        App._gpsLbActief = false;
+        App._gpsLbWatchId = null;
+        var btn = document.getElementById('gps-lb-gps-btn');
+        var display = document.getElementById('gps-lb-km-display');
+        if (btn) btn.textContent = '\ud83d\udeb2 Start GPS-rit';
+        if (display) display.style.display = 'none';
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
     );
   },
 
@@ -4455,21 +4483,25 @@ _collectProjectFotos: function(naam) {
         '<button class="gps-lb-seg-del" onclick="App._gpsLbVerwijderBest(' + i + ')">&#x2715;</button>' +
         '</div>';
     }).join('');
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    if (App._googleMapsGeladen && typeof google !== 'undefined' && google.maps && google.maps.places) {
       App._gpsLbBest.forEach(function(b, i) {
         var inp = document.getElementById('gps-lb-best-' + i);
         if (inp && !inp._acInited) {
           inp._acInited = true;
-          var ac = new google.maps.places.Autocomplete(inp, {
-            types: ['geocode'],
-            componentRestrictions: { country: 'be' }
-          });
-          (function(idx, autocomplete) {
-            autocomplete.addListener('place_changed', function() {
-              var place = autocomplete.getPlace();
-              if (place && place.formatted_address) App._gpsLbSyncBest(idx, place.formatted_address);
+          try {
+            var ac = new google.maps.places.Autocomplete(inp, {
+              types: ['geocode'],
+              componentRestrictions: { country: 'be' }
             });
-          })(i, ac);
+            (function(idx, autocomplete) {
+              autocomplete.addListener('place_changed', function() {
+                var place = autocomplete.getPlace();
+                if (place && place.formatted_address) App._gpsLbSyncBest(idx, place.formatted_address);
+              });
+            })(i, ac);
+          } catch(e) {
+            console.warn('Autocomplete init fout:', e);
+          }
         }
       });
     }
@@ -4496,7 +4528,7 @@ _collectProjectFotos: function(naam) {
   _gpsLbBerekenRoute: function() {
     var best = App._gpsLbBest.filter(function(b) { return b.trim(); });
     if (best.length < 2) { App.toast('Voeg minstens vertrek en bestemming in'); return; }
-    if (typeof google === 'undefined' || !google.maps) { App.toast('Google Maps niet beschikbaar'); return; }
+    if (!App._googleMapsGeladen || typeof google === 'undefined' || !google.maps) { App.toast('Google Maps nog niet geladen, probeer opnieuw'); return; }
     var service  = new google.maps.DistanceMatrixService();
     var segments = [];
     for (var i = 0; i < best.length - 1; i++) segments.push({ from: best[i], to: best[i+1] });

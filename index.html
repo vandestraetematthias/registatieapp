@@ -17,8 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=3.0.1">
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc&libraries=places" async defer></script>
+<link rel="stylesheet" href="style.css?v=3.0.2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -1753,11 +1752,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=3.0.1"></script>
+<script src="app.js?v=3.0.2"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '3.0.1';
+    var CURRENT_VERSION = '3.0.2';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1804,6 +1803,7 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.0.1</footer>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc&libraries=places&callback=App.initGoogleMaps" async></script>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.0.2</footer>
 </body>
 </html>
