@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=3.0.0">
+<link rel="stylesheet" href="style.css?v=3.0.1">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc&libraries=places" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -868,8 +868,12 @@
       <div class="vraag">
         <div class="vraag-label">Foto/Bewijs toevoegen</div>
         <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--groen);color:#fff;border-radius:8px;font-size:0.85rem;font-weight:600">
-          📷 Foto/Bewijs toevoegen
+          📷 Camera
           <input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadModuleFoto('log',this)">
+        </label>
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--blauw);color:#fff;border-radius:8px;font-size:0.85rem;font-weight:600;margin-left:8px">
+          📁 Kies uit galerij
+          <input type="file" accept="image/*" style="display:none" onchange="App._uploadModuleFoto('log',this)">
         </label>
         <span id="log-foto-preview" style="display:none;margin-left:10px;align-items:center;gap:4px"></span>
       </div>
@@ -935,9 +939,13 @@
 
       <div class="vraag">
         <div class="vraag-label">Foto/Bewijs toevoegen</div>
-        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--blauw);color:#fff;border-radius:8px;font-size:0.85rem;font-weight:600">
-          📷 Foto/Bewijs toevoegen
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--groen);color:#fff;border-radius:8px;font-size:0.85rem;font-weight:600">
+          📷 Camera
           <input type="file" accept="image/*" capture="environment" style="display:none" onchange="App._uploadModuleFoto('ov',this)">
+        </label>
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--blauw);color:#fff;border-radius:8px;font-size:0.85rem;font-weight:600;margin-left:8px">
+          📁 Kies uit galerij
+          <input type="file" accept="image/*" style="display:none" onchange="App._uploadModuleFoto('ov',this)">
         </label>
         <span id="ov-foto-preview" style="display:none;margin-left:10px;align-items:center;gap:4px"></span>
       </div>
@@ -1745,11 +1753,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=3.0.0"></script>
+<script src="app.js?v=3.0.1"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '3.0.0';
+    var CURRENT_VERSION = '3.0.1';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1796,6 +1804,6 @@
     });
   }
 </script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.0.0</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.0.1</footer>
 </body>
 </html>

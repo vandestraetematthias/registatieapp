@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.0.0 | **Datum**: 2026-04-27
+**Versie**: 3.0.1 | **Datum**: 2026-04-28
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.0`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.1`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -503,6 +503,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.0.1` | Chronologische sortering recente acties (aangemaakt + datum), galerij-knop foto-upload uitgebreid naar Logistiek en Overleg modules |
 | `v3.0.0` | Fietsritten volledig herschreven: standalone `pg-fiets-gps` (3 tabs), Google Maps API, koppeling aan IA/CA, verwijder-CA knop, galerij + scan knoppen voor foto/bewijs |
 | `v2.9.7` | Stop rit & Verwerk knop, batterij-optimalisatie GPS, geavanceerde Rydoo-opmerking, foutafhandeling |
 | `v2.9.6` | GPS in wizardstap 1 met live km-teller, multi-stop route (+Extra stop), auto-invulling bestemming |

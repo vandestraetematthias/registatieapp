@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.0';
+var APP_VERSION = '3.0.1';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -450,7 +450,11 @@ var App = {
   renderColStart: function() {
     var badgeKleur = { '': 'badge-groen', 'Logistiek': 'badge-blauw', 'Overleg': 'badge-paars', 'Activiteit': 'badge-oranje' };
     var alle = DB.collectief.filter(function(c) { return c.status === 'actief'; });
-    alle.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
+    alle.sort(function(a, b) {
+      var tA = a.aangemaakt || a.datum || '';
+      var tB = b.aangemaakt || b.datum || '';
+      return tB > tA ? 1 : tB < tA ? -1 : 0;
+    });
     var html = '';
     alle.slice(0, 8).forEach(function(c) {
       var type = c.module || '';
