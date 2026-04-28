@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.0.2 | **Datum**: 2026-04-28
+**Versie**: 3.0.3 | **Datum**: 2026-04-28
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.2`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.3`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -198,6 +198,16 @@ Sleutelmethoden:
 - `onAuthStateChanged` listener → toont app of loginpagina
 
 ### 5.3 Object `App` — applicatielogica
+
+#### Startpagina recente acties
+- `App.renderStart()` — Rendert `#start-recente`: alle actieve individuele acties + alle collectieve records (hoofdacties én modules), gesorteerd op `aangemaakt || datum` aflopend, **zonder limiet**
+- Badge-kleur per type: Individueel = groen, Actie = blauw, Logistiek = blauw, Overleg = paars, Activiteit = oranje
+- Meta-tekst per module-type:
+  - **Hoofdactie** (`module: null`): `"Maand JJJJ — N bewoners"`
+  - **Activiteit**: `"DD/MM/YYYY — locatie"` (veld `locatie`)
+  - **Logistiek**: `"DD/MM/YYYY — uitlegType[0]"` (eerste waarde uit array)
+  - **Overleg**: `"DD/MM/YYYY — notitie (max 40 tekens…)"`
+  - Datum: `datum` ISO-veld geformatteerd als DD/MM/YYYY; fallback op `aangemaakt`
 
 #### Navigatie
 - `App.nav(pagina)` — Wisselt actieve pagina, scrollt naar top, triggert renders
@@ -503,6 +513,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.0.3` | Recente acties pg-start: modules zichtbaar, rijke meta per type, geen limiet |
 | `v3.0.2` | Bugfix: Google Maps callback-laadvolgorde, GPS maximumAge=0, error-UI reset |
 | `v3.0.1` | Chronologische sortering recente acties (aangemaakt + datum), galerij-knop foto-upload uitgebreid naar Logistiek en Overleg modules |
 | `v3.0.0` | Fietsritten volledig herschreven: standalone `pg-fiets-gps` (3 tabs), Google Maps API, koppeling aan IA/CA, verwijder-CA knop, galerij + scan knoppen voor foto/bewijs |

@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.2';
+var APP_VERSION = '3.0.3';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -377,17 +377,53 @@ var App = {
   renderStart: function() {
     var per = DB.personen.filter(function(p) { return p.status === 'actief'; });
     var ind = DB.individueel.filter(function(i) { return i.status === 'actief'; });
-    var col = DB.collectief.filter(function(c) { return !c.module && c.status === 'actief'; });
+    var col = DB.collectief.filter(function(c) { return c.status === 'actief'; });
+
+    function fmtDatum(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso.substring(0, 10);
+      return String(d.getDate()).padStart(2,'0') + '/' +
+             String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+
     var alle = [];
     ind.forEach(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
       var init = p ? getInitials(p.voornaam + ' ' + p.familienaam) : 'P#' + a.persoonNummer;
-      alle.push({ datum: a.datum, label: init, meta: a.maand + ' — ' + (a.tijd || '?'), badge: 'badge-groen', badgeTxt: 'Individueel', pagina: 'pg-rapport-individueel' });
+      alle.push({ datum: a.datum || '', label: init, meta: a.maand + ' — ' + (a.tijd || '?'), badge: 'badge-groen', badgeTxt: 'Individueel', pagina: 'pg-rapport-individueel' });
     });
     col.forEach(function(a) {
-      alle.push({ datum: a.datum, label: a.naamVanDeActie, meta: a.maand + ' — ' + a.aantalBewoners + ' bewoners', badge: 'badge-blauw', badgeTxt: 'Collectief', pagina: 'pg-rapport-collectief' });
+      var ts = a.aangemaakt || a.datum || '';
+      var datStr = fmtDatum(a.datum || a.aangemaakt || '');
+      var meta, badge, badgeTxt, label;
+      if (!a.module) {
+        label = a.naamVanDeActie;
+        meta  = (a.maand || '') + ' ' + (a.jaar || '') + ' \u2014 ' + (a.aantalBewoners || 0) + ' bewoners';
+        badge = 'badge-blauw'; badgeTxt = 'Actie';
+      } else if (a.module === 'Activiteit') {
+        label = 'Activiteit: ' + (a.naamVanDeActie || '');
+        meta  = datStr + (a.locatie ? ' \u2014 ' + a.locatie : '');
+        badge = 'badge-oranje'; badgeTxt = 'Activiteit';
+      } else if (a.module === 'Logistiek') {
+        label = 'Logistiek: ' + (a.naamVanDeActie || '');
+        var type0 = (a.uitlegType && a.uitlegType.length) ? a.uitlegType[0] : '';
+        meta  = datStr + (type0 ? ' \u2014 ' + type0 : '');
+        badge = 'badge-blauw'; badgeTxt = 'Logistiek';
+      } else if (a.module === 'Overleg') {
+        label = 'Overleg: ' + (a.naamVanDeActie || '');
+        var notitie = a.notitie || '';
+        var kort = notitie.length > 40 ? notitie.substring(0, 40) + '\u2026' : notitie;
+        meta  = datStr + (kort ? ' \u2014 ' + kort : '');
+        badge = 'badge-paars'; badgeTxt = 'Overleg';
+      } else {
+        label = a.module + ': ' + (a.naamVanDeActie || '');
+        meta  = datStr;
+        badge = 'badge-groen'; badgeTxt = a.module;
+      }
+      alle.push({ datum: ts, label: label, meta: meta, badge: badge, badgeTxt: badgeTxt, pagina: 'pg-rapport-collectief' });
     });
-    alle.sort(function(a, b) { return b.datum < a.datum ? -1 : 1; });
+    alle.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
     var html = '';
     alle.forEach(function(item) {
       var klik = item.pagina ? 'onclick="App.nav(\'' + item.pagina + '\')" style="cursor:pointer"' : '';
