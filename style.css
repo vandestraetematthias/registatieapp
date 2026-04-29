@@ -1414,3 +1414,206 @@ tr:nth-child(even) td { background: #fafaf9; }
   margin-top: 2px;
 }
 
+/* ══ DASHBOARD FOTO-THUMBNAILS v3.0.5 ══ */
+.dash-thumb-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dash-thumb {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  border: 1px solid #e5e7eb;
+}
+.dash-thumb:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+}
+#lightbox-caption {
+  color: #fff;
+  font-size: 0.85rem;
+  margin-top: 10px;
+  text-align: center;
+  opacity: 0.85;
+  max-width: 90vw;
+}
+
+/* ══ PERSOONSDATABASE v3.0.5 ══ */
+.pdb-zoek {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  margin-bottom: 18px;
+  box-sizing: border-box;
+  background: var(--bg);
+}
+.pdb-zoek:focus {
+  outline: none;
+  border-color: var(--groen);
+}
+.pdb-alfa-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--zacht);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 4px;
+}
+.pdb-rij {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid #f3f4f6;
+}
+.pdb-rij:hover {
+  background: #f0fdf4;
+}
+.pdb-rij-nr {
+  font-size: 0.7rem;
+  color: var(--zacht);
+  min-width: 28px;
+}
+.pdb-rij-naam {
+  font-weight: 600;
+  font-size: 0.88rem;
+  flex: 1;
+}
+.pdb-rij-gemeente {
+  font-size: 0.78rem;
+  color: var(--zacht);
+}
+.pdb-rij-pijl {
+  font-size: 1rem;
+  color: var(--groen);
+  font-weight: 700;
+}
+.pdb-dossier {
+  background: #f0fdf4;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 4px 0 12px;
+  border: 1px solid #d1fae5;
+}
+.pdb-teller-rij {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.pdb-teller {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  text-align: center;
+  border: 1px solid #d1fae5;
+  min-width: 70px;
+}
+.pdb-teller-getal {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--groen);
+  display: block;
+}
+.pdb-teller-label {
+  font-size: 0.65rem;
+  color: var(--zacht);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pdb-profiel-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+.pdb-profiel-tabel td {
+  padding: 4px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pdb-profiel-tabel td:first-child {
+  color: var(--zacht);
+  white-space: nowrap;
+  width: 38%;
+}
+.pdb-actie-rij {
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.82rem;
+}
+.pdb-actie-datum {
+  font-size: 0.72rem;
+  color: var(--zacht);
+  margin-bottom: 3px;
+}
+.pdb-tag {
+  display: inline-block;
+  background: var(--groen);
+  color: #fff;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin: 1px 2px 1px 0;
+}
+.pdb-donuts {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.pdb-donut-wrap {
+  flex: 1;
+  min-width: 180px;
+  text-align: center;
+}
+.pdb-donut-titel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--zacht);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.pdb-donut-svg {
+  width: 160px;
+  height: 160px;
+}
+.pdb-legenda {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  text-align: left;
+  display: inline-block;
+}
+.pdb-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.pdb-legenda-bol {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-leeg {
+  color: var(--zacht);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+

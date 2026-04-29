@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.0.4 | **Datum**: 2026-04-28
+**Versie**: 3.0.5 | **Datum**: 2026-04-28
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.4`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.5`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -167,6 +167,7 @@ Alle pagina's zijn `<div class="pagina" id="pg-*">`. Actieve pagina krijgt klass
 | `pg-persoon-detail` | Persoon bewerken / detail |
 | `pg-dashboard` | Dashboard (KPI + analyses) |
 | `pg-fiets-gps` | Fietsritten: 3 tabs (GPS & Invoer / Logboek / Koppelen) |
+| `pg-persoon-db` | Persoonsdatabase: zoekbalk, alfabetische lijst, uitklapbaar dossier + SVG donut-analyse |
 
 **Bottom navigation** (`#bottom-nav`): knoppen met `data-page` naar pg-start, pg-individueel-start, pg-collectief-start, pg-jaarplan, pg-dashboard.
 
@@ -208,6 +209,20 @@ Sleutelmethoden:
   - **Logistiek**: `"DD/MM/YYYY — uitlegType[0]"` (eerste waarde uit array)
   - **Overleg**: `"DD/MM/YYYY — notitie (max 40 tekens…)"`
   - Datum: `datum` ISO-veld geformatteerd als DD/MM/YYYY; fallback op `aangemaakt`
+
+#### Dashboard foto-thumbnails (v3.0.5)
+- `App._dashMedia()` — rendert `#dash-media` als klikbaar thumbnail-grid (`.dash-thumb-grid`); elke `<img class="dash-thumb">` uit `DB.collectief[].fotoUrl`
+- `App._dashFotoVergroot(url, naam)` — opent bestaande `#lightbox` met foto + zet `#lightbox-caption` op actienaam
+
+#### Persoonsdatabase (v3.0.5)
+- `App.renderPersoonDb()` — hoofdrender voor `pg-persoon-db`, roept `_dbRenderLijst('')` aan
+- `App._dbZoek()` — live filter op `#pdb-zoekbalk` invoer → `_dbRenderLijst(q)`
+- `App._dbRenderLijst(zoek)` — rendert `#pdb-lijst`: personen gesorteerd familienaam/voornaam, met alfabetische scheidingslabels (`.pdb-alfa-label`), persoonsrijen (`.pdb-rij`) en lege dossier-containers (`.pdb-dossier`, display none)
+- `App._dbOpenPersoon(id)` — toggle dossier: haalt persoon + acties op, vult `.pdb-dossier` via `_dbDossierHTML()`
+- `App._dbDossierHTML(persoon, acties)` — genereert HTML met: tellerblokjes, profieltabel, Bewerken-knop, actiehistoriek, SVG donut-analyse per levensdomein (≥2 acties vereist)
+  - Donuts: 2× SVG `viewBox="0 0 200 200"` met `<circle stroke-dasharray>` techniek, R=70, stroke-width=30
+  - Donut 1: acties per domein | Donut 2: uren per domein
+  - Kleuren: groen, blauw, oranje, paars, rood, herhaal met 60% opacity
 
 #### Navigatie
 - `App.nav(pagina)` — Wisselt actieve pagina, scrollt naar top, triggert renders
@@ -436,6 +451,23 @@ Score 0–3 per persoon, 1 punt per criterium:
 - `dash-ind-actie-rij`, `-datum`, `-info` — acties in N2
 - `dash-ind-metric`, `-groen`, `-blauw`, `-oranje`, `-rood` — metric-kaarten
 - `dash-ind-metric-getal`, `-label`, `-sub` — metric-kaart inhoud
+- `dash-thumb-grid` — flex wrap container voor foto-thumbnails
+- `dash-thumb` — 100×100px thumbnail, object-fit cover, hover schaduw
+- `dash-leeg` — italic lichtgrijs "leeg"-bericht
+
+#### Persoonsdatabase CSS (prefix `pdb-`)
+- `pdb-zoek` — zoekbalk input (groen focus-border)
+- `pdb-alfa-label` — grijze alfabetische scheidingsletter
+- `pdb-rij` — klikbare persoonsrij (hover groen-tint), bevat `pdb-rij-nr`, `pdb-rij-naam`, `pdb-rij-gemeente`, `pdb-rij-pijl`
+- `pdb-dossier` — uitklapbaar dossier-paneel (groene achtergrond)
+- `pdb-teller-rij` — flex rij met teller-blokjes
+- `pdb-teller`, `pdb-teller-getal`, `pdb-teller-label` — individueel teller-blokje
+- `pdb-profiel-tabel` — persoonsprofielgegevens tabel
+- `pdb-actie-rij`, `pdb-actie-datum` — historiek-actierij
+- `pdb-tag` — groene levensdomein-tag pill
+- `pdb-donuts` — flex container voor 2 SVG donut-diagrammen
+- `pdb-donut-wrap`, `pdb-donut-titel`, `pdb-donut-svg` — wrapper per diagram
+- `pdb-legenda`, `pdb-legenda-item`, `pdb-legenda-bol` — kleur-legenda
 
 ---
 
@@ -513,6 +545,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.0.5` | Dashboard foto-thumbnails (klikbaar grid, lightbox-caption); Persoonsdatabase `pg-persoon-db` met zoekbalk, alfabetische lijst, uitklapbaar dossier + SVG donut-analyse per levensdomein |
 | `v3.0.4` | Bugfix `renderColStart`: module-subtitel toont nu datum+locatie/type/notitie i.p.v. herhaalde actienaam |
 | `v3.0.3` | Recente acties pg-start: modules zichtbaar, rijke meta per type, geen limiet |
 | `v3.0.2` | Bugfix: Google Maps callback-laadvolgorde, GPS maximumAge=0, error-UI reset |

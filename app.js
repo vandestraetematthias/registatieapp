@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.4';
+var APP_VERSION = '3.0.5';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -261,7 +261,8 @@ var App = {
       'pg-rapport-collectief':'pg-jaarplan','pg-jaarplan-mod':'pg-jaarplan','pg-persoon-detail':'pg-jaarplan',
       'pg-fiets-gps':'pg-fiets-gps',
       'pg-archief':'pg-archief',
-      'pg-dashboard':'pg-dashboard'
+      'pg-dashboard':'pg-dashboard',
+      'pg-persoon-db':'pg-individueel-start'
     };
     var _actNav = _navMap[pagina] || 'pg-start';
     document.querySelectorAll('.bn-item').forEach(function(btn) {
@@ -283,6 +284,7 @@ var App = {
     if (pagina === 'pg-jaarplan-mod')      App.renderJaarplan();
     if (pagina === 'pg-dashboard')         App.renderDashboard();
     if (pagina === 'pg-fiets-gps')         App.renderFietsGps();
+    if (pagina === 'pg-persoon-db')        App.renderPersoonDb();
   },
 
   /* ── UI HELPERS ── */
@@ -4023,33 +4025,228 @@ _collectProjectFotos: function(naam) {
     volgende();
   },
 
+  _dashFotoVergroot: function(url, naam) {
+    var lb  = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    var cap = document.getElementById('lightbox-caption');
+    if (!lb || !img) { window.open(url, '_blank'); return; }
+    img.src = url;
+    if (cap) cap.textContent = naam || '';
+    lb.style.display = 'flex';
+  },
+
   _dashMedia: function() {
     var el = document.getElementById('dash-media');
     if (!el) return;
-    // Enkel sfeerfoto's tonen (geen bewijsjes/bonnen)
     var fotos = [];
     DB.collectief.forEach(function(r) {
-      if (r.fotoUrl) fotos.push({ type: r.module || 'Actie', naam: r.naamVanDeActie || '', url: r.fotoUrl, label: (r.datum || '').substr(0,10) });
+      if (r.fotoUrl) fotos.push({ naam: r.naamVanDeActie || '', url: r.fotoUrl });
     });
     if (!fotos.length) {
-      el.innerHTML = '<div style="color:var(--zacht);font-size:0.9rem">Nog geen sfeerfoto\'s geüpload.</div>';
+      el.innerHTML = '<p class="dash-leeg">Nog geen foto\'s ge\u00FCpload</p>';
       return;
     }
-    var html = '<div style="font-size:0.85rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' sfeerfoto\'s gevonden</div>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    var html = '<div style="font-size:0.82rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' sfeerfoto\'s</div>' +
+      '<div class="dash-thumb-grid">';
     fotos.forEach(function(f) {
-      html += '<div style="background:var(--bg);border-radius:8px;padding:10px;min-width:110px;max-width:150px;border:1px solid #e5e7eb;display:flex;flex-direction:column;gap:4px">' +
-        '<div onclick="App.openLightbox(\'' + App.esc(f.url) + '\')" style="cursor:pointer">' +
-          '<div style="font-size:0.68rem;font-weight:700;color:var(--groen);text-transform:uppercase">' + App.esc(f.type) + '</div>' +
-          '<div style="font-size:0.72rem;font-weight:600;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(f.naam) + '">' + App.esc(f.naam) + '</div>' +
-          '<div style="font-size:0.68rem;color:var(--zacht);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(f.label) + '</div>' +
-          '<div style="font-size:1.4rem;text-align:center;margin-top:4px">🖼️</div>' +
-        '</div>' +
-        '<button onclick="App.wisFoto(\'' + App.esc(f.id) + '\',null)" style="background:var(--rood);color:#fff;border:none;border-radius:5px;padding:3px;cursor:pointer;font-size:0.7rem;width:100%">🗑️ Wis</button>' +
-        '</div>';
+      var escapedUrl  = App.esc(f.url);
+      var escapedNaam = App.esc(f.naam);
+      html += '<img src="' + escapedUrl + '" class="dash-thumb" alt="' + escapedNaam + '" title="' + escapedNaam + '" ' +
+        'onclick="App._dashFotoVergroot(\'' + escapedUrl + '\',\'' + escapedNaam + '\')" ' +
+        'onerror="this.style.display=\'none\'">';
     });
     html += '</div>';
     el.innerHTML = html;
+  },
+
+  /* ══════════════════════════════════════
+     PERSOONSDATABASE v3.0.5
+  ══════════════════════════════════════ */
+  renderPersoonDb: function() {
+    var el = document.getElementById('pdb-lijst');
+    if (!el) return;
+    var zoek = (document.getElementById('pdb-zoekbalk') || {}).value || '';
+    App._dbRenderLijst(zoek);
+  },
+
+  _dbZoek: function() {
+    var zoek = (document.getElementById('pdb-zoekbalk') || {}).value || '';
+    App._dbRenderLijst(zoek);
+  },
+
+  _dbRenderLijst: function(zoek) {
+    var el = document.getElementById('pdb-lijst');
+    if (!el) return;
+    var q = zoek.trim().toLowerCase();
+    var personen = DB.personen.filter(function(p) {
+      if (p.status !== 'actief') return false;
+      if (!q) return true;
+      var naam = ((p.voornaam || '') + ' ' + (p.familienaam || '')).toLowerCase();
+      var fam  = (p.familienaam || '').toLowerCase();
+      return naam.indexOf(q) !== -1 || fam.indexOf(q) !== -1;
+    });
+    personen.sort(function(a, b) {
+      var fA = (a.familienaam || '').toLowerCase();
+      var fB = (b.familienaam || '').toLowerCase();
+      if (fA < fB) return -1;
+      if (fA > fB) return 1;
+      var vA = (a.voornaam || '').toLowerCase();
+      var vB = (b.voornaam || '').toLowerCase();
+      return vA < vB ? -1 : vA > vB ? 1 : 0;
+    });
+    if (!personen.length) {
+      el.innerHTML = '<p class="dash-leeg">Geen personen gevonden.</p>';
+      return;
+    }
+    var html = '';
+    var huidigLetter = '';
+    personen.forEach(function(p) {
+      var letter = (p.familienaam || '?')[0].toUpperCase();
+      if (letter !== huidigLetter) {
+        huidigLetter = letter;
+        html += '<div class="pdb-alfa-label">' + letter + '</div>';
+      }
+      html += '<div class="pdb-rij" onclick="App._dbOpenPersoon(\'' + p.id + '\')" id="pdb-rij-' + p.id + '">' +
+        '<span class="pdb-rij-nr">' + p.volgnummer + '</span>' +
+        '<span class="pdb-rij-naam">' + App.esc(p.familienaam || '') + ' ' + App.esc(p.voornaam || '') + '</span>' +
+        '<span class="pdb-rij-gemeente">' + App.esc(p.gemeente || '') + '</span>' +
+        '<span class="pdb-rij-pijl">&rsaquo;</span>' +
+        '</div>' +
+        '<div class="pdb-dossier" id="pdb-dos-' + p.id + '" style="display:none"></div>';
+    });
+    el.innerHTML = html;
+  },
+
+  _dbOpenPersoon: function(id) {
+    var dosEl = document.getElementById('pdb-dos-' + id);
+    if (!dosEl) return;
+    if (dosEl.style.display !== 'none') {
+      dosEl.style.display = 'none';
+      return;
+    }
+    var p = DB.personen.find(function(x) { return x.id === id; });
+    if (!p) return;
+    var acties = DB.individueel.filter(function(a) { return a.persoonNummer === p.volgnummer; });
+    acties.sort(function(a, b) { return (b.datum || '') > (a.datum || '') ? 1 : -1; });
+    dosEl.innerHTML = App._dbDossierHTML(p, acties);
+    dosEl.style.display = 'block';
+  },
+
+  _dbDossierHTML: function(p, acties) {
+    var totActies = acties.length;
+    var totUren = 0;
+    acties.forEach(function(a) { totUren += App._tijdNaarUren(a.tijd); });
+    var datums = acties.map(function(a) { return a.datum || ''; }).filter(Boolean).sort();
+    var eersteContact = datums[0] ? datums[0].substr(0,10) : '—';
+    var laasteContact = datums[datums.length - 1] ? datums[datums.length - 1].substr(0,10) : '—';
+
+    var html = '<div class="pdb-teller-rij">' +
+      '<div class="pdb-teller"><span class="pdb-teller-getal">' + totActies + '</span><span class="pdb-teller-label">acties</span></div>' +
+      '<div class="pdb-teller"><span class="pdb-teller-getal">' + totUren.toFixed(1).replace('.',',') + '</span><span class="pdb-teller-label">uren</span></div>' +
+      '<div class="pdb-teller"><span class="pdb-teller-getal" style="font-size:0.85rem">' + eersteContact + '</span><span class="pdb-teller-label">eerste contact</span></div>' +
+      '<div class="pdb-teller"><span class="pdb-teller-getal" style="font-size:0.85rem">' + laasteContact + '</span><span class="pdb-teller-label">laatste contact</span></div>' +
+      '</div>';
+
+    // Profielblok
+    var arr = function(v) { return Array.isArray(v) ? v.join(', ') : (v || '—'); };
+    html += '<table class="pdb-profiel-tabel">' +
+      '<tr><td>Adres</td><td>' + App.esc((p.adres || '') + (p.postcode ? ', ' + p.postcode : '') + (p.gemeente ? ' ' + p.gemeente : '')) + '</td></tr>' +
+      '<tr><td>Leeftijd</td><td>' + App.esc(p.leeftijd || '—') + '</td></tr>' +
+      '<tr><td>Woonsituatie</td><td>' + App.esc(p.woonsituatie || '—') + '</td></tr>' +
+      '<tr><td>Huisvesting</td><td>' + App.esc(arr(p.huisvesting)) + '</td></tr>' +
+      '<tr><td>Inkomen</td><td>' + App.esc(arr(p.inkomen)) + '</td></tr>' +
+      '<tr><td>Eerste contact</td><td>' + App.esc(p.eersteContact || '—') + '</td></tr>' +
+      '<tr><td>Gekend bij</td><td>' + App.esc(arr(p.gekendBij)) + '</td></tr>' +
+      (p.notitie ? '<tr><td>Notitie</td><td>' + App.esc(p.notitie) + '</td></tr>' : '') +
+      '</table>' +
+      '<div style="margin-bottom:12px">' +
+      '<button onclick="App.laadPerBewerk(\'' + p.id + '\')" style="background:var(--groen);color:#fff;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:0.82rem;font-weight:600">\u270F\uFE0F Bewerken</button>' +
+      '</div>';
+
+    // Historiek
+    if (acties.length) {
+      html += '<div style="font-weight:700;font-size:0.82rem;margin-bottom:8px;color:var(--groen)">Traject (' + acties.length + ' acties)</div>';
+      acties.forEach(function(a) {
+        var domeinen = (a.levensdomein || []);
+        var tags = domeinen.map(function(d) { return '<span class="pdb-tag">' + App.esc(d) + '</span>'; }).join('');
+        var methTxt = (a.methodiek || []).join(', ');
+        html += '<div class="pdb-actie-rij">' +
+          '<div class="pdb-actie-datum">' + App.esc((a.datum || '').substr(0,10)) + ' &nbsp;·&nbsp; ' + App.esc(a.maand || '') + ' ' + App.esc(String(a.jaar || '')) + '</div>' +
+          (tags ? '<div style="margin-bottom:4px">' + tags + '</div>' : '') +
+          '<div style="font-size:0.78rem;color:var(--zacht)">' +
+          (a.vindplaats && a.vindplaats.length ? App.esc(a.vindplaats.join(', ')) + ' &nbsp;·&nbsp; ' : '') +
+          App.esc(a.tijd || '—') +
+          (methTxt ? ' &nbsp;·&nbsp; ' + App.esc(methTxt) : '') +
+          '</div>' +
+          (a.extraInfo ? '<div style="font-size:0.76rem;color:#374151;margin-top:3px">' + App.esc(a.extraInfo) + '</div>' : '') +
+          '<div style="margin-top:5px"><button onclick="App.laadIaBewerk(\'' + a.id + '\')" style="background:var(--blauw);color:#fff;border:none;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.72rem">\u270F\uFE0F Bewerk actie</button></div>' +
+          '</div>';
+      });
+    } else {
+      html += '<p class="dash-leeg">Nog geen acties geregistreerd.</p>';
+    }
+
+    // Donut-diagrammen
+    if (acties.length >= 2) {
+      var KLEUREN = ['#16a34a','#2563eb','#ea580c','#7c3aed','#dc2626','rgba(22,163,74,0.6)','rgba(37,99,235,0.6)','rgba(234,88,12,0.6)'];
+      var domActies = {}, domUren = {};
+      acties.forEach(function(a) {
+        var uren = App._tijdNaarUren(a.tijd);
+        (a.levensdomein || []).forEach(function(d) {
+          domActies[d] = (domActies[d] || 0) + 1;
+          domUren[d]   = (domUren[d]   || 0) + uren;
+        });
+      });
+      var domeinen = Object.keys(domActies);
+
+      function maakDonut(titelTxt, telFn, labelFn, totaalLabel) {
+        var items = domeinen.map(function(d, i) { return { naam: d, val: telFn(d), kleur: KLEUREN[i % KLEUREN.length] }; });
+        items = items.filter(function(x) { return x.val > 0; });
+        var totaal = items.reduce(function(s, x) { return s + x.val; }, 0);
+        if (!totaal) return '';
+        var R = 70, omtrek = 2 * Math.PI * R;
+        var offset = 0;
+        var sectoren = '';
+        items.forEach(function(item) {
+          var deel = (item.val / totaal) * omtrek;
+          sectoren += '<circle cx="100" cy="100" r="' + R + '" fill="none" stroke="' + item.kleur + '" stroke-width="30" ' +
+            'stroke-dasharray="' + deel.toFixed(2) + ' ' + omtrek.toFixed(2) + '" ' +
+            'stroke-dashoffset="' + (-(offset)).toFixed(2) + '" ' +
+            'transform="rotate(-90 100 100)"></circle>';
+          offset += deel;
+        });
+        var totTxt = totaalLabel === 'uren' ? totaal.toFixed(1).replace('.',',') : String(totaal);
+        var svg = '<svg class="pdb-donut-svg" viewBox="0 0 200 200">' + sectoren +
+          '<text x="100" y="96" text-anchor="middle" font-size="26" font-weight="700" fill="#111">' + totTxt + '</text>' +
+          '<text x="100" y="115" text-anchor="middle" font-size="11" fill="#6b7280">' + totaalLabel + '</text>' +
+          '</svg>';
+        var legenda = '<ul class="pdb-legenda">';
+        items.forEach(function(item) {
+          legenda += '<li class="pdb-legenda-item"><span class="pdb-legenda-bol" style="background:' + item.kleur + '"></span>' +
+            App.esc(item.naam) + ' &mdash; ' + labelFn(item) + '</li>';
+        });
+        legenda += '</ul>';
+        return '<div class="pdb-donut-wrap"><div class="pdb-donut-titel">' + titelTxt + '</div>' + svg + legenda + '</div>';
+      }
+
+      var donut1 = maakDonut('Acties per domein',
+        function(d) { return domActies[d] || 0; },
+        function(item) { return item.val + ' acties'; },
+        'acties');
+      var donut2 = maakDonut('Tijd per domein',
+        function(d) { return domUren[d] || 0; },
+        function(item) { return item.val.toFixed(1).replace('.',',') + 'u'; },
+        'uren');
+
+      if (donut1 || donut2) {
+        html += '<div style="font-weight:700;font-size:0.82rem;margin:16px 0 8px;color:var(--groen)">Analyse per levensdomein</div>' +
+          '<div class="pdb-donuts">' + donut1 + donut2 + '</div>';
+      }
+    } else if (acties.length > 0) {
+      html += '<p class="dash-leeg">Te weinig data voor analyse</p>';
+    }
+
+    return html;
   },
 
   renderDashboard: function() {
