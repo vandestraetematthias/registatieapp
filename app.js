@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.1.4';
+var APP_VERSION = '3.1.5';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -674,23 +674,25 @@ var App = {
     if (State._bewerktPersoId) {
       var editId = State._bewerktPersoId;
       var lijst = DB.personen.map(function(p) {
-        if (p.id === editId) {
-          p.voornaam      = voornaam;
-          p.familienaam   = familienaam;
-          p.adres         = document.getElementById('per-adres').value.trim();
-          p.postcode      = document.getElementById('per-postcode').value.trim();
-          p.gemeente      = document.getElementById('per-gemeente').value.trim();
-          p.leeftijd      = App.getEnkele('per-leeftijd');
-          p.inkomen       = App.getKeuzes('per-inkomen');
-          p.huisvesting   = App.getKeuzes('per-woon');
-          p.woonsituatie  = App.getEnkele('per-woonsituatie');
-          p.eersteContact = App.getEnkele('per-eerste');
-          p.type          = App.getKeuzes('per-type');
-          p.gekendBij     = App.getKeuzes('per-gekend-bij');
-          p.notitie       = document.getElementById('per-notitie').value.trim();
-          p.gewijzigd     = nu();
-        }
-        return p;
+        if (p.id !== editId) return p;
+        // Object.assign maakt een nieuw object zodat _syncLijst het verschil
+        // detecteert t.o.v. de oude snapshot in DB._personen.
+        return Object.assign({}, p, {
+          voornaam:      voornaam,
+          familienaam:   familienaam,
+          adres:         document.getElementById('per-adres').value.trim(),
+          postcode:      document.getElementById('per-postcode').value.trim(),
+          gemeente:      document.getElementById('per-gemeente').value.trim(),
+          leeftijd:      App.getEnkele('per-leeftijd'),
+          inkomen:       App.getKeuzes('per-inkomen'),
+          huisvesting:   App.getKeuzes('per-woon'),
+          woonsituatie:  App.getEnkele('per-woonsituatie'),
+          eersteContact: App.getEnkele('per-eerste'),
+          type:          App.getKeuzes('per-type'),
+          gekendBij:     App.getKeuzes('per-gekend-bij'),
+          notitie:       document.getElementById('per-notitie').value.trim(),
+          gewijzigd:     nu()
+        });
       });
       DB.slaPerOp(lijst);
       var terugNaarDb = State._dbBewerkTerug;
