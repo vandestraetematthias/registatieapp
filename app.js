@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.1.5';
+var APP_VERSION = '3.1.6';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -672,34 +672,37 @@ var App = {
 
     // BEWERK MODUS
     if (State._bewerktPersoId) {
-      var editId = State._bewerktPersoId;
-      var lijst = DB.personen.map(function(p) {
-        if (p.id !== editId) return p;
-        // Object.assign maakt een nieuw object zodat _syncLijst het verschil
-        // detecteert t.o.v. de oude snapshot in DB._personen.
-        return Object.assign({}, p, {
-          voornaam:      voornaam,
-          familienaam:   familienaam,
-          adres:         document.getElementById('per-adres').value.trim(),
-          postcode:      document.getElementById('per-postcode').value.trim(),
-          gemeente:      document.getElementById('per-gemeente').value.trim(),
-          leeftijd:      App.getEnkele('per-leeftijd'),
-          inkomen:       App.getKeuzes('per-inkomen'),
-          huisvesting:   App.getKeuzes('per-woon'),
-          woonsituatie:  App.getEnkele('per-woonsituatie'),
-          eersteContact: App.getEnkele('per-eerste'),
-          type:          App.getKeuzes('per-type'),
-          gekendBij:     App.getKeuzes('per-gekend-bij'),
-          notitie:       document.getElementById('per-notitie').value.trim(),
-          gewijzigd:     nu()
+      try {
+        var editId = State._bewerktPersoId;
+        var lijst = DB.personen.map(function(p) {
+          if (p.id !== editId) return p;
+          return Object.assign({}, p, {
+            voornaam:      voornaam,
+            familienaam:   familienaam,
+            adres:         document.getElementById('per-adres').value.trim(),
+            postcode:      document.getElementById('per-postcode').value.trim(),
+            gemeente:      document.getElementById('per-gemeente').value.trim(),
+            leeftijd:      App.getEnkele('per-leeftijd'),
+            inkomen:       App.getKeuzes('per-inkomen'),
+            huisvesting:   App.getKeuzes('per-woon'),
+            woonsituatie:  App.getEnkele('per-woonsituatie'),
+            eersteContact: App.getEnkele('per-eerste'),
+            type:          App.getKeuzes('per-type'),
+            gekendBij:     App.getKeuzes('per-gekend-bij'),
+            notitie:       document.getElementById('per-notitie').value.trim(),
+            gewijzigd:     nu()
+          });
         });
-      });
-      DB.slaPerOp(lijst);
-      var terugNaarDb = State._dbBewerkTerug;
-      State._bewerktPersoId = null;
-      State._dbBewerkTerug = false;
-      App.toast('Persoon bijgewerkt.', true);
-      App.nav(terugNaarDb ? 'pg-persoon-db' : 'pg-rapport-personen');
+        DB.slaPerOp(lijst);
+        var terugNaarDb = State._dbBewerkTerug;
+        State._bewerktPersoId = null;
+        State._dbBewerkTerug = false;
+        App.toast('Persoon bijgewerkt.', true);
+        App.nav(terugNaarDb ? 'pg-persoon-db' : 'pg-rapport-personen');
+      } catch(e) {
+        console.error('slaPerOp fout:', e);
+        App.toast('Fout bij opslaan: ' + e.message);
+      }
       return;
     }
 
@@ -838,10 +841,11 @@ var App = {
     var jaar = jaarInput ? (parseInt(jaarInput.value) || huidigJaar()) : huidigJaar();
     var editId = State._bewerktIaId;
     if (editId) {
-      var lijst = DB.individueel.slice();
-      var idx = -1;
-      for (var i = 0; i < lijst.length; i++) { if (lijst[i].id === editId) { idx = i; break; } }
-      if (idx !== -1) {
+      try {
+        var lijst = DB.individueel.slice();
+        var idx = -1;
+        for (var i = 0; i < lijst.length; i++) { if (lijst[i].id === editId) { idx = i; break; } }
+        if (idx === -1) { App.toast('Actie niet gevonden in cache.'); return; }
         lijst[idx] = Object.assign({}, lijst[idx], {
           persoonNummer: State.gekozenPersoon.volgnummer,
           maand:         maand,
@@ -853,15 +857,18 @@ var App = {
           toeleiding:    App.getKeuzes('ia-toeleiding'),
           tijd:          App.getEnkele('ia-tijd')
         });
+        DB.slaIndOp(lijst);
+        State._bewerktIaId = null;
+        var p = State.gekozenPersoon;
+        App.succes('✅', 'Actie bijgewerkt!',
+          'Actie voor ' + p.voornaam + ' ' + p.familienaam + ' — ' + maand,
+          '🏠 Naar start', function() { App.nav('pg-start'); },
+          '⚡ Andere actie', function() { App.nav('pg-ind-actie-wiz'); }
+        );
+      } catch(e) {
+        console.error('slaIaOp fout:', e);
+        App.toast('Fout bij opslaan: ' + e.message);
       }
-      DB.slaIndOp(lijst);
-      State._bewerktIaId = null;
-      var p = State.gekozenPersoon;
-      App.succes('✅', 'Actie bijgewerkt!',
-        'Actie voor ' + p.voornaam + ' ' + p.familienaam + ' — ' + maand,
-        '🏠 Naar start', function() { App.nav('pg-start'); },
-        '⚡ Andere actie', function() { App.nav('pg-ind-actie-wiz'); }
-      );
       return;
     }
     var record = {
@@ -994,10 +1001,11 @@ var App = {
     var aantalBewoners = parseInt(document.getElementById('ca-bewoners').value) || 0;
     var editId = State._bewerktCaId;
     if (editId) {
-      var lijst = DB.collectief.slice();
-      var idx = -1;
-      for (var j = 0; j < lijst.length; j++) { if (lijst[j].id === editId) { idx = j; break; } }
-      if (idx !== -1) {
+      try {
+        var lijst = DB.collectief.slice();
+        var idx = -1;
+        for (var j = 0; j < lijst.length; j++) { if (lijst[j].id === editId) { idx = j; break; } }
+        if (idx === -1) { App.toast('Actie niet gevonden in cache.'); return; }
         lijst[idx] = Object.assign({}, lijst[idx], {
           maand:                 maand,
           jaar:                  jaar,
@@ -1014,17 +1022,20 @@ var App = {
           naamVrijwilligers:     namen,
           naamPartner:           document.getElementById('ca-partner').value.trim()
         });
+        DB.slaColOp(lijst);
+        State._bewerktCaId = null;
+        App.succes('✅', 'Collectieve actie bijgewerkt!',
+          naamVanDeActie + ' — ' + maand,
+          '🏠 Naar start', function() { App.nav('pg-start'); },
+          '🔗 Module toevoegen', function() {
+            State.huidigActie = naamVanDeActie;
+            App.nav('pg-collectief-module');
+          }
+        );
+      } catch(e) {
+        console.error('slaCaOp fout:', e);
+        App.toast('Fout bij opslaan: ' + e.message);
       }
-      DB.slaColOp(lijst);
-      State._bewerktCaId = null;
-      App.succes('✅', 'Collectieve actie bijgewerkt!',
-        naamVanDeActie + ' — ' + maand,
-        '🏠 Naar start', function() { App.nav('pg-start'); },
-        '🔗 Module toevoegen', function() {
-          State.huidigActie = naamVanDeActie;
-          App.nav('pg-collectief-module');
-        }
-      );
       return;
     }
     var record = {

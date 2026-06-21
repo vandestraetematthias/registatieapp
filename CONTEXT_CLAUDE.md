@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.1.5 | **Datum**: 2026-06-21
+**Versie**: 3.1.6 | **Datum**: 2026-06-21
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.1.5`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.1.6`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -455,6 +455,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.1.6` | Foutafhandeling: try-catch toegevoegd aan bewerkingsmodus van `slaPerOp`, `slaIaOp` en `slaCaOp`; idx===-1 guard voor individuele/collectieve acties; fouten worden nu altijd getoond via `App.toast` én `console.error` |
 | `v3.1.5` | Bugfix: `App.slaPerOp()` gebruikte in-place mutatie (`p.voornaam = v`) waardoor `_syncLijst` oud en nieuw als identiek zag en nooit naar Firestore schreef; opgelost via `Object.assign({}, p, {...})` zoals `slaIaOp`/`slaCaOp` al deden |
 | `v3.1.4` | Derde sub-tab "Individuele Acties" toegevoegd aan Database-pagina: chronologische lijst (nieuwste eerst), uitklapbare dossiers met details, Bewerken-knop met terugnavigatie naar database; realtime sync (`_herlaadHuidigePagina`) uitgebreid met `pg-persoon-db` |
 | `v3.1.0` | Verwijdering fietsapp (pg-fiets-gps, Google Maps API, gps-lb functies/CSS); Database-pagina als 6e hoofdtab met sub-tabs Personen + Collectieve Acties, uitklapbare dossiers, bewerkfuncties en scroll-fixes |
