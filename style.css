@@ -1528,17 +1528,9 @@ tr:nth-child(even) td { background: #fafaf9; }
    DATABASE PAGINA (v3.1.0)
 ══════════════════════════════════════════ */
 
-/* Algemene pagina scroll fix */
-.pagina {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Database pagina */
+/* Database pagina — flex-direction via .pagina.actief, geen display override hier */
 #pg-persoon-db {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  overflow-y: hidden;
 }
 
 .pagina-kop {
