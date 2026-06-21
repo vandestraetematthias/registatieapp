@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.0.5';
+var APP_VERSION = '3.1.0';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -55,6 +55,23 @@ function getInitials(naam) {
     .map(function(w) { return w.charAt(0).toUpperCase(); }).join('');
 }
 
+/* ── Privacy wachtwoord-check (ww: 1224) ── */
+function privacyCheck(onSuccess) {
+  var ww = prompt('Voer het privacywachtwoord in om de naam te tonen:');
+  if (ww === null) return; // geannuleerd
+  if (ww.trim() === '1224') {
+    onSuccess();
+  } else {
+    var el = document.getElementById('toast');
+    if (el) {
+      el.textContent = 'Onjuist wachtwoord.';
+      el.className = 'toast zichtbaar';
+      clearTimeout(el._t);
+      el._t = setTimeout(function() { el.className = 'toast'; }, 2200);
+    }
+  }
+}
+
 function verkleenFoto(file, callback) {
   var maxB = 1200;
   var reader = new FileReader();
@@ -80,7 +97,6 @@ var DB = {
   _personen:    [],
   _individueel: [],
   _collectief:  [],
-  _fietsritten: [],
   _unsubs:      [],
   _uid:         null,
   _laadGereed:  0,
@@ -94,7 +110,6 @@ var DB = {
   get personen()    { return this._personen; },
   get individueel() { return this._individueel; },
   get collectief()  { return this._collectief; },
-  get fietsritten() { return this._fietsritten; },
 
   // Start realtime-listeners naar Firestore (gebruiker-gekoppeld)
   startListeners: function() {
@@ -123,13 +138,6 @@ var DB = {
         App._herlaadHuidigePagina();
       }, function(e) { console.error('collectief listener:', e); })
     );
-    // Fietsritten — apart (eigen teller niet nodig voor initieel geladen-signaal)
-    DB._unsubs.push(
-      DB._col('fietsritten').onSnapshot(function(snap) {
-        DB._fietsritten = snap.docs.map(function(d) { return d.data(); });
-        if (State.huidigePagina === 'pg-fiets-gps') App.renderFietsGps();
-      }, function(e) { console.error('fietsritten listener:', e); })
-    );
   },
 
   // Stop listeners en leeg cache bij uitloggen
@@ -139,7 +147,6 @@ var DB = {
     DB._personen = [];
     DB._individueel = [];
     DB._collectief = [];
-    DB._fietsritten = [];
     DB._uid = null;
     DB._laadGereed = 0;
   },
@@ -185,11 +192,6 @@ var DB = {
     var oud = this._collectief.slice();
     this._collectief = lijst;
     DB._syncLijst('collectief', oud, lijst);
-  },
-  slaFietsOp: function(lijst) {
-    var oud = this._fietsritten.slice();
-    this._fietsritten = lijst;
-    DB._syncLijst('fietsritten', oud, lijst);
   },
 
   // Volgnummer
@@ -259,10 +261,9 @@ var App = {
       'pg-mod-logistiek':'pg-collectief-start','pg-mod-overleg':'pg-collectief-start','pg-mod-activiteit':'pg-collectief-start',
       'pg-jaarplan':'pg-jaarplan','pg-rapport-personen':'pg-jaarplan','pg-rapport-individueel':'pg-jaarplan',
       'pg-rapport-collectief':'pg-jaarplan','pg-jaarplan-mod':'pg-jaarplan','pg-persoon-detail':'pg-jaarplan',
-      'pg-fiets-gps':'pg-fiets-gps',
-      'pg-archief':'pg-archief',
+      'pg-archief':'pg-jaarplan',
       'pg-dashboard':'pg-dashboard',
-      'pg-persoon-db':'pg-individueel-start'
+      'pg-persoon-db':'pg-persoon-db'
     };
     var _actNav = _navMap[pagina] || 'pg-start';
     document.querySelectorAll('.bn-item').forEach(function(btn) {
@@ -283,7 +284,6 @@ var App = {
     if (pagina === 'pg-col-actie-wiz')     App.resetCa();
     if (pagina === 'pg-jaarplan-mod')      App.renderJaarplan();
     if (pagina === 'pg-dashboard')         App.renderDashboard();
-    if (pagina === 'pg-fiets-gps')         App.renderFietsGps();
     if (pagina === 'pg-persoon-db')        App.renderPersoonDb();
   },
 
@@ -449,16 +449,16 @@ var App = {
 
     // Combineer en sorteer op datum
     var alle = [];
-    per.slice(0, 5).forEach(function(p) {
+    per.forEach(function(p) {
       alle.push({ datum: p.aangemaakt || '', soort: 'persoon', item: p });
     });
-    ind.slice(0, 5).forEach(function(a) {
+    ind.forEach(function(a) {
       alle.push({ datum: a.datum || '', soort: 'actie', item: a });
     });
     alle.sort(function(a, b) { return b.datum > a.datum ? 1 : -1; });
 
     var html = '';
-    alle.slice(0, 8).forEach(function(entry) {
+    alle.forEach(function(entry) {
       if (entry.soort === 'persoon') {
         var p = entry.item;
         html += '<div class="mini-kaart" style="flex-direction:row;justify-content:space-between;align-items:center">' +
@@ -494,7 +494,7 @@ var App = {
       return tB > tA ? 1 : tB < tA ? -1 : 0;
     });
     var html = '';
-    alle.slice(0, 8).forEach(function(c) {
+    alle.forEach(function(c) {
       var type = c.module || '';
       var badge = badgeKleur[type] || 'badge-groen';
       var typeLabel = type || 'Actie';
@@ -1446,7 +1446,7 @@ var App = {
       var init = getInitials((p.voornaam || '') + ' ' + (p.familienaam || ''));
       return '<tr>' +
         '<td>' + p.volgnummer + '</td>' +
-        '<td>' + App.esc(init) + '</td>' +
+        '<td><span class="privacy-init" onclick="App._ontklaasInit(this,\'' + App.esc(p.voornaam) + ' ' + App.esc(p.familienaam) + '\')" title="Klik om naam te tonen">' + App.esc(init) + '</span></td>' +
         '<td>' + App.esc((p.inkomen || []).join(', ') || '—') + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.bekijkPersoon(\'' + p.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
@@ -1517,9 +1517,10 @@ var App = {
     var html = ind.map(function(a) {
       var p = per.find(function(x) { return x.volgnummer === a.persoonNummer; });
       var init = p ? getInitials((p.voornaam || '') + ' ' + (p.familienaam || '')) : 'P#' + a.persoonNummer;
+      var volNaam = p ? p.voornaam + ' ' + p.familienaam : '';
       return '<tr>' +
         '<td>' + App.esc(a.maand || '') + '</td>' +
-        '<td>' + App.esc(init) + '</td>' +
+        '<td>' + (volNaam ? '<span class="privacy-init" onclick="App._ontklaasInit(this,\'' + App.esc(volNaam) + '\')" title="Klik om naam te tonen">' + App.esc(init) + '</span>' : App.esc(init)) + '</td>' +
         '<td style="white-space:nowrap">' +
         '<button onclick="App.laadIaBewerk(\'' + a.id + '\')" style="background:var(--groen);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;margin-right:4px">Bewerk</button>' +
         '<button onclick="App.archiveerRecord(\'' + a.id + '\',\'individueel\')" style="background:var(--oranje);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem">Archiveer</button>' +
@@ -1824,12 +1825,18 @@ var App = {
     var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || (typeof jsPDF !== 'undefined' ? jsPDF : null);
     if (!jsPDFLib) { App.toast('jsPDF niet beschikbaar.'); return; }
 
-    var per = DB.personen;
-    var ind = DB.individueel;
-    var col = DB.collectief.filter(function(c) { return !c.module; });
+    var per = DB.personen.filter(function(p) { return p.status !== 'gearchiveerd'; });
+    var ind = DB.individueel.filter(function(r) { return r.status !== 'gearchiveerd'; });
+    var col = DB.collectief.filter(function(c) { return !c.module && c.status !== 'gearchiveerd'; });
+
+    // Unieke personen bereikt via individuele acties (distinct persoonNummer)
+    var uniekeIndNrs = {};
+    ind.forEach(function(r) { if (r.persoonNummer) uniekeIndNrs[r.persoonNummer] = true; });
+    var aantalUniekeBewonersInd = Object.keys(uniekeIndNrs).length;
 
     var vrijwMap = {};
     DB.collectief.forEach(function(r) {
+      if (r.status === 'gearchiveerd') return;
       (r.naamVrijwilligers || []).forEach(function(n) {
         if (n && n.trim()) vrijwMap[n.trim().toLowerCase()] = true;
       });
@@ -1838,11 +1845,14 @@ var App = {
 
     var totUren = 0;
     ind.forEach(function(r) { totUren += App._tijdNaarUren(r.tijd); });
+    var gemUrenPerActie = ind.length ? Math.round((totUren / ind.length) * 10) / 10 : 0;
+
     var totBereik = 0, totNieuw = 0;
     col.forEach(function(r) {
-      totBereik += (r.aantalBewoners || 0);
-      totNieuw  += (r.waarvanNieuweBewoners || 0);
+      totBereik += parseInt(r.aantalBewoners || 0, 10);
+      totNieuw  += parseInt(r.waarvanNieuweBewoners || 0, 10);
     });
+    var nieuweInstroom = totBereik > 0 ? Math.round((totNieuw / totBereik) * 100) : 0;
 
     var fotoRefs = [];
     DB.collectief.forEach(function(r) {
@@ -1902,14 +1912,19 @@ var App = {
 
       sectie('OVERZICHT');
       regel('Totaal geregistreerde personen', per.length);
+      regel('Unieke personen bereikt (individueel)', aantalUniekeBewonersInd);
       regel('Individuele acties (totaal)', ind.length);
       regel('Collectieve acties (totaal)', col.length);
+      regel('Totaal collectief bereik (bewoners)', totBereik);
+      regel('Waarvan nieuwe bewoners', totNieuw + ' (' + nieuweInstroom + '%)');
       regel('Unieke vrijwilligers (alle acties)', aantalUniekeVrijw);
       y += 6;
 
       sectie('INDIVIDUEEL');
       regel('Totaal acties', ind.length);
+      regel('Unieke bewoners bereikt', aantalUniekeBewonersInd);
       regel('Totaal uren', (Math.round(totUren * 10) / 10) + 'u');
+      regel('Gemiddeld uren per actie', gemUrenPerActie + 'u');
       var methT = telVeld(ind, 'methodiek');
       var methLijst = Object.keys(methT).sort(function(a,b) { return methT[b] - methT[a]; });
       if (methLijst.length) {
@@ -1937,7 +1952,9 @@ var App = {
       sectie('COLLECTIEF');
       regel('Totaal acties', col.length);
       regel('Totaal bewoners bereikt', totBereik);
-      regel('Waarvan nieuwe bewoners', totNieuw);
+      regel('Waarvan nieuwe bewoners', totNieuw + ' (' + nieuweInstroom + '%)');
+      var gemBewPerActie = col.length ? Math.round(totBereik / col.length) : 0;
+      regel('Gem. bewoners per actie', gemBewPerActie);
       regel('Unieke vrijwilligers', aantalUniekeVrijw);
       var themaT = {};
       col.forEach(function(r) {
@@ -2857,6 +2874,143 @@ _collectProjectFotos: function(naam) {
     stel('kpi-vrijw', Object.keys(vrijwNamen).length);
     stel('kpi-signalen', sigCount);
     stel('kpi-toeleiding', toelCount);
+    App._dashLastKPIData = d;
+  },
+
+  _dashLastKPIData: null,
+
+  /* ── KPI drill-down (klik op KPI-kaart) ── */
+  _dashKpiDrillActief: null,
+
+  _dashKpiDrill: function(type) {
+    var el = document.getElementById('dash-kpi-drill');
+    if (!el) return;
+    if (App._dashKpiDrillActief === type) {
+      el.style.display = 'none';
+      App._dashKpiDrillActief = null;
+      return;
+    }
+    App._dashKpiDrillActief = type;
+    var d = App._dashLastKPIData;
+    if (!d) { el.style.display = 'none'; return; }
+    var html = '';
+
+    if (type === 'personen') {
+      var pers = d.per;
+      html = '<div class="dash-ind-n1-header">' + pers.length + ' persoon' + (pers.length !== 1 ? 'en' : '') + '</div>';
+      html += '<div class="dash-ind-n1-list">';
+      pers.forEach(function(p) {
+        var init = App._dashIndInit(p);
+        html += '<div class="dash-ind-person-row" onclick="App._dashKpiOpenDossier(\'' + p.id + '\')" style="cursor:pointer">' +
+          '<div class="dash-ind-avatar" style="background:' + App._dashIndAvatarKleur(init) + '">' + App.esc(init) + '</div>' +
+          '<div style="flex:1"><div style="font-weight:600;font-size:0.82rem">' + App.esc(p.voornaam + ' ' + p.familienaam) + '</div>' +
+          '<div style="font-size:0.7rem;color:var(--zacht)">Nr. ' + p.volgnummer + (p.gemeente ? ' · ' + App.esc(p.gemeente) : '') + '</div></div>' +
+          '<span style="font-size:0.72rem;color:var(--groen);font-weight:600">Dossier →</span></div>';
+      });
+      html += '</div>';
+
+    } else if (type === 'ind') {
+      var acties = d.ind.slice().sort(function(a,b){ return (b.datum||'') > (a.datum||'') ? 1 : -1; });
+      html = '<div class="dash-ind-n1-header">' + acties.length + ' individuele acties</div>';
+      html += '<div style="max-height:380px;overflow-y:auto">';
+      acties.forEach(function(a) {
+        var p = d.per.find(function(x){ return x.volgnummer === a.persoonNummer; });
+        var naam = p ? p.voornaam + ' ' + p.familienaam : 'P#' + a.persoonNummer;
+        var init = p ? App._dashIndInit(p) : '#' + a.persoonNummer;
+        html += '<div class="dash-ind-actie-rij" onclick="App._dashKpiOpenDossierVanActie(\'' + (p ? p.id : '') + '\')" style="cursor:pointer">' +
+          '<span class="dash-ind-actie-datum">' + App.esc((a.maand||'') + ' ' + (a.jaar||'')) + '</span>' +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:600;font-size:0.8rem">' + App.esc(naam) + '</div>' +
+          '<div style="font-size:0.72rem;color:var(--zacht)">' + App.esc((a.levensdomein||[]).join(', ')||'—') + ' · ' + App.esc((a.methodiek||[]).join(', ')||'—') + '</div>' +
+          (a.extraInfo ? '<div style="font-size:0.7rem;color:var(--zacht);margin-top:2px;font-style:italic">' + App.esc(a.extraInfo.substring(0,80)) + (a.extraInfo.length > 80 ? '…' : '') + '</div>' : '') +
+          '</div>' +
+          '<span style="font-size:0.7rem;color:var(--blauw)">' + App.esc(a.tijd||'') + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+
+    } else if (type === 'col') {
+      var hoofd = d.col;
+      html = '<div class="dash-ind-n1-header">' + hoofd.length + ' collectieve acties</div>';
+      html += '<div style="max-height:380px;overflow-y:auto">';
+      hoofd.forEach(function(c) {
+        var modules = d.colAlle.filter(function(r){ return r.naamVanDeActie === c.naamVanDeActie && r.module; });
+        html += '<div class="dash-ind-actie-rij" style="flex-direction:column;align-items:flex-start;gap:4px">' +
+          '<div style="font-weight:700;font-size:0.85rem">' + App.esc(c.naamVanDeActie||'') + '</div>' +
+          '<div style="font-size:0.72rem;color:var(--zacht)">' + App.esc((c.maand||'') + ' ' + (c.jaar||'')) + ' · ' + (c.aantalBewoners||0) + ' bewoners · ' + (c.aantalVrijwilligers||0) + ' vrijw.</div>' +
+          (modules.length ? '<div style="font-size:0.7rem;color:var(--blauw)">' + modules.map(function(m){ return m.module; }).join(' · ') + '</div>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+
+    } else if (type === 'vrijw') {
+      var vrijwMap = {};
+      d.colAlle.forEach(function(r) {
+        (r.naamVrijwilligers||[]).forEach(function(n) {
+          if (n && n.trim()) {
+            var k = n.trim();
+            if (!vrijwMap[k]) vrijwMap[k] = [];
+            if (r.naamVanDeActie && vrijwMap[k].indexOf(r.naamVanDeActie) === -1) vrijwMap[k].push(r.naamVanDeActie);
+          }
+        });
+      });
+      var namen = Object.keys(vrijwMap).sort();
+      html = '<div class="dash-ind-n1-header">' + namen.length + ' unieke vrijwilligers</div>';
+      html += '<div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">';
+      namen.forEach(function(naam) {
+        html += '<div style="background:#f8f9fa;border-radius:8px;padding:8px 12px">' +
+          '<div style="font-weight:600;font-size:0.82rem">' + App.esc(naam) + '</div>' +
+          '<div style="font-size:0.72rem;color:var(--zacht);margin-top:2px">' + vrijwMap[naam].map(function(a){ return App.esc(a); }).join(' · ') + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+
+    } else if (type === 'signalen') {
+      var sigMap = {};
+      d.colAlle.forEach(function(r) {
+        if (r.signalen && r.signaalTypes && r.signaalTypes.length) {
+          r.signaalTypes.forEach(function(s) {
+            if (!sigMap[s]) sigMap[s] = [];
+            sigMap[s].push({
+              datum: r.datum || r.aangemaakt || '',
+              actie: r.naamVanDeActie || '',
+              notitie: r.notitie || ''
+            });
+          });
+        }
+      });
+      var themas = Object.keys(sigMap).sort();
+      html = '<div class="dash-ind-n1-header">' + themas.length + ' signaalthema\'s</div>';
+      html += '<div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">';
+      themas.forEach(function(thema) {
+        html += '<div style="background:#fef2f2;border:1px solid #fde8e8;border-radius:8px;padding:10px 12px">' +
+          '<div style="font-weight:700;font-size:0.82rem;color:var(--rood)">' + App.esc(thema) + ' (' + sigMap[thema].length + 'x)</div>';
+        sigMap[thema].forEach(function(sig) {
+          html += '<div style="font-size:0.72rem;color:var(--zacht);margin-top:4px">' +
+            '<span style="font-weight:600">' + App.esc((sig.datum||'').substring(0,10)) + '</span>' +
+            (sig.actie ? ' · ' + App.esc(sig.actie) : '') +
+            (sig.notitie ? '<div style="font-style:italic">' + App.esc(sig.notitie.substring(0,100)) + (sig.notitie.length>100?'…':'') + '</div>' : '') +
+          '</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  _dashKpiOpenDossier: function(id) {
+    var p = DB.personen.find(function(x){ return x.id === id; });
+    if (!p) return;
+    App.bekijkPersoon(id);
+  },
+
+  _dashKpiOpenDossierVanActie: function(id) {
+    if (!id) return;
+    App.bekijkPersoon(id);
   },
 
   _dashTop20: function(d) {
@@ -4040,38 +4194,223 @@ _collectProjectFotos: function(naam) {
     if (!el) return;
     var fotos = [];
     DB.collectief.forEach(function(r) {
-      if (r.fotoUrl) fotos.push({ naam: r.naamVanDeActie || '', url: r.fotoUrl });
+      if (r.fotoUrl) {
+        var omschrijving = r.notitie || r.omschrijving || '';
+        fotos.push({ naam: r.naamVanDeActie || '', url: r.fotoUrl, omschrijving: omschrijving, module: r.module || '' });
+      }
+      // Bewijsjes/bonnen ook tonen
+      (r.uitgaven || []).forEach(function(u) {
+        if (u.bonUrl) {
+          fotos.push({ naam: r.naamVanDeActie || '', url: u.bonUrl, omschrijving: u.beschrijving || '', module: 'Bon', isBewijs: true });
+        }
+      });
     });
     if (!fotos.length) {
       el.innerHTML = '<p class="dash-leeg">Nog geen foto\'s ge\u00FCpload</p>';
       return;
     }
-    var html = '<div style="font-size:0.82rem;color:var(--zacht);margin-bottom:10px">' + fotos.length + ' sfeerfoto\'s</div>' +
-      '<div class="dash-thumb-grid">';
+    var html = '<div style="font-size:0.82rem;color:var(--zacht);margin-bottom:12px">' + fotos.length + ' media-items</div>' +
+      '<div class="dash-media-gallery">';
     fotos.forEach(function(f) {
       var escapedUrl  = App.esc(f.url);
-      var escapedNaam = App.esc(f.naam);
-      html += '<img src="' + escapedUrl + '" class="dash-thumb" alt="' + escapedNaam + '" title="' + escapedNaam + '" ' +
-        'onclick="App._dashFotoVergroot(\'' + escapedUrl + '\',\'' + escapedNaam + '\')" ' +
-        'onerror="this.style.display=\'none\'">';
+      var caption = [f.naam, f.omschrijving].filter(Boolean).join(' — ');
+      var escapedCap = App.esc(caption);
+      var badgeTekst = f.isBewijs ? 'Bon' : (f.module || 'Foto');
+      html += '<div class="dash-media-item">' +
+        '<img src="' + escapedUrl + '" class="dash-media-thumb" alt="' + escapedCap + '" ' +
+          'onclick="App._dashFotoVergroot(\'' + escapedUrl + '\',\'' + escapedCap + '\')" ' +
+          'onerror="this.parentElement.style.display=\'none\'">' +
+        '<div class="dash-media-info">' +
+          '<div class="dash-media-actie">' + App.esc(f.naam) + '</div>' +
+          (f.omschrijving ? '<div class="dash-media-oms">' + App.esc(f.omschrijving.substring(0,60)) + (f.omschrijving.length>60?'…':'') + '</div>' : '') +
+          '<span class="dash-media-badge">' + App.esc(badgeTekst) + '</span>' +
+        '</div>' +
+      '</div>';
     });
     html += '</div>';
     el.innerHTML = html;
   },
 
   /* ══════════════════════════════════════
-     PERSOONSDATABASE v3.0.5
+     PERSOONSDATABASE v3.1.0
   ══════════════════════════════════════ */
   renderPersoonDb: function() {
     var el = document.getElementById('pdb-lijst');
     if (!el) return;
     var zoek = (document.getElementById('pdb-zoekbalk') || {}).value || '';
     App._dbRenderLijst(zoek);
+    // Als collectief-tab actief is, ook cdb renderen
+    var cdbPanel = document.getElementById('db-panel-collectief');
+    if (cdbPanel && cdbPanel.style.display !== 'none') {
+      App._cdbRenderLijst('');
+    }
+    if (window.lucide) lucide.createIcons();
+  },
+
+  dbTab: function(tab) {
+    document.getElementById('db-panel-personen').style.display = tab === 'personen' ? '' : 'none';
+    document.getElementById('db-panel-collectief').style.display = tab === 'collectief' ? '' : 'none';
+    document.getElementById('db-tab-personen').classList.toggle('actief', tab === 'personen');
+    document.getElementById('db-tab-collectief').classList.toggle('actief', tab === 'collectief');
+    if (tab === 'collectief') App._cdbRenderLijst('');
+    if (window.lucide) lucide.createIcons();
   },
 
   _dbZoek: function() {
     var zoek = (document.getElementById('pdb-zoekbalk') || {}).value || '';
     App._dbRenderLijst(zoek);
+  },
+
+  _cdbZoek: function() {
+    var q = (document.getElementById('cdb-zoekbalk') || {}).value || '';
+    App._cdbRenderLijst(q.toLowerCase());
+  },
+
+  _cdbRenderLijst: function(zoek) {
+    var container = document.getElementById('cdb-lijst');
+    if (!container) return;
+
+    // Haal unieke hoofdacties op (module === null of module === undefined)
+    var acties = DB.collectief.filter(function(r) {
+      return r.module == null && r.status !== 'gearchiveerd';
+    });
+
+    // Filter op naam
+    if (zoek) {
+      acties = acties.filter(function(a) {
+        return (a.naamVanDeActie || '').toLowerCase().indexOf(zoek) !== -1;
+      });
+    }
+
+    // Sorteer alfabetisch op naam
+    acties.sort(function(a, b) {
+      return (a.naamVanDeActie || '').localeCompare(b.naamVanDeActie || '');
+    });
+
+    if (!acties.length) {
+      container.innerHTML = '<p class="dash-leeg">Geen collectieve acties gevonden.</p>';
+      return;
+    }
+
+    var html = '';
+    var vorigeNaam = '';
+    acties.forEach(function(actie) {
+      var naam = actie.naamVanDeActie || '(naamloos)';
+      // Alfabetisch scheidingslabel
+      var eersteChar = naam.charAt(0).toUpperCase();
+      if (eersteChar !== vorigeNaam) {
+        html += '<div class="pdb-alfa-label">' + App.esc(eersteChar) + '</div>';
+        vorigeNaam = eersteChar;
+      }
+      html += '<div class="pdb-rij" onclick="App._cdbOpenActie(\'' + actie.id + '\')">'
+        + '<span class="pdb-rij-nr">' + App.esc(actie.maand || '') + ' ' + (actie.jaar || '') + '</span>'
+        + '<span class="pdb-rij-naam">' + App.esc(naam) + '</span>'
+        + '<span class="pdb-rij-gemeente">' + (actie.aantalBewoners || 0) + ' bew.</span>'
+        + '<span class="pdb-rij-pijl">&rsaquo;</span>'
+        + '</div>'
+        + '<div class="pdb-dossier" id="cdb-dossier-' + actie.id + '" style="display:none"></div>';
+    });
+    container.innerHTML = html;
+  },
+
+  _cdbOpenActie: function(id) {
+    var el = document.getElementById('cdb-dossier-' + id);
+    if (!el) return;
+    var open = el.style.display !== 'none';
+    // Sluit alle dossiers
+    var alle = document.querySelectorAll('#cdb-lijst .pdb-dossier');
+    alle.forEach(function(d) { d.style.display = 'none'; d.innerHTML = ''; });
+    if (open) return;
+
+    var actie = DB.collectief.find(function(r) { return r.id === id; });
+    if (!actie) return;
+
+    // Haal alle modules op voor deze actie
+    var modules = DB.collectief.filter(function(r) {
+      return r.module != null && r.naamVanDeActie === actie.naamVanDeActie && r.status !== 'gearchiveerd';
+    });
+
+    el.innerHTML = App._cdbDossierHTML(actie, modules);
+    el.style.display = '';
+    // Vernieuw lucide iconen
+    if (window.lucide) lucide.createIcons();
+  },
+
+  _cdbDossierHTML: function(actie, modules) {
+    var html = '<div class="pdb-dossier-inner">';
+
+    // Hoofdactie info
+    html += '<div class="pdb-teller-rij">'
+      + '<div class="pdb-teller"><div class="pdb-teller-getal">' + (actie.aantalBewoners || 0) + '</div><div class="pdb-teller-label">Bewoners</div></div>'
+      + '<div class="pdb-teller"><div class="pdb-teller-getal">' + (actie.waarvanNieuweBewoners || 0) + '</div><div class="pdb-teller-label">Nieuw</div></div>'
+      + '<div class="pdb-teller"><div class="pdb-teller-getal">' + (actie.aantalVrijwilligers || 0) + '</div><div class="pdb-teller-label">Vrijwilligers</div></div>'
+      + '<div class="pdb-teller"><div class="pdb-teller-getal">' + modules.length + '</div><div class="pdb-teller-label">Modules</div></div>'
+      + '</div>';
+
+    // Hoofdactie details
+    html += '<table class="pdb-profiel-tabel">';
+    html += '<tr><td>Periode</td><td>' + App.esc(actie.maand || '') + ' ' + (actie.jaar || '') + '</td></tr>';
+    if (actie.buurt) html += '<tr><td>Buurt</td><td>' + App.esc(actie.buurt) + '</td></tr>';
+    if (actie.cluster && actie.cluster.length) html += '<tr><td>Cluster</td><td>' + actie.cluster.map(App.esc).join(', ') + '</td></tr>';
+    if (actie.thema && actie.thema.length) html += '<tr><td>Thema</td><td>' + actie.thema.map(App.esc).join(', ') + '</td></tr>';
+    if (actie.naamPartner) html += '<tr><td>Partner</td><td>' + App.esc(actie.naamPartner) + '</td></tr>';
+    if (actie.naamVrijwilligers && actie.naamVrijwilligers.length) html += '<tr><td>Vrijwilligers</td><td>' + actie.naamVrijwilligers.map(App.esc).join(', ') + '</td></tr>';
+    html += '</table>';
+
+    // Bewerken knop
+    html += '<button class="knop knop-blauw" style="margin:8px 0;background:var(--blauw);color:#fff;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:0.82rem;font-weight:600" onclick="App.laadCaBewerk(\'' + actie.id + '\')">'
+      + '<i data-lucide="edit-2"></i> Hoofdactie bewerken</button>';
+
+    // Modules
+    if (modules.length) {
+      html += '<div class="pdb-sectie-kop">Modules (' + modules.length + ')</div>';
+      // Sorteer modules op aangemaakt datum
+      modules.sort(function(a, b) {
+        return (a.aangemaakt || '').localeCompare(b.aangemaakt || '');
+      });
+      modules.forEach(function(mod) {
+        html += '<div class="pdb-actie-rij">';
+        html += '<div class="pdb-actie-datum">';
+        // Module type badge
+        var kleur = mod.module === 'Logistiek' ? 'fill-blauw' : mod.module === 'Overleg' ? 'fill-paars' : 'fill-oranje';
+        html += '<span class="dash-badge ' + kleur + '">' + App.esc(mod.module) + '</span>';
+        if (mod.datum) {
+          var d = new Date(mod.datum);
+          if (!isNaN(d)) html += ' ' + d.toLocaleDateString('nl-BE');
+        }
+        html += '</div>';
+        html += '<div class="pdb-actie-info">';
+
+        if (mod.notitie) html += '<div>' + App.esc(mod.notitie) + '</div>';
+
+        // Kosten
+        if (mod.uitgaven && mod.uitgaven.length) {
+          var totaal = mod.uitgaven.reduce(function(s, u) { return s + (parseFloat(u.bedrag) || 0); }, 0);
+          html += '<div>Uitgaven: \u20ac' + totaal.toFixed(2) + ' (' + mod.uitgaven.length + ' posten)</div>';
+        }
+
+        // Foto thumbnail
+        if (mod.fotoUrl) {
+          html += '<div style="margin-top:4px"><img src="' + App.esc(mod.fotoUrl) + '" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="App._dashFotoVergroot(\'' + App.esc(mod.fotoUrl) + '\',\'' + App.esc(actie.naamVanDeActie || '') + '\')"></div>';
+        }
+
+        // Activiteit specifiek
+        if (mod.module === 'Activiteit') {
+          if (mod.locatie) html += '<div>' + App.esc(mod.locatie) + '</div>';
+          if (mod.participatie && mod.participatie.length) html += '<div>' + mod.participatie.map(App.esc).join(', ') + '</div>';
+        }
+
+        html += '<button style="background:var(--blauw);color:#fff;border:none;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.72rem;margin-top:4px" onclick="App.laadCaBewerk(\'' + mod.id + '\')">'
+          + '<i data-lucide="edit-2"></i> Bewerken</button>';
+
+        html += '</div></div>'; // pdb-actie-info, pdb-actie-rij
+      });
+    } else {
+      html += '<p class="dash-leeg">Nog geen modules gekoppeld aan deze actie.</p>';
+    }
+
+    html += '</div>'; // pdb-dossier-inner
+    return html;
   },
 
   _dbRenderLijst: function(zoek) {
@@ -4584,397 +4923,6 @@ _collectProjectFotos: function(naam) {
 
   },
 
-  /* ══════════════════════════════════════════
-     FIETSRITTEN v3.0.0 — GPS & LOGBOEK
-  ══════════════════════════════════════════ */
-
-  // State
-  _gpsLbWatchId:        null,
-  _gpsLbRoute:          [],
-  _gpsLbKm:             0,
-  _gpsLbActief:         false,
-  _gpsLbWakeLock:       null,
-  _gpsLbBest:           [],
-  _gpsLbRit:            null,
-  _gpsLbGekozenPersoon: null,
-  _gpsLbGekozenActie:   null,
-  _gpsLbRedenStr:       '',
-  _gpsLbRouteKm:        0,
-  _gpsLbKoppelType:     'ia',
-  _googleMapsGeladen:   false,
-
-  // Callback aangeroepen zodra Google Maps API volledig geladen is
-  initGoogleMaps: function() {
-    App._googleMapsGeladen = true;
-    // Als de gebruiker al op de fiets-GPS pagina staat, herrender de adresvelden
-    if (State.huidigePagina === 'pg-fiets-gps') {
-      App._gpsLbRenderBest();
-    }
-  },
-
-  _haversine: function(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  },
-
-  renderFietsGps: function() {
-    App.gpsLbTab(1);
-    App._gpsLbRenderBest();
-    var datEl = document.getElementById('gps-lb-datum');
-    if (datEl && !datEl.value) {
-      var nu = new Date();
-      datEl.value = nu.getFullYear() + '-' +
-        String(nu.getMonth()+1).padStart(2,'0') + '-' +
-        String(nu.getDate()).padStart(2,'0');
-    }
-    App.renderFietsLogboek();
-  },
-
-  gpsLbTab: function(n) {
-    [1,2,3].forEach(function(i) {
-      var btn   = document.getElementById('gps-lb-tab-' + i);
-      var panel = document.getElementById('gps-lb-panel-' + i);
-      if (btn)   btn.classList.toggle('actief', i === n);
-      if (panel) panel.style.display = i === n ? '' : 'none';
-    });
-    if (n === 2) App.renderFietsLogboek();
-  },
-
-  _gpsLbStartGps: function() {
-    if (App._gpsLbActief) { App._gpsLbStopGps(); return; }
-    if (!navigator.geolocation) { App.toast('GPS niet beschikbaar op dit toestel'); return; }
-    App._gpsLbRoute = [];
-    App._gpsLbKm    = 0;
-    App._gpsLbActief = true;
-    var btn     = document.getElementById('gps-lb-gps-btn');
-    var display = document.getElementById('gps-lb-km-display');
-    if (btn)     btn.textContent = '\u23f9 Stop GPS-rit';
-    if (display) display.style.display = '';
-    if (navigator.wakeLock) {
-      navigator.wakeLock.request('screen')
-        .then(function(wl) { App._gpsLbWakeLock = wl; })
-        .catch(function() {});
-    }
-    App._gpsLbWatchId = navigator.geolocation.watchPosition(
-      function(pos) {
-        var lat = pos.coords.latitude, lon = pos.coords.longitude;
-        console.log('[GPS] positie:', lat, lon, '| route punten:', App._gpsLbRoute.length, '| km:', App._gpsLbKm.toFixed(3));
-        if (App._gpsLbRoute.length > 0) {
-          var prev = App._gpsLbRoute[App._gpsLbRoute.length - 1];
-          var d = App._haversine(prev.lat, prev.lon, lat, lon);
-          if (d > 0.02) {
-            App._gpsLbKm += d;
-            console.log('[GPS] afstand segment:', d.toFixed(3), 'km | totaal:', App._gpsLbKm.toFixed(3), 'km');
-          }
-        }
-        App._gpsLbRoute.push({ lat: lat, lon: lon });
-        var valEl = document.getElementById('gps-lb-km-val');
-        if (valEl) {
-          valEl.textContent = App._gpsLbKm.toFixed(1).replace('.', ',');
-        } else {
-          console.warn('[GPS] gps-lb-km-val element niet gevonden');
-        }
-      },
-      function(err) {
-        console.error('[GPS] fout:', err.code, err.message);
-        App.toast('GPS fout: ' + err.message);
-        // Reset UI volledig zodat gebruiker opnieuw kan starten
-        App._gpsLbActief = false;
-        App._gpsLbWatchId = null;
-        var btn = document.getElementById('gps-lb-gps-btn');
-        var display = document.getElementById('gps-lb-km-display');
-        if (btn) btn.textContent = '\ud83d\udeb2 Start GPS-rit';
-        if (display) display.style.display = 'none';
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
-    );
-  },
-
-  _gpsLbStopGps: function() {
-    if (App._gpsLbWatchId !== null) {
-      navigator.geolocation.clearWatch(App._gpsLbWatchId);
-      App._gpsLbWatchId = null;
-    }
-    App._gpsLbActief = false;
-    if (App._gpsLbWakeLock) {
-      App._gpsLbWakeLock.release().catch(function() {});
-      App._gpsLbWakeLock = null;
-    }
-    var btn     = document.getElementById('gps-lb-gps-btn');
-    var display = document.getElementById('gps-lb-km-display');
-    if (btn)     btn.textContent = '\ud83d\udeb2 Start GPS-rit';
-    if (display) display.style.display = 'none';
-    var km = Math.round(App._gpsLbKm * 10) / 10;
-    if (km > 0) {
-      var kmEl = document.getElementById('gps-lb-km-manueel');
-      if (kmEl) kmEl.value = km;
-      App.toast('GPS gestopt: ' + km.toString().replace('.', ',') + ' km', true);
-    }
-  },
-
-  _gpsLbRenderBest: function() {
-    var container = document.getElementById('gps-lb-best-lijst');
-    if (!container) return;
-    if (!App._gpsLbBest.length) {
-      container.innerHTML = '<div style="color:var(--zacht);font-size:0.85rem;margin-bottom:8px">Geen bestemmingen. Voeg er een toe.</div>';
-      return;
-    }
-    container.innerHTML = App._gpsLbBest.map(function(b, i) {
-      var lbl = i === 0 ? 'Van' : (i === App._gpsLbBest.length - 1 ? 'Naar' : 'Via');
-      return '<div class="gps-lb-seg-rij">' +
-        '<span class="gps-lb-seg-lbl">' + lbl + '</span>' +
-        '<input type="text" class="gps-lb-adres-inp" id="gps-lb-best-' + i + '" value="' + App.esc(b) + '" ' +
-          'oninput="App._gpsLbSyncBest(' + i + ',this.value)" placeholder="Adres...">' +
-        '<button class="gps-lb-seg-del" onclick="App._gpsLbVerwijderBest(' + i + ')">&#x2715;</button>' +
-        '</div>';
-    }).join('');
-    if (App._googleMapsGeladen && typeof google !== 'undefined' && google.maps && google.maps.places) {
-      App._gpsLbBest.forEach(function(b, i) {
-        var inp = document.getElementById('gps-lb-best-' + i);
-        if (inp && !inp._acInited) {
-          inp._acInited = true;
-          try {
-            var ac = new google.maps.places.Autocomplete(inp, {
-              types: ['geocode'],
-              componentRestrictions: { country: 'be' }
-            });
-            (function(idx, autocomplete) {
-              autocomplete.addListener('place_changed', function() {
-                var place = autocomplete.getPlace();
-                if (place && place.formatted_address) App._gpsLbSyncBest(idx, place.formatted_address);
-              });
-            })(i, ac);
-          } catch(e) {
-            console.warn('Autocomplete init fout:', e);
-          }
-        }
-      });
-    }
-  },
-
-  _gpsLbInitAutocomplete: function() {},
-
-  _gpsLbVoegBestemmingToe: function() {
-    if (App._gpsLbBest.length === 0) App._gpsLbBest = ['', ''];
-    else App._gpsLbBest.splice(App._gpsLbBest.length - 1, 0, '');
-    App._gpsLbRenderBest();
-  },
-
-  _gpsLbVerwijderBest: function(idx) {
-    App._gpsLbBest.splice(idx, 1);
-    if (App._gpsLbBest.length < 2) App._gpsLbBest = ['', ''];
-    App._gpsLbRenderBest();
-  },
-
-  _gpsLbSyncBest: function(idx, val) {
-    App._gpsLbBest[idx] = val;
-  },
-
-  _gpsLbBerekenRoute: function() {
-    var best = App._gpsLbBest.filter(function(b) { return b.trim(); });
-    if (best.length < 2) { App.toast('Voeg minstens vertrek en bestemming in'); return; }
-    if (!App._googleMapsGeladen || typeof google === 'undefined' || !google.maps) { App.toast('Google Maps nog niet geladen, probeer opnieuw'); return; }
-    var service  = new google.maps.DistanceMatrixService();
-    var segments = [];
-    for (var i = 0; i < best.length - 1; i++) segments.push({ from: best[i], to: best[i+1] });
-    var pending = segments.length;
-    var results = new Array(segments.length);
-    segments.forEach(function(seg, idx) {
-      service.getDistanceMatrix(
-        { origins: [seg.from], destinations: [seg.to], travelMode: 'BICYCLING' },
-        function(resp, status) {
-          if (status === 'OK' && resp.rows[0].elements[0].status === 'OK') {
-            results[idx] = resp.rows[0].elements[0].distance.value / 1000;
-          } else {
-            results[idx] = 0;
-          }
-          pending--;
-          if (pending === 0) {
-            var km = 0;
-            results.forEach(function(d) { km += d; });
-            km = Math.round(km * 10) / 10;
-            App._gpsLbToonRoute(km);
-          }
-        }
-      );
-    });
-  },
-
-  _gpsLbToonRoute: function(km) {
-    var el = document.getElementById('gps-lb-result-km');
-    if (el) {
-      el.style.display = '';
-      el.textContent = '\ud83d\uddfa Berekende afstand: ' + km.toString().replace('.', ',') + ' km (fiets)';
-    }
-    var kmEl = document.getElementById('gps-lb-km-manueel');
-    if (kmEl) kmEl.value = km;
-    App._gpsLbRouteKm = km;
-  },
-
-  _gpsLbManueelSla: function() {
-    var kmEl  = document.getElementById('gps-lb-km-manueel');
-    var datEl = document.getElementById('gps-lb-datum');
-    var km    = kmEl ? parseFloat(kmEl.value) : 0;
-    var datum = datEl ? datEl.value : '';
-    if (!km || km <= 0) { App.toast('Voer een geldige afstand in'); return; }
-    App._gpsLbSlaRitOp(km, 'manueel', datum);
-  },
-
-  _gpsLbSlaRitOp: function(km, type, datumOverride) {
-    var uid = _auth.currentUser ? _auth.currentUser.uid : null;
-    if (!uid) { App.toast('Niet ingelogd'); return; }
-    var nu = datumOverride ? new Date(datumOverride) : new Date();
-    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
-    var id   = 'rit_' + Date.now();
-    var van  = App._gpsLbBest[0] || '';
-    var naar = App._gpsLbBest[App._gpsLbBest.length - 1] || '';
-    var via  = App._gpsLbBest.slice(1, -1).filter(Boolean).join(' \u2192 ');
-    var tarief = 0.2287;
-    var totaal = Math.round(km * tarief * 100) / 100;
-    var doc = {
-      id: id,
-      datum:    nu.toISOString().substring(0, 10),
-      datumRit: nu.toLocaleDateString('nl-BE'),
-      van: van, naar: naar, via: via,
-      afstand: km, tarief: tarief, totaal: totaal,
-      opmerking: '', type: type || 'manueel',
-      categorie: 'individueel', actieRef: '',
-      jaar: nu.getFullYear(), maand: maanden[nu.getMonth()],
-      status: 'open'
-    };
-    _db.collection('users').doc(uid).collection('fietsritten').doc(id).set(doc)
-      .then(function() {
-        App._gpsLbRit = doc;
-        App.toast('\u2714 Rit opgeslagen (' + km.toString().replace('.', ',') + ' km)', true);
-        App.gpsLbTab(3);
-        App._gpsLbKoppelRitInfo();
-      })
-      .catch(function(e) { App.toast('Fout: ' + e.message); });
-  },
-
-  _gpsLbKoppelRitInfo: function() {
-    var el = document.getElementById('gps-lb-koppel-rit-info');
-    if (!el || !App._gpsLbRit) return;
-    var r = App._gpsLbRit;
-    el.style.display = '';
-    el.textContent = '\ud83d\udeb2 ' + (r.afstand || 0).toFixed(1).replace('.', ',') + ' km \u2014 ' + (r.datumRit || '') + ' \u2014 koppelen aan:';
-  },
-
-  _gpsLbToggleKoppelType: function(type) {
-    App._gpsLbKoppelType = type;
-    ['ia','ca'].forEach(function(t) {
-      var btn = document.getElementById('gps-lb-koppel-type-' + t);
-      if (btn) btn.classList.toggle('actief', t === type);
-    });
-    var pw = document.getElementById('gps-lb-koppel-persoon-wrap');
-    var aw = document.getElementById('gps-lb-koppel-actie-wrap');
-    if (type === 'ia') {
-      if (pw) pw.style.display = ''; if (aw) aw.style.display = 'none';
-    } else {
-      if (pw) pw.style.display = 'none'; if (aw) aw.style.display = '';
-      App._gpsLbLaadActies();
-    }
-  },
-
-  _gpsLbZoekPersonen: function() {
-    var inp  = document.getElementById('gps-lb-koppel-persoon-inp');
-    var zoek = inp ? inp.value.trim().toLowerCase() : '';
-    var lijst = document.getElementById('gps-lb-koppel-persoon-lijst');
-    if (!lijst) return;
-    var gevonden = DB.personen.filter(function(p) {
-      var naam = ((p.voornaam || '') + ' ' + (p.familienaam || '')).toLowerCase();
-      return !zoek || naam.indexOf(zoek) !== -1;
-    }).slice(0, 8);
-    lijst.innerHTML = gevonden.map(function(p) {
-      return '<div class="gps-lb-persoon-rij" onclick="App._gpsLbKiesPersonen(\'' + p.id + '\')">' +
-        App.esc((p.voornaam || '') + ' ' + (p.familienaam || '')) + '</div>';
-    }).join('') || '<div style="color:var(--zacht);font-size:0.85rem">Geen resultaten</div>';
-  },
-
-  _gpsLbKiesPersonen: function(id) {
-    var p = DB.personen.find(function(x) { return x.id === id; });
-    if (!p) return;
-    App._gpsLbGekozenPersoon = p;
-    var inp = document.getElementById('gps-lb-koppel-persoon-inp');
-    if (inp) inp.value = (p.voornaam || '') + ' ' + (p.familienaam || '');
-    var lijst = document.getElementById('gps-lb-koppel-persoon-lijst');
-    if (lijst) lijst.innerHTML = '';
-    App._gpsLbGenReden();
-  },
-
-  _gpsLbLaadActies: function() {
-    var lijst = document.getElementById('gps-lb-koppel-actie-lijst');
-    if (!lijst) return;
-    var acties = DB.collectief.filter(function(c) { return c.status === 'actief' && !c.module; }).slice(0, 10);
-    lijst.innerHTML = acties.map(function(c) {
-      return '<div class="gps-lb-actie-rij" onclick="App._gpsLbKiesActie(\'' + c.id + '\')">' +
-        App.esc(c.naamVanDeActie || c.id) + '</div>';
-    }).join('') || '<div style="color:var(--zacht);font-size:0.85rem">Geen actieve acties</div>';
-  },
-
-  _gpsLbKiesActie: function(id) {
-    var c = DB.collectief.find(function(x) { return x.id === id; });
-    if (!c) return;
-    App._gpsLbGekozenActie = c;
-    App._gpsLbGenReden();
-  },
-
-  _gpsLbGenReden: function() {
-    var r = App._gpsLbRit;
-    if (!r) return;
-    var km = (r.afstand || 0).toFixed(1).replace('.', ',');
-    var reden = '';
-    if (App._gpsLbKoppelType === 'ia' && App._gpsLbGekozenPersoon) {
-      var p    = App._gpsLbGekozenPersoon;
-      var naam = ((p.voornaam || '') + ' ' + (p.familienaam || '')).trim();
-      reden = 'Individueel \u2014 ' + naam + ' \u2014 ' + (r.van || '') + ' \u2192 ' + (r.naar || '') + ' \u2014 ' + km + ' km';
-    } else if (App._gpsLbKoppelType === 'ca' && App._gpsLbGekozenActie) {
-      var a = App._gpsLbGekozenActie;
-      reden = 'Collectief \u2014 ' + App.esc(a.naamVanDeActie || '') + ' \u2014 ' + (r.van || '') + ' \u2192 ' + (r.naar || '') + ' \u2014 ' + km + ' km';
-    }
-    App._gpsLbRedenStr = reden;
-    var preview = document.getElementById('gps-lb-reden-preview');
-    var tekst   = document.getElementById('gps-lb-reden-tekst');
-    var slaBtn  = document.getElementById('gps-lb-koppel-sla');
-    if (reden) {
-      if (preview) preview.style.display = '';
-      if (tekst)   tekst.textContent = reden;
-      if (slaBtn)  slaBtn.style.display = '';
-    }
-  },
-
-  _gpsLbKoppel: function(id) {
-    var r = DB._fietsritten.find(function(x) { return x.id === id; });
-    if (!r) return;
-    App._gpsLbRit = r;
-    App.gpsLbTab(3);
-    App._gpsLbKoppelRitInfo();
-  },
-
-  _gpsLbKoppelSlaOp: function() {
-    var r = App._gpsLbRit;
-    if (!r || !App._gpsLbRedenStr) { App.toast('Geen rit of koppeling geselecteerd'); return; }
-    var uid = _auth.currentUser ? _auth.currentUser.uid : null;
-    if (!uid) { App.toast('Niet ingelogd'); return; }
-    var actieRef = App._gpsLbKoppelType === 'ca' && App._gpsLbGekozenActie ? App._gpsLbGekozenActie.id : '';
-    _db.collection('users').doc(uid).collection('fietsritten').doc(r.id).update({
-      opmerking: App._gpsLbRedenStr,
-      actieRef:  actieRef,
-      categorie: App._gpsLbKoppelType === 'ca' ? 'collectief' : 'individueel',
-      status:    'gekoppeld'
-    })
-    .then(function() {
-      App.toast('\u2714 Koppeling opgeslagen', true);
-      App._gpsLbRit = null; App._gpsLbGekozenPersoon = null;
-      App._gpsLbGekozenActie = null; App._gpsLbRedenStr = '';
-    })
-    .catch(function(e) { App.toast('Fout: ' + e.message); });
-  },
 
   verwijderCa: function(id, naam) {
     if (!confirm('Wil je "' + naam + '" definitief verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
@@ -4985,74 +4933,17 @@ _collectProjectFotos: function(naam) {
       .catch(function(e) { App.toast('Fout bij verwijderen: ' + e.message); });
   },
 
-  // Logboek
-  renderFietsLogboek: function() {
-    App._vulFietsFilters();
-    var jaarEl  = document.getElementById('fiets-log-jaar');
-    var maandEl = document.getElementById('fiets-log-maand');
-    var jaarF   = jaarEl  ? jaarEl.value  : '';
-    var maandF  = maandEl ? maandEl.value : '';
-    var ritten  = DB._fietsritten.filter(function(r) {
-      if (r.status === 'gearchiveerd') return false;
-      if (jaarF  && String(r.jaar) !== jaarF)  return false;
-      if (maandF && r.maand !== maandF)         return false;
-      return true;
-    }).sort(function(a, b) { return a.datum < b.datum ? 1 : -1; });
+  /* ── Privacy: onthul volledige naam na wachtwoord ── */
+  _ontklaasInit: function(el, volNaam) {
+    privacyCheck(function() {
+      el.textContent = volNaam;
+      el.style.cursor = 'default';
+      el.onclick = null;
+      el.title = '';
+      el.classList.remove('privacy-init');
+    });
+  },
 
-    var totKm = 0, totEur = 0;
-    ritten.forEach(function(r) { totKm += (r.afstand || 0); totEur += (r.totaal || 0); });
-
-    var telEl = document.getElementById('fiets-log-teller');
-    if (telEl) telEl.textContent = ritten.length + ' rit' + (ritten.length !== 1 ? 'ten' : '') +
-      ' \u2014 ' + totKm.toFixed(1).replace('.', ',') + ' km \u2014 ' +
-      '\u20ac\u00a0' + totEur.toFixed(2).replace('.', ',');
-
-    var el = document.getElementById('fiets-logboek-tabel');
-    if (!el) return;
-    if (!ritten.length) {
-      el.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--zacht);padding:20px">Geen ritten gevonden.</td></tr>';
-      return;
-    }
-    el.innerHTML = ritten.map(function(r) {
-      var statusKlasse = r.status === 'gekoppeld' ? 'gps-lb-status-ok' : 'gps-lb-status-open';
-      var statusLabel  = r.status === 'gekoppeld' ? '\u2714 Gekoppeld' : 'Open';
-      var opm = (r.opmerking || '');
-      return '<tr>' +
-        '<td>' + App.esc(r.datumRit || '\u2014') + '</td>' +
-        '<td style="text-align:right;font-weight:600">' + (r.afstand || 0).toFixed(1).replace('.', ',') + ' km' + App._fietsKopBtn((r.afstand || 0).toFixed(1)) + '</td>' +
-        '<td><span class="' + statusKlasse + '">' + statusLabel + '</span></td>' +
-        '<td class="gps-lb-reden-cel">' + (opm ? App.esc(opm) + App._fietsKopBtn(opm) : '<button class="gps-lb-koppel-btn" onclick="App._gpsLbKoppel(\'' + r.id + '\')">🔗 Koppelen</button>') + '</td>' +
-        '<td><button class="gps-lb-del-btn" onclick="App._verwijderRit(\'' + r.id + '\')" title="Verwijderen">\ud83d\uddd1</button></td>' +
-      '</tr>';
-    }).join('');
-  },
-  _fietsKopBtn: function(tekst) {
-    if (!tekst) return '';
-    return '<button class="fiets-kop-btn" onclick="App.kopieerTekst(\'' +
-      tekst.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" title="Kopi\u00ebren">\ud83d\udccb</button>';
-  },
-  _vulFietsFilters: function() {
-    var jaarEl  = document.getElementById('fiets-log-jaar');
-    var maandEl = document.getElementById('fiets-log-maand');
-    if (!jaarEl || !maandEl) return;
-    var hj = new Date().getFullYear();
-    var hv = jaarEl.value || String(hj);
-    var jHtml = '';
-    for (var j = hj; j >= hj - 2; j--) {
-      jHtml += '<option value="' + j + '"' + (String(j) === hv ? ' selected' : '') + '>' + j + '</option>';
-    }
-    jaarEl.innerHTML = jHtml;
-    var maanden = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
-    var hm = maandEl.value;
-    maandEl.innerHTML = '<option value="">Alle maanden</option>' +
-      maanden.map(function(m) {
-        return '<option value="' + m + '"' + (m === hm ? ' selected' : '') + '>' + m + '</option>';
-      }).join('');
-  },
-  _verwijderRit: function(id) {
-    DB.slaFietsOp(DB._fietsritten.filter(function(r) { return r.id !== id; }));
-    App.renderFietsLogboek();
-  },
   kopieerTekst: function(tekst) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(tekst)
@@ -5072,19 +4963,6 @@ _collectProjectFotos: function(naam) {
     catch(e) { App.toast('Kopi\u00ebren mislukt'); }
     document.body.removeChild(ta);
   },
-  printLogboek: function() { window.print(); },
-  exportFietsExcel: function() {
-    var ritten = DB._fietsritten.filter(function(r) { return r.status !== 'gearchiveerd'; });
-    if (!ritten.length) { App.toast('Geen ritten om te exporteren'); return; }
-    var rijen = [['Datum','Van','Naar','Via','Afstand (km)','Tarief (\u20ac/km)','Totaal (\u20ac)','Opmerking','Type','Categorie']];
-    ritten.forEach(function(r) {
-      rijen.push([r.datumRit, r.van, r.naar, r.via || '', r.afstand, r.tarief, r.totaal, r.opmerking, r.type, r.categorie]);
-    });
-    var ws = XLSX.utils.aoa_to_sheet(rijen);
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Fietsritten');
-    XLSX.writeFile(wb, 'fietsritten_' + new Date().getFullYear() + '.xlsx');
-  }
 
 };
 

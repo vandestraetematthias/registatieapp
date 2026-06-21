@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.0.5 | **Datum**: 2026-04-28
+**Versie**: 3.1.0 | **Datum**: 2026-06-21
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.0.5`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.1.0`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -115,29 +115,6 @@ Extra velden per type:
 - **Overleg**: `datum`
 - **Activiteit**: `locatie`, `type`, `uitgaven`, `inkomsten`, `participatie` (array), `doel` (array), `impact` (array — conditioneel)
 
-### 3.4 Collectie `fietsritten`
-
-Eén document per fietsrit (vergoeding). Pad: `users/{uid}/fietsritten`.
-
-| Veld | Type | Waarden / Opmerking |
-|---|---|---|
-| `id` | string | UUID |
-| `datum` | string | ISO timestamp (aanmaakmoment) |
-| `datumRit` | string | `DD/MM/YYYY` (display) |
-| `van` | string | Vertrekadres |
-| `naar` | string | Bestemmingsadres |
-| `via` | string | Optioneel tussenadres |
-| `afstand` | number | Kilometers (OSRM of GPS of manueel) |
-| `tarief` | number | Standaard `0.2287` (€/km) |
-| `totaal` | number | `afstand × tarief` |
-| `opmerking` | string | Rydoo-tekst, bv. "Individueel — V.F." |
-| `type` | string | `'gps'` / `'route'` / `'manueel'` |
-| `categorie` | string | `'individueel'` / `'collectief'` |
-| `actieRef` | string | ID van de gekoppelde collectieve actie |
-| `jaar` | number | Jaar van de rit |
-| `maand` | string | `Januari` … `December` |
-| `status` | string | `'open'` / `'gekoppeld'` / `'gearchiveerd'` |
-
 ---
 
 ## 4. HTML PAGINASTRUCTUUR
@@ -166,10 +143,9 @@ Alle pagina's zijn `<div class="pagina" id="pg-*">`. Actieve pagina krijgt klass
 | `pg-jaarplan-mod` | Jaarplan module details |
 | `pg-persoon-detail` | Persoon bewerken / detail |
 | `pg-dashboard` | Dashboard (KPI + analyses) |
-| `pg-fiets-gps` | Fietsritten: 3 tabs (GPS & Invoer / Logboek / Koppelen) |
-| `pg-persoon-db` | Persoonsdatabase: zoekbalk, alfabetische lijst, uitklapbaar dossier + SVG donut-analyse |
+| `pg-persoon-db` | Database: sub-tabs Personen + Collectieve Acties, uitklapbare dossiers met bewerkfuncties |
 
-**Bottom navigation** (`#bottom-nav`): knoppen met `data-page` naar pg-start, pg-individueel-start, pg-collectief-start, pg-jaarplan, pg-dashboard.
+**Bottom navigation** (`#bottom-nav`): 6 knoppen met `data-page` naar pg-start, pg-individueel-start, pg-collectief-start, pg-persoon-db (Database), pg-jaarplan, pg-dashboard.
 
 ---
 
@@ -187,9 +163,6 @@ Sleutelmethoden:
 - `DB.volgNummer()` — Geeft volgend persoonsnummer
 - `DB.actieNamen()` — Unieke namen van actieve collectieve acties
 - `DB.slaPerOp(lijst)` / `slaIndOp(lijst)` / `slaColOp(lijst)` — Schrijft gewijzigde records naar Firestore
-- `DB.slaFietsOp(lijst)` — Schrijft fietsritten naar Firestore
-- `DB.fietsritten` — getter voor gecachte `_fietsritten` array
-- Fietsritten-listener start apart (telt NIET mee in `_laadGereed`), refresht `pg-fiets-gps` bij wijziging
 
 ### 5.2 Object `Auth` — authenticatie
 
@@ -214,15 +187,21 @@ Sleutelmethoden:
 - `App._dashMedia()` — rendert `#dash-media` als klikbaar thumbnail-grid (`.dash-thumb-grid`); elke `<img class="dash-thumb">` uit `DB.collectief[].fotoUrl`
 - `App._dashFotoVergroot(url, naam)` — opent bestaande `#lightbox` met foto + zet `#lightbox-caption` op actienaam
 
-#### Persoonsdatabase (v3.0.5)
-- `App.renderPersoonDb()` — hoofdrender voor `pg-persoon-db`, roept `_dbRenderLijst('')` aan
-- `App._dbZoek()` — live filter op `#pdb-zoekbalk` invoer → `_dbRenderLijst(q)`
-- `App._dbRenderLijst(zoek)` — rendert `#pdb-lijst`: personen gesorteerd familienaam/voornaam, met alfabetische scheidingslabels (`.pdb-alfa-label`), persoonsrijen (`.pdb-rij`) en lege dossier-containers (`.pdb-dossier`, display none)
+#### Database pagina (v3.1.0) — `pg-persoon-db`
+- Twee sub-tabs: **Personen** en **Collectieve Acties**, gewisseld via `App.dbTab(tab)`
+- `App.renderPersoonDb()` — hoofdrender, roept `_dbRenderLijst('')` aan (en `_cdbRenderLijst` als collectief-tab actief)
+- `App.dbTab(tab)` — wissel sub-tab: toont/verbergt `db-panel-personen` / `db-panel-collectief`, activeert tab-knoppen
+- `App._dbZoek()` — live filter op `#pdb-zoekbalk` → `_dbRenderLijst(q)`
+- `App._dbRenderLijst(zoek)` — rendert `#pdb-lijst`: personen gesorteerd familienaam/voornaam, met alfabetische scheidingslabels (`.pdb-alfa-label`), persoonsrijen (`.pdb-rij`) en lege dossier-containers
 - `App._dbOpenPersoon(id)` — toggle dossier: haalt persoon + acties op, vult `.pdb-dossier` via `_dbDossierHTML()`
-- `App._dbDossierHTML(persoon, acties)` — genereert HTML met: tellerblokjes, profieltabel, Bewerken-knop, actiehistoriek, SVG donut-analyse per levensdomein (≥2 acties vereist)
+- `App._dbDossierHTML(persoon, acties)` — genereert HTML met: tellerblokjes, profieltabel, Bewerken-knop (`laadPerBewerk`), actiehistoriek, SVG donut-analyse per levensdomein (≥2 acties vereist)
   - Donuts: 2× SVG `viewBox="0 0 200 200"` met `<circle stroke-dasharray>` techniek, R=70, stroke-width=30
   - Donut 1: acties per domein | Donut 2: uren per domein
   - Kleuren: groen, blauw, oranje, paars, rood, herhaal met 60% opacity
+- `App._cdbZoek()` — live filter op `#cdb-zoekbalk` → `_cdbRenderLijst(q)`
+- `App._cdbRenderLijst(zoek)` — rendert `#cdb-lijst`: hoofdacties (module == null) gesorteerd alfabetisch op naam, met scheidingslabels en uitklapbare dossiers
+- `App._cdbOpenActie(id)` — toggle collectief dossier: laadt hoofdactie + bijhorende modules, vult via `_cdbDossierHTML()`
+- `App._cdbDossierHTML(actie, modules)` — genereert HTML: tellers (bewoners/nieuw/vrijwilligers/modules), profieltabel, Bewerken-knop, modulelijst per type (Logistiek/Overleg/Activiteit) met datum, notitie, kosten, foto-thumbnail
 
 #### Navigatie
 - `App.nav(pagina)` — Wisselt actieve pagina, scrollt naar top, triggert renders
@@ -265,57 +244,6 @@ Sleutelmethoden:
 - `App.exportBackup()` — Volledige backup CSV
 - `App.exportBuurtwerkPDF()` — Jaarrapport PDF
 - `App.importCSVDialog()` — CSV import
-
-#### Fietsritten module (v3.0.0) — Standalone pagina pg-fiets-gps
-
-**Architectuur**: Volledig los van de wizards (ia/ca). Eigen pagina `pg-fiets-gps` met 3 tabs:
-1. **Tab 1 — GPS & Invoer**: GPS tracking starten/stoppen, route-adressen invullen, Google Maps afstand berekenen, manueel km + datum invoeren en opslaan
-2. **Tab 2 — Logboek**: Gefilterd overzicht van ritten (Datum, km, Status, Reden), print + Excel export
-3. **Tab 3 — Koppelen**: Gekoppeld een opgeslagen rit aan een individuele persoon of collectieve actie, Rydoo-opmerking genereren
-
-**State-variabelen**:
-- `_gpsLbWatchId` — geolocation watch ID
-- `_gpsLbRoute` — array van {lat, lon} punten
-- `_gpsLbKm` — opgetelde kilometer teller
-- `_gpsLbActief` — boolean GPS loopt
-- `_gpsLbWakeLock` — Wake Lock API object
-- `_gpsLbBest` — array van adresstrings (Van, Via…, Naar)
-- `_gpsLbRit` — meest recent opgeslagen rit-document
-- `_gpsLbGekozenPersoon`, `_gpsLbGekozenActie` — geselecteerde koppeling
-- `_gpsLbRedenStr` — gegenereerde Rydoo-opmerking
-- `_gpsLbRouteKm` — afstand berekend via Google Maps
-- `_gpsLbKoppelType` — `'ia'` of `'ca'`
-
-**Functies (nieuw)**:
-- `App.renderFietsGps()` — init GPS-pagina (tab 1 actief, datum default vandaag, renderFietsLogboek aanroepen)
-- `App.gpsLbTab(n)` — wissel tab 1/2/3
-- `App._gpsLbStartGps()` / `_gpsLbStopGps()` — GPS tracking (Wake Lock, Haversine 20m drempel, km naar invoerveld na stop)
-- `App._haversine(lat1,lon1,lat2,lon2)` — Haversine formula km
-- `App._gpsLbRenderBest()` — renders route-adres inputs met Google Places Autocomplete (BE)
-- `App._gpsLbVoegBestemmingToe()` / `_gpsLbVerwijderBest(idx)` / `_gpsLbSyncBest(idx, val)` — route beheer
-- `App._gpsLbBerekenRoute()` — Google Maps DistanceMatrixService (BICYCLING), per segment
-- `App._gpsLbToonRoute(km)` — toont resultaat, vult km-invoer
-- `App._gpsLbManueelSla()` — slaat manuele km + datum op
-- `App._gpsLbSlaRitOp(km, type, datumOverride)` — schrijft fietsrit naar Firestore, opent tab 3
-- `App._gpsLbKoppelRitInfo()` — toont rit-info in tab 3
-- `App._gpsLbToggleKoppelType(type)` — 'ia' / 'ca' wissel
-- `App._gpsLbZoekPersonen()` / `_gpsLbKiesPersonen(id)` — zoek + selecteer persoon
-- `App._gpsLbLaadActies()` / `_gpsLbKiesActie(id)` — laad + selecteer collectieve actie
-- `App._gpsLbGenReden()` — genereert Rydoo-tekst: `"Individueel — V.F. — Van → Naar — X,X km"` of `"Collectief — Actienaam — Van → Naar — X,X km"`
-- `App._gpsLbKoppelSlaOp()` — update Firestore: opmerking, actieRef, categorie, status `'gekoppeld'`
-- `App._gpsLbKoppel(id)` — laad specifieke rit vanuit logboek naar tab 3
-- `App.verwijderCa(id, naam)` — verwijdert collectieve actie definitief (confirm eerst)
-
-**Google Maps API**: `AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc` — geladen als `async defer` script in `<head>` met `&libraries=places`.
-
-**Logboek** (`pg-fiets-gps` Tab 2):
-- `App.renderFietsLogboek()` — rendert gefilterde tabel
-- Kolommen: Datum, km, Status (`open`/`gekoppeld`), Reden/Opmerking, Verwijder
-- Status `open` → toont "🔗 Koppelen" knop → `App._gpsLbKoppel(id)` → tab 3
-- Status `gekoppeld` → toont opmerking + copy-knop
-- `App.printLogboek()`, `App.exportFietsExcel()`, `App._verwijderRit(id)` — behouden
-
-**Navigatieknop**: `pg-jaarplan` → knop "🚲 Fietsritten" → `App.nav('pg-fiets-gps')`
 
 #### Dashboard (hoofdfuncties)
 - `App.renderDashboard()` — Triggert alle dashboard-renders
@@ -416,28 +344,16 @@ Score 0–3 per persoon, 1 punt per criterium:
 - Divider: `dash-divider`
 - Leeg: `dash-leeg`
 
-**Fietsritten CSS-klassen (v3.0.0, prefix `gps-lb-`)**:
-- `gps-lb-tabs`, `gps-lb-tab-btn` — tab-balk en tab-knoppen (`.actief` = groen gevuld)
-- `gps-lb-start-btn` — dashed groene GPS-startknop (hover → gevuld groen)
-- `gps-lb-km-display` — live km-display tijdens GPS (groen achtergrond)
-- `gps-lb-sam-rij` — flex rij voor km + datum manuele invoer
-- `gps-lb-sla-btn`, `gps-lb-koppel-sla-btn` — groene opslaan/koppel knoppen
-- `gps-lb-add-btn` — blauw "+ Bestemming toevoegen" knop
-- `gps-lb-bereken-btn` — groene "Bereken via Google Maps" knop
-- `gps-lb-result-km` — groene resultaat-balk met berekende afstand
-- `gps-lb-seg-rij`, `gps-lb-seg-lbl`, `gps-lb-adres-inp`, `gps-lb-seg-del` — route-segment rijen (Van/Via/Naar)
-- `gps-lb-tabel` — logboek tabel (5 kolommen: Datum, km, Status, Reden, Acties)
-- `gps-lb-status-ok` — groene pill voor "gekoppeld" status
-- `gps-lb-status-open` — oranje pill voor "open" status
-- `gps-lb-reden-cel` — tabelcel voor opmerking (max-width, word-break)
-- `gps-lb-koppel-btn` — blauw "🔗 Koppelen" knop in tabel
-- `gps-lb-del-btn` — verwijder knop in tabel
-- `fiets-kop-btn` — copy-knop (bewaard uit v2.x)
-- `fiets-log-teller` — teller tekst boven logboek (bewaard)
-- `gps-lb-persoon-rij`, `gps-lb-actie-rij` — klikbare rijen in koppelen-tab
-- `gps-lb-reden-preview` — groen achtergrondvak voor gegenereerde Rydoo-opmerking
-- `gps-lb-rit-info-rij` — blauw info-banneertje met rit-details in koppelen-tab
-- `@media print` — verbergt alles behalve `pg-fiets-gps` + panel 2 (logboek)
+**Database CSS-klassen (v3.1.0)**:
+- `db-tabs` — flex balk met sub-tabknoppen, sticky top, border-bottom
+- `db-tab-btn` — tab-knop, `.actief` = groene border-bottom + groene tekst
+- `db-panel` — tab-inhoud container, overflow-y auto
+- `pdb-zoek-wrap` — padding wrapper voor zoekbalk
+- `pdb-sectie-kop` — sectietitel in dossier (uppercase, grijs)
+- `pdb-dossier-inner` — inner wrapper met padding voor dossier-inhoud
+- `pdb-actie-info` — info blok per module in collectief dossier
+- `pagina-kop` — paginakop met h2 en padding
+- `.pagina` — overflow-y: auto (scroll fix voor alle pagina's)
 
 **Drill-down klassen (v2.9.4)**:
 - `dash-ind-drill-panel` — container voor N1/N2
@@ -516,24 +432,11 @@ pg-dashboard
 1. `pg-col-actie-wiz` → `App.slaCaOp()` → hoofdactie (`module: null`)
 2. `pg-collectief-module` → `App.startModule(type)` → module-formulier → sub-record (`module: 'Logistiek'` etc.)
 
-### Fietsrit registreren (v3.0.0)
-1. `pg-jaarplan` → "🚲 Fietsritten" → `App.nav('pg-fiets-gps')` → tab 1 actief
-2. **GPS**: klik "🚲 Start GPS-rit" → tracking start → km loopt live → "⏹ Stop GPS" → km vult invoerveld
-3. **Route**: adressen invoeren (Google Places Autocomplete) → "🗺 Bereken via Google Maps" → km ingevuld
-4. **Manueel**: km + datum invoeren
-5. "💾 Opslaan als rit" → `App._gpsLbManueelSla()` / `_gpsLbSlaRitOp()` → record in Firestore → tab 3
-
-### Fietsrit koppelen (v3.0.0)
-1. Tab 3 (of via "🔗 Koppelen" knop in logboek) → rit-info getoond
-2. Kies type: Individueel → zoek persoon → selecteer; of Collectief → kies actie
-3. Rydoo-opmerking gegenereerd: `"Individueel — V.F. — Van → Naar — X km"`
-4. "🔗 Koppeling opslaan" → Firestore update: `opmerking`, `actieRef`, `status: 'gekoppeld'`
-
-### Fietslogboek bekijken (v3.0.0)
-1. `pg-fiets-gps` → tab 2 → `App.renderFietsLogboek()` → jaar/maand filteren
-2. Kolommen: Datum, km, Status (open/gekoppeld), Reden/Opmerking
-3. Open ritten: "🔗 Koppelen" knop; gekoppeld: opmerking + copy-knop
-4. Print (A4) of Excel export
+### Database pagina (v3.1.0)
+1. Bottom nav → "Database" → `App.nav('pg-persoon-db')` → sub-tab Personen actief
+2. **Personen**: zoekbalk → gefilterde alfabetische lijst → klik rij → uitklapbaar dossier met tellerblokjes, profiel, traject, donuts
+3. **Collectieve Acties**: klik tab → `App.dbTab('collectief')` → `_cdbRenderLijst('')` → klik actie → modules tonen
+4. Bewerken-knop in dossier → `App.laadPerBewerk(id)` of `App.laadCaBewerk(id)` → bewerkingsmodus
 
 ### Dashboard refreshen
 1. `App.renderDashboard()` → `_dashData()` → alle render-functies
@@ -545,6 +448,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.1.0` | Verwijdering fietsapp (pg-fiets-gps, Google Maps API, gps-lb functies/CSS); Database-pagina als 6e hoofdtab met sub-tabs Personen + Collectieve Acties, uitklapbare dossiers, bewerkfuncties en scroll-fixes |
 | `v3.0.5` | Dashboard foto-thumbnails (klikbaar grid, lightbox-caption); Persoonsdatabase `pg-persoon-db` met zoekbalk, alfabetische lijst, uitklapbaar dossier + SVG donut-analyse per levensdomein |
 | `v3.0.4` | Bugfix `renderColStart`: module-subtitel toont nu datum+locatie/type/notitie i.p.v. herhaalde actienaam |
 | `v3.0.3` | Recente acties pg-start: modules zichtbaar, rijke meta per type, geen limiet |
@@ -572,4 +476,4 @@ pg-dashboard
 - **HTML in JS**: template strings gebouwd via string concatenatie, altijd `App.esc()` voor user data
 - **Onclick in gegenereerde HTML**: `onclick="App.methodNaam(arg)"` direct in de string
 - **Firebase writes**: altijd via `DB.sla*Op()` methoden die `_syncLijst()` gebruiken
-- **Versie bumpen**: in `app.js` (regel 9: `APP_VERSION`), `index.html` (css/js query strings + footer + `CURRENT_VERSION`), `service-worker.js` (`CACHE_NAAM`)
+- **Versie bumpen**: in `app.js` (regel 9: `APP_VERSION`), `index.html` (css/js query strings + footer + `CURRENT_VERSION`), `service-worker.js` (`CACHE_NAAM`), `CONTEXT_CLAUDE.md` (versie + datum bovenaan)

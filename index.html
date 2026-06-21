@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=3.0.5">
+<link rel="stylesheet" href="style.css?v=3.1.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -159,17 +159,33 @@
      2B-DB. PERSOONSDATABASE
 ══════════════════════════════════════════ -->
 <div class="pagina" id="pg-persoon-db">
-  <div class="wizard-wrap sectie-ind">
-    <div class="terug-link">
-      <button onclick="App.nav('pg-individueel-start')">← Individueel</button>
+  <div class="pagina-kop">
+    <h2>Database</h2>
+  </div>
+  <!-- Sub-tab navigatie -->
+  <div class="db-tabs">
+    <button class="db-tab-btn actief" onclick="App.dbTab('personen')" id="db-tab-personen">
+      <i data-lucide="users"></i> Personen
+    </button>
+    <button class="db-tab-btn" onclick="App.dbTab('collectief')" id="db-tab-collectief">
+      <i data-lucide="calendar"></i> Collectieve Acties
+    </button>
+  </div>
+
+  <!-- Tab: Personen -->
+  <div id="db-panel-personen" class="db-panel">
+    <div class="pdb-zoek-wrap">
+      <input type="search" id="pdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op naam..." oninput="App._dbZoek()">
     </div>
-    <div class="wiz-header">
-      <div class="wiz-sectie-icon"><i data-lucide="database"></i></div>
-      <h1>Persoonsbibliotheek</h1>
-      <p>Alle geregistreerde personen en hun trajecten</p>
-    </div>
-    <input type="search" class="pdb-zoek" id="pdb-zoekbalk" placeholder="🔍 Zoek op naam…" oninput="App._dbZoek()">
     <div id="pdb-lijst"></div>
+  </div>
+
+  <!-- Tab: Collectieve Acties -->
+  <div id="db-panel-collectief" class="db-panel" style="display:none">
+    <div class="pdb-zoek-wrap">
+      <input type="search" id="cdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op actienaam..." oninput="App._cdbZoek()">
+    </div>
+    <div id="cdb-lijst"></div>
   </div>
 </div>
 
@@ -1146,7 +1162,6 @@
         <button class="blauw" onclick="App.nav('pg-rapport-collectief')"><i data-lucide="users"></i> Collectief</button>
         <button class="bruin" onclick="App.nav('pg-archief')"><i data-lucide="archive"></i> Archief</button>
         <button class="bruin" onclick="App.nav('pg-jaarplan-mod')"><i data-lucide="bar-chart-2"></i> Rapporten</button>
-        <button class="groen" onclick="App.nav('pg-fiets-gps')">🚲 Fietsritten</button>
       </div>
 
       <hr class="divider">
@@ -1430,16 +1445,17 @@
     </div>
 
     <div class="dash-kpi-rij">
-      <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-personen">—</div><div class="dash-kpi-l">Aantal ind. personen</div></div>
-      <div class="dash-kpi"><div class="dash-kpi-n blauw" id="kpi-ind">—</div><div class="dash-kpi-l">Ind. acties</div></div>
+      <div class="dash-kpi dash-kpi-klikbaar" onclick="App._dashKpiDrill('personen')" title="Klik voor persoonlijst"><div class="dash-kpi-n" id="kpi-personen">—</div><div class="dash-kpi-l">Aantal ind. personen</div></div>
+      <div class="dash-kpi dash-kpi-klikbaar" onclick="App._dashKpiDrill('ind')" title="Klik voor actielijst"><div class="dash-kpi-n blauw" id="kpi-ind">—</div><div class="dash-kpi-l">Ind. acties</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-uren">—</div><div class="dash-kpi-l">Uren ind.</div></div>
-      <div class="dash-kpi"><div class="dash-kpi-n oranje" id="kpi-col">—</div><div class="dash-kpi-l">Col. acties</div></div>
+      <div class="dash-kpi dash-kpi-klikbaar" onclick="App._dashKpiDrill('col')" title="Klik voor collectieve acties"><div class="dash-kpi-n oranje" id="kpi-col">—</div><div class="dash-kpi-l">Col. acties</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n paars" id="kpi-bereik">—</div><div class="dash-kpi-l">Bereik col.</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n" id="kpi-nieuw">—</div><div class="dash-kpi-l">Nieuwe bew.</div></div>
-      <div class="dash-kpi"><div class="dash-kpi-n blauw" id="kpi-vrijw">—</div><div class="dash-kpi-l">Vrijwilligers</div></div>
-      <div class="dash-kpi"><div class="dash-kpi-n rood" id="kpi-signalen">—</div><div class="dash-kpi-l">Signalen</div></div>
+      <div class="dash-kpi dash-kpi-klikbaar" onclick="App._dashKpiDrill('vrijw')" title="Klik voor vrijwilligerslijst"><div class="dash-kpi-n blauw" id="kpi-vrijw">—</div><div class="dash-kpi-l">Vrijwilligers</div></div>
+      <div class="dash-kpi dash-kpi-klikbaar" onclick="App._dashKpiDrill('signalen')" title="Klik voor signalenlijst"><div class="dash-kpi-n rood" id="kpi-signalen">—</div><div class="dash-kpi-l">Signalen</div></div>
       <div class="dash-kpi"><div class="dash-kpi-n oranje" id="kpi-toeleiding">—</div><div class="dash-kpi-l">Toegeleid</div></div>
     </div>
+    <div id="dash-kpi-drill" class="dash-ind-drill-panel" style="display:none;margin-bottom:10px"></div>
 
     <div class="dash-sec-kop"><span class="dash-badge groen-badge">👤 Individueel</span></div>
 
@@ -1623,127 +1639,6 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     FIETSRITTEN GPS & LOGBOEK
-══════════════════════════════════════════ -->
-<div class="pagina" id="pg-fiets-gps">
-  <div class="wizard-wrap sectie-rap">
-    <div class="terug-link">
-      <button onclick="App.nav('pg-jaarplan')">← Rapporten</button>
-    </div>
-    <div class="wiz-header">
-      <div class="wiz-sectie-icon">🚲</div>
-      <h1>Fietsritten</h1>
-      <p>GPS-registratie &amp; Rydoo-logboek</p>
-    </div>
-
-    <!-- Tabs -->
-    <div class="gps-lb-tabs">
-      <button class="gps-lb-tab-btn actief" id="gps-lb-tab-1" onclick="App.gpsLbTab(1)">📍 GPS &amp; Invoer</button>
-      <button class="gps-lb-tab-btn" id="gps-lb-tab-2" onclick="App.gpsLbTab(2)">📋 Logboek</button>
-      <button class="gps-lb-tab-btn" id="gps-lb-tab-3" onclick="App.gpsLbTab(3)">🔗 Koppelen</button>
-    </div>
-
-    <!-- Tab 1: GPS & Invoer -->
-    <div id="gps-lb-panel-1">
-      <div class="kaart">
-        <div class="kaart-titel">GPS-tracking</div>
-        <button class="gps-lb-start-btn" id="gps-lb-gps-btn" onclick="App._gpsLbStartGps()">🚲 Start GPS-rit</button>
-        <div class="gps-lb-km-display" id="gps-lb-km-display" style="display:none">
-          📍 <strong id="gps-lb-km-val">0,0</strong> km — rit loopt…
-          <button type="button" style="margin-left:12px;background:var(--rood);color:white;border:none;border-radius:6px;padding:4px 12px;cursor:pointer" onclick="App._gpsLbStopGps()">⏹ Stop GPS</button>
-        </div>
-      </div>
-
-      <div class="kaart" style="margin-top:12px">
-        <div class="kaart-titel">Route &amp; Afstand</div>
-        <div id="gps-lb-best-lijst"></div>
-        <button class="gps-lb-add-btn" onclick="App._gpsLbVoegBestemmingToe()">+ Bestemming toevoegen</button>
-        <div style="margin-top:10px">
-          <button class="gps-lb-bereken-btn" onclick="App._gpsLbBerekenRoute()">🗺 Bereken via Google Maps</button>
-        </div>
-        <div class="gps-lb-result-km" id="gps-lb-result-km" style="display:none"></div>
-      </div>
-
-      <div class="kaart" style="margin-top:12px">
-        <div class="kaart-titel">Manuele invoer</div>
-        <div class="gps-lb-sam-rij">
-          <label>km</label>
-          <input type="number" id="gps-lb-km-manueel" step="0.1" min="0" placeholder="0.0" style="width:100px">
-          <label style="margin-left:12px">Datum</label>
-          <input type="date" id="gps-lb-datum" style="width:150px">
-        </div>
-        <button class="gps-lb-sla-btn" onclick="App._gpsLbManueelSla()">💾 Opslaan als rit</button>
-      </div>
-    </div>
-
-    <!-- Tab 2: Logboek -->
-    <div id="gps-lb-panel-2" style="display:none">
-      <div class="kaart">
-        <div class="kaart-titel">Filter &amp; Acties</div>
-        <div class="filter-balk" style="margin-bottom:14px">
-          <span class="filter-lbl">Filter</span>
-          <div class="filter-groep">
-            <label class="filter-label-klein">Jaar</label>
-            <select id="fiets-log-jaar" onchange="App.renderFietsLogboek()"></select>
-          </div>
-          <div class="filter-groep">
-            <label class="filter-label-klein">Maand</label>
-            <select id="fiets-log-maand" onchange="App.renderFietsLogboek()"></select>
-          </div>
-        </div>
-        <div id="fiets-log-teller" class="fiets-log-teller"></div>
-        <div class="actie-rij" style="margin-top:12px">
-          <button onclick="App.printLogboek()">🖨 Afdrukken (A4)</button>
-          <button class="blauw" onclick="App.exportFietsExcel()">📥 Excel export</button>
-        </div>
-      </div>
-      <div class="kaart" style="margin-top:16px;overflow-x:auto" id="fiets-logboek-kaart">
-        <div class="kaart-titel">Rittenlijst</div>
-        <table class="gps-lb-tabel">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th style="text-align:right">km</th>
-              <th>Status</th>
-              <th>Reden / Opmerking</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="fiets-logboek-tabel"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Tab 3: Koppelen -->
-    <div id="gps-lb-panel-3" style="display:none">
-      <div class="kaart">
-        <div class="kaart-titel">Rit koppelen aan activiteit</div>
-        <div id="gps-lb-koppel-rit-info" class="gps-lb-rit-info-rij" style="display:none"></div>
-        <div style="margin-bottom:10px">
-          <button class="gps-lb-tab-btn" id="gps-lb-koppel-type-ia" onclick="App._gpsLbToggleKoppelType('ia')" style="margin-right:6px">Individueel</button>
-          <button class="gps-lb-tab-btn" id="gps-lb-koppel-type-ca" onclick="App._gpsLbToggleKoppelType('ca')">Collectief</button>
-        </div>
-        <div id="gps-lb-koppel-persoon-wrap" style="display:none">
-          <div class="vraag-label">Persoon</div>
-          <input type="text" id="gps-lb-koppel-persoon-inp" placeholder="Zoek naam…" oninput="App._gpsLbZoekPersonen()" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">
-          <div id="gps-lb-koppel-persoon-lijst"></div>
-        </div>
-        <div id="gps-lb-koppel-actie-wrap" style="display:none">
-          <div class="vraag-label">Actie</div>
-          <div id="gps-lb-koppel-actie-lijst"></div>
-        </div>
-        <div class="gps-lb-reden-preview" id="gps-lb-reden-preview" style="display:none">
-          <div class="vraag-label">Gegenereerde Rydoo-opmerking</div>
-          <div id="gps-lb-reden-tekst" style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:0.85rem;word-break:break-all"></div>
-          <button style="margin-top:6px;background:transparent;border:1px solid var(--groen);color:var(--groen);padding:4px 10px;border-radius:6px;cursor:pointer" onclick="App.kopieerTekst(document.getElementById('gps-lb-reden-tekst').textContent)">📋 Kopieer</button>
-        </div>
-        <button class="gps-lb-koppel-sla-btn" id="gps-lb-koppel-sla" onclick="App._gpsLbKoppelSlaOp()" style="display:none">🔗 Koppeling opslaan</button>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="bn-item actief" data-page="pg-start" onclick="App.nav('pg-start')">
@@ -1758,6 +1653,10 @@
     <i data-lucide="users"></i>
     <span>Collectief</span>
   </button>
+  <button class="bn-item" data-page="pg-persoon-db" onclick="App.nav('pg-persoon-db')">
+    <i data-lucide="database"></i>
+    <span>Database</span>
+  </button>
   <button class="bn-item" data-page="pg-jaarplan" onclick="App.nav('pg-jaarplan')">
     <i data-lucide="bar-chart-2"></i>
     <span>Rapporten</span>
@@ -1766,21 +1665,13 @@
     <i data-lucide="layout-dashboard"></i>
     <span>Dashboard</span>
   </button>
-  <button class="bn-item" data-page="pg-fiets-gps" onclick="App.nav('pg-fiets-gps')">
-    <i data-lucide="bike"></i>
-    <span>Ritten</span>
-  </button>
-  <button class="bn-item" data-page="pg-archief" onclick="App.nav('pg-archief')">
-    <i data-lucide="archive"></i>
-    <span>Archief</span>
-  </button>
 </nav>
 
-<script src="app.js?v=3.0.5"></script>
+<script src="app.js?v=3.1.0"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '3.0.5';
+    var CURRENT_VERSION = '3.1.0';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);
@@ -1827,7 +1718,6 @@
     });
   }
 </script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARXw1vzjH8e0kMsR2zhLpfNh5rkOh1wuc&libraries=places&callback=App.initGoogleMaps" async></script>
-<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.0.5</footer>
+<footer style="text-align:center;padding:4px;font-size:10px;color:#aaa;position:fixed;bottom:0;left:0;right:0;pointer-events:none;">v3.1.0</footer>
 </body>
 </html>

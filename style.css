@@ -821,6 +821,8 @@ tr:nth-child(even) td { background: #fafaf9; }
 .dash-sub         { font-size:clamp(1rem,3vw,1.15rem); font-weight:600; color:rgba(255,255,255,0.90); text-shadow:0 1px 8px rgba(0,0,0,0.55) }
 .dash-kpi-rij     { display:grid; grid-template-columns:repeat(auto-fit,minmax(85px,1fr)); gap:8px; margin-bottom:18px }
 .dash-kpi         { background:var(--glas); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); border:1px solid var(--glas-rand); border-radius:12px; padding:12px 8px; text-align:center; box-shadow:0 4px 16px rgba(0,0,0,0.1) }
+.dash-kpi-klikbaar { cursor:pointer; transition:transform .15s, box-shadow .15s }
+.dash-kpi-klikbaar:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.18) }
 .dash-kpi-n       { font-size:1.5rem; font-weight:700; color:var(--groen); line-height:1; margin-bottom:3px }
 .dash-kpi-n.blauw { color:var(--blauw) }
 .dash-kpi-n.oranje{ color:var(--oranje) }
@@ -1051,194 +1053,6 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 @media (hover: hover) { .uitlog-btn:hover { border-color: var(--rood); color: var(--rood); } }
 
-/* ══ FIETSRITTEN v3.0.0 — GPS & LOGBOEK ══ */
-
-/* Tabs */
-.gps-lb-tabs {
-  display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap;
-}
-.gps-lb-tab-btn {
-  padding: 8px 18px; border-radius: 8px; border: 1.5px solid var(--rand);
-  background: #fff; color: var(--zacht); font-family: 'Poppins', sans-serif;
-  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all .15s;
-}
-.gps-lb-tab-btn.actief {
-  background: var(--groen); color: #fff; border-color: var(--groen);
-}
-
-/* GPS Start knop */
-.gps-lb-start-btn {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 13px 18px; border-radius: 12px;
-  border: 2px dashed var(--groen); color: var(--groen);
-  background: var(--groen-licht); font-size: 0.92rem; font-weight: 700;
-  cursor: pointer; transition: all .2s; font-family: 'Poppins', sans-serif;
-  margin-bottom: 10px;
-}
-.gps-lb-start-btn:hover { background: var(--groen); color: #fff; border-style: solid; }
-
-/* KM display tijdens GPS */
-.gps-lb-km-display {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; background: var(--groen-licht);
-  border-radius: 10px; font-size: 0.9rem; font-weight: 700;
-  color: var(--groen); margin-bottom: 10px;
-}
-
-/* Samenvatting rij */
-.gps-lb-sam-rij {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
-}
-
-/* Sla op knop */
-.gps-lb-sla-btn {
-  width: 100%; margin-top: 12px; padding: 11px;
-  background: var(--groen); color: #fff; border: none;
-  border-radius: 8px; font-family: 'Poppins', sans-serif;
-  font-size: 0.88rem; font-weight: 700; cursor: pointer;
-}
-@media (hover: hover) { .gps-lb-sla-btn:hover { filter: brightness(1.08); } }
-
-/* Toevoeg-knop */
-.gps-lb-add-btn {
-  padding: 7px 16px; border-radius: 8px; margin-top: 8px;
-  border: 1.5px solid var(--blauw); color: var(--blauw);
-  background: var(--blauw-licht); font-size: 0.82rem;
-  font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif;
-}
-
-/* Bereken knop */
-.gps-lb-bereken-btn {
-  padding: 8px 18px; border-radius: 8px;
-  border: 1.5px solid var(--groen); color: var(--groen);
-  background: var(--groen-licht); font-size: 0.85rem;
-  font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif;
-}
-
-/* Resultaat km */
-.gps-lb-result-km {
-  margin-top: 10px; padding: 10px 14px;
-  background: var(--groen-licht); border-radius: 8px;
-  font-size: 0.88rem; font-weight: 700; color: var(--groen);
-}
-
-/* Segment rij (adres invoer) */
-.gps-lb-seg-rij {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-}
-.gps-lb-seg-lbl {
-  min-width: 40px; font-size: 0.72rem; font-weight: 700;
-  color: var(--zacht); text-transform: uppercase; letter-spacing: .04em;
-}
-.gps-lb-adres-inp {
-  flex: 1; padding: 8px 10px; border: 1.5px solid var(--rand);
-  border-radius: 7px; font-family: 'Poppins', sans-serif; font-size: 0.85rem;
-}
-.gps-lb-seg-del {
-  flex-shrink: 0; padding: 6px 10px; border: none; background: none;
-  color: var(--rood); font-size: 0.9rem; cursor: pointer;
-}
-
-/* Logboek tabel */
-.gps-lb-tabel {
-  width: 100%; border-collapse: collapse; font-size: 0.78rem;
-}
-.gps-lb-tabel th {
-  text-align: left; font-size: 0.63rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--zacht); border-bottom: 2px solid var(--rand);
-  padding: 6px 8px; white-space: nowrap;
-}
-.gps-lb-tabel td {
-  padding: 8px; border-bottom: 1px solid var(--rand); vertical-align: middle;
-}
-.gps-lb-tabel tr:last-child td { border-bottom: none; }
-@media (hover: hover) { .gps-lb-tabel tbody tr:hover td { background: var(--blauw-licht); } }
-
-/* Status badges */
-.gps-lb-status-ok {
-  background: var(--groen); color: #fff;
-  border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700;
-}
-.gps-lb-status-open {
-  background: var(--oranje-licht); color: var(--oranje);
-  border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700;
-  border: 1px solid var(--oranje);
-}
-
-/* Reden cel */
-.gps-lb-reden-cel { max-width: 200px; word-break: break-word; font-size: 0.75rem; }
-
-/* Koppelen knop in tabel */
-.gps-lb-koppel-btn {
-  padding: 3px 10px; border-radius: 6px; border: 1.5px solid var(--blauw);
-  color: var(--blauw); background: var(--blauw-licht);
-  font-size: 0.72rem; font-weight: 600; cursor: pointer;
-}
-
-/* Verwijder knop in tabel */
-.gps-lb-del-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 0.82rem; opacity: 0.35; padding: 2px 4px;
-}
-@media (hover: hover) { .gps-lb-del-btn:hover { opacity: 1; } }
-
-/* Kopieer knop */
-.fiets-kop-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 0.75rem; opacity: 0.4; padding: 0 2px; vertical-align: middle;
-}
-@media (hover: hover) { .fiets-kop-btn:hover { opacity: 1; } }
-
-/* Logboek teller */
-.fiets-log-teller {
-  font-size: 0.82rem; font-weight: 600; color: var(--zacht); margin-bottom: 4px;
-}
-
-/* Persoon/actie rijen in koppelen */
-.gps-lb-persoon-rij, .gps-lb-actie-rij {
-  padding: 7px 10px; cursor: pointer; border-radius: 6px;
-  margin-bottom: 4px; background: #f5f5f5; font-size: 0.85rem;
-  transition: background .15s;
-}
-@media (hover: hover) {
-  .gps-lb-persoon-rij:hover, .gps-lb-actie-rij:hover { background: var(--blauw-licht); }
-}
-
-/* Reden preview */
-.gps-lb-reden-preview {
-  margin-top: 14px; padding: 12px;
-  background: var(--groen-licht); border-radius: 10px;
-}
-
-/* Rit info rij */
-.gps-lb-rit-info-rij {
-  padding: 8px 12px; background: var(--blauw-licht);
-  border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-  color: var(--blauw); margin-bottom: 12px;
-}
-
-/* Koppel opslaan knop */
-.gps-lb-koppel-sla-btn {
-  width: 100%; margin-top: 14px; padding: 11px;
-  background: var(--groen); color: #fff; border: none;
-  border-radius: 8px; font-family: 'Poppins', sans-serif;
-  font-size: 0.88rem; font-weight: 700; cursor: pointer;
-}
-
-/* Print — logboek op A4 */
-@media print {
-  body > *:not(#pg-fiets-gps) { display: none !important; }
-  #pg-fiets-gps { display: block !important; position: static !important; }
-  .terug-link, .actie-rij, .filter-balk,
-  .fiets-kop-btn, .gps-lb-del-btn, .gps-lb-koppel-btn,
-  .gps-lb-tabs, #gps-lb-panel-1, #gps-lb-panel-3 { display: none !important; }
-  #gps-lb-panel-2 { display: block !important; }
-  .kaart { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
-  .gps-lb-tabel { font-size: 9pt; }
-  .gps-lb-tabel th, .gps-lb-tabel td { padding: 4px 6px; }
-}
-
 /* ══ INDIVIDUEEL DASHBOARD v2.9.4 — drill-down ══ */
 
 .dash-ind-drill-panel {
@@ -1441,70 +1255,151 @@ tr:nth-child(even) td { background: #fafaf9; }
   max-width: 90vw;
 }
 
-/* ══ PERSOONSDATABASE v3.0.5 ══ */
+/* ══ DASHBOARD MEDIA GALLERY v3.1.0 ══ */
+.dash-media-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+.dash-media-item {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--rand);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.dash-media-item:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.16); transform: translateY(-2px); }
+.dash-media-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+}
+.dash-media-info {
+  padding: 8px 10px 10px;
+}
+.dash-media-actie {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--tekst);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.dash-media-oms {
+  font-size: 0.65rem;
+  color: var(--zacht);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.dash-media-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--groen-licht);
+  color: var(--groen);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+
+/* ══ PERSOONSDATABASE v3.1.0 — Glass Morphism ══ */
 .pdb-zoek {
   width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #d1d5db;
-  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--glas-rand);
+  border-radius: 14px;
   font-size: 0.95rem;
   font-family: inherit;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   box-sizing: border-box;
-  background: var(--bg);
+  background: var(--glas);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: 0 2px 12px rgba(88,121,98,0.10);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .pdb-zoek:focus {
   outline: none;
   border-color: var(--groen);
+  box-shadow: 0 0 0 3px rgba(88,121,98,0.15);
 }
 .pdb-alfa-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--zacht);
-  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--groen);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 8px 0 4px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 4px;
+  padding: 14px 6px 6px;
+  border-bottom: 2px solid var(--glas-rand);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .pdb-rij {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background 0.12s;
-  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
 }
 .pdb-rij:hover {
-  background: #f0fdf4;
+  background: var(--glas);
+  border-color: var(--glas-rand);
+  box-shadow: 0 3px 14px rgba(88,121,98,0.12);
+  transform: translateY(-1px);
 }
 .pdb-rij-nr {
-  font-size: 0.7rem;
-  color: var(--zacht);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--wit);
+  background: var(--groen);
+  border-radius: 6px;
   min-width: 28px;
+  text-align: center;
+  padding: 2px 5px;
 }
 .pdb-rij-naam {
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   flex: 1;
+  color: var(--tekst);
 }
 .pdb-rij-gemeente {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--zacht);
+  background: #f0f4ee;
+  border-radius: 6px;
+  padding: 2px 8px;
 }
 .pdb-rij-pijl {
   font-size: 1rem;
   color: var(--groen);
   font-weight: 700;
+  opacity: 0.6;
+  transition: opacity 0.15s;
 }
+.pdb-rij:hover .pdb-rij-pijl { opacity: 1; }
 .pdb-dossier {
-  background: #f0fdf4;
-  border-radius: 10px;
-  padding: 16px;
-  margin: 4px 0 12px;
-  border: 1px solid #d1fae5;
+  background: var(--glas);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 6px 0 14px;
+  border: 1.5px solid var(--glas-rand);
+  box-shadow: 0 4px 20px rgba(88,121,98,0.12);
 }
 .pdb-teller-rij {
   display: flex;
@@ -1532,6 +1427,18 @@ tr:nth-child(even) td { background: #fafaf9; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+
+/* Privacy initialen — klik om naam te tonen */
+.privacy-init {
+  cursor: pointer;
+  border-bottom: 1.5px dashed var(--blauw);
+  color: var(--blauw);
+  font-weight: 700;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background .15s;
+}
+.privacy-init:hover { background: var(--blauw-licht); }
 .pdb-profiel-tabel {
   width: 100%;
   border-collapse: collapse;
@@ -1615,5 +1522,111 @@ tr:nth-child(even) td { background: #fafaf9; }
   color: var(--zacht);
   font-size: 0.9rem;
   font-style: italic;
+}
+
+/* ══════════════════════════════════════════
+   DATABASE PAGINA (v3.1.0)
+══════════════════════════════════════════ */
+
+/* Algemene pagina scroll fix */
+.pagina {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Database pagina */
+#pg-persoon-db {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.pagina-kop {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--rand);
+}
+
+.pagina-kop h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--tekst);
+}
+
+/* Database sub-tabs */
+.db-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 0;
+  border-bottom: 2px solid var(--rand);
+  background: var(--achtergrond);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.db-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: var(--zacht);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 4px 4px 0 0;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.db-tab-btn.actief {
+  color: var(--groen);
+  border-bottom-color: var(--groen);
+}
+
+.db-tab-btn:hover:not(.actief) {
+  color: var(--tekst);
+  background: var(--groen-licht);
+}
+
+/* Database panels */
+.db-panel {
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Zoekbalk wrapper */
+.pdb-zoek-wrap {
+  padding: 12px 16px 8px;
+}
+
+/* Sectie koptitel in dossier */
+.pdb-sectie-kop {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--zacht);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--rand);
+  margin-top: 8px;
+}
+
+/* Dossier inner container */
+.pdb-dossier-inner {
+  padding: 12px 16px;
+}
+
+/* Actie info blok in collectief dossier */
+.pdb-actie-info {
+  font-size: 0.82rem;
+  color: var(--tekst);
+  padding: 4px 0;
 }
 
