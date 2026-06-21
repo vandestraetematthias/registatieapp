@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.1.2';
+var APP_VERSION = '3.1.4';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -2195,7 +2195,7 @@ var App = {
   /* ══════════════════════════════════════
      BEWERK INDIVIDUELE ACTIE
   ══════════════════════════════════════ */
-  laadIaBewerk: function(id) {
+  laadIaBewerk: function(id, terugPagina) {
     var a = DB.individueel.find(function(x) { return x.id === id; });
     if (!a) return;
     State._bewerktIaId = id;
@@ -2225,8 +2225,9 @@ var App = {
     if (wh) wh.textContent = '\u270F\uFE0F Actie bewerken';
     var terugBtn = document.querySelector('#pg-ind-actie-wiz .terug-link button');
     if (terugBtn) {
-      terugBtn.textContent = '\u2190 Rapporten';
-      terugBtn.onclick = function() { State._bewerktIaId = null; App.nav('pg-rapport-individueel'); };
+      var navTerug = terugPagina || 'pg-rapport-individueel';
+      terugBtn.textContent = navTerug === 'pg-persoon-db' ? '\u2190 Database' : '\u2190 Rapporten';
+      terugBtn.onclick = function() { State._bewerktIaId = null; App.nav(navTerug); };
     }
   },
 
@@ -4246,15 +4247,23 @@ _collectProjectFotos: function(naam) {
     if (cdbPanel && cdbPanel.style.display !== 'none') {
       App._cdbRenderLijst('');
     }
+    // Als individueel-tab actief is, ook idb renderen
+    var idbPanel = document.getElementById('db-panel-individueel');
+    if (idbPanel && idbPanel.style.display !== 'none') {
+      App._idbRenderLijst('');
+    }
     if (window.lucide) lucide.createIcons();
   },
 
   dbTab: function(tab) {
     document.getElementById('db-panel-personen').style.display = tab === 'personen' ? '' : 'none';
     document.getElementById('db-panel-collectief').style.display = tab === 'collectief' ? '' : 'none';
+    document.getElementById('db-panel-individueel').style.display = tab === 'individueel' ? '' : 'none';
     document.getElementById('db-tab-personen').classList.toggle('actief', tab === 'personen');
     document.getElementById('db-tab-collectief').classList.toggle('actief', tab === 'collectief');
+    document.getElementById('db-tab-individueel').classList.toggle('actief', tab === 'individueel');
     if (tab === 'collectief') App._cdbRenderLijst('');
+    if (tab === 'individueel') App._idbRenderLijst('');
     if (window.lucide) lucide.createIcons();
   },
 
@@ -4266,6 +4275,11 @@ _collectProjectFotos: function(naam) {
   _cdbZoek: function() {
     var q = (document.getElementById('cdb-zoekbalk') || {}).value || '';
     App._cdbRenderLijst(q.toLowerCase());
+  },
+
+  _idbZoek: function() {
+    var q = (document.getElementById('idb-zoekbalk') || {}).value || '';
+    App._idbRenderLijst(q.toLowerCase());
   },
 
   _cdbRenderLijst: function(zoek) {
@@ -4412,6 +4426,111 @@ _collectProjectFotos: function(naam) {
     }
 
     html += '</div>'; // pdb-dossier-inner
+    return html;
+  },
+
+  /* ══════════════════════════════════════
+     INDIVIDUELE ACTIES DATABASE v3.1.4
+  ══════════════════════════════════════ */
+  _idbRenderLijst: function(zoek) {
+    var container = document.getElementById('idb-lijst');
+    if (!container) return;
+
+    // Snelle lookup volgnummer → persoon
+    var perMap = {};
+    DB.personen.forEach(function(p) { perMap[p.volgnummer] = p; });
+
+    var acties = DB.individueel.filter(function(a) {
+      if (a.status === 'gearchiveerd') return false;
+      if (!zoek) return true;
+      var p = perMap[a.persoonNummer];
+      var naam = p ? ((p.voornaam || '') + ' ' + (p.familienaam || '')).toLowerCase() : '';
+      return naam.indexOf(zoek) !== -1;
+    });
+
+    // Chronologisch: nieuwste eerst
+    acties.sort(function(a, b) {
+      return (b.datum || '') > (a.datum || '') ? 1 : -1;
+    });
+
+    if (!acties.length) {
+      container.innerHTML = '<p class="dash-leeg">Geen individuele acties gevonden.</p>';
+      return;
+    }
+
+    var html = '';
+    acties.forEach(function(a) {
+      var p = perMap[a.persoonNummer];
+      var naam = p ? App.esc((p.voornaam || '') + ' ' + (p.familienaam || '')) : 'Persoon #' + a.persoonNummer;
+      var d = a.datum ? new Date(a.datum) : null;
+      var datStr = (d && !isNaN(d)) ? d.toLocaleDateString('nl-BE') : (a.datum ? a.datum.substr(0,10) : '—');
+      var domeinen = (a.levensdomein || []).slice(0,3).map(function(dom) {
+        return '<span class="pdb-tag">' + App.esc(dom) + '</span>';
+      }).join('');
+
+      html += '<div class="pdb-rij" onclick="App._idbOpenActie(\'' + a.id + '\')" id="idb-rij-' + a.id + '">'
+        + '<span class="pdb-rij-nr">' + datStr + '</span>'
+        + '<span class="pdb-rij-naam">' + naam + (domeinen ? ' <span style="display:inline-flex;gap:3px;vertical-align:middle">' + domeinen + '</span>' : '') + '</span>'
+        + '<span class="pdb-rij-gemeente">' + App.esc(a.tijd || '') + '</span>'
+        + '<span class="pdb-rij-pijl">&rsaquo;</span>'
+        + '</div>'
+        + '<div class="pdb-dossier" id="idb-dos-' + a.id + '" style="display:none"></div>';
+    });
+    container.innerHTML = html;
+  },
+
+  _idbOpenActie: function(id) {
+    var dosEl = document.getElementById('idb-dos-' + id);
+    if (!dosEl) return;
+    if (dosEl.style.display !== 'none') {
+      dosEl.style.display = 'none';
+      dosEl.innerHTML = '';
+      return;
+    }
+    // Sluit alle open dossiers
+    var alle = document.querySelectorAll('#idb-lijst .pdb-dossier');
+    alle.forEach(function(d) { d.style.display = 'none'; d.innerHTML = ''; });
+
+    var a = DB.individueel.find(function(x) { return x.id === id; });
+    if (!a) return;
+    var p = DB.personen.find(function(x) { return x.volgnummer === a.persoonNummer; });
+    dosEl.innerHTML = App._idbDossierHTML(a, p);
+    dosEl.style.display = 'block';
+    if (window.lucide) lucide.createIcons();
+  },
+
+  _idbDossierHTML: function(a, p) {
+    var html = '<div class="pdb-dossier-inner">';
+
+    // Persoonsnaam bovenaan
+    var naam = p ? App.esc((p.voornaam || '') + ' ' + (p.familienaam || '')) : 'Persoon #' + a.persoonNummer;
+    html += '<div style="font-weight:700;font-size:0.9rem;color:var(--groen);margin-bottom:8px">' + naam + '</div>';
+
+    // Tellerblokjes
+    var d = a.datum ? new Date(a.datum) : null;
+    var datStr = (d && !isNaN(d)) ? d.toLocaleDateString('nl-BE') : '—';
+    var uren = App._tijdNaarUren(a.tijd);
+    html += '<div class="pdb-teller-rij">'
+      + '<div class="pdb-teller"><span class="pdb-teller-getal" style="font-size:0.8rem">' + datStr + '</span><span class="pdb-teller-label">datum</span></div>'
+      + '<div class="pdb-teller"><span class="pdb-teller-getal" style="font-size:0.78rem">' + App.esc((a.maand || '') + ' ' + (a.jaar || '')) + '</span><span class="pdb-teller-label">periode</span></div>'
+      + '<div class="pdb-teller"><span class="pdb-teller-getal">' + App.esc(a.tijd || '—') + '</span><span class="pdb-teller-label">duur</span></div>'
+      + '<div class="pdb-teller"><span class="pdb-teller-getal">' + uren.toFixed(1).replace('.', ',') + '</span><span class="pdb-teller-label">uren</span></div>'
+      + '</div>';
+
+    // Details tabel
+    html += '<table class="pdb-profiel-tabel">';
+    if (a.levensdomein && a.levensdomein.length) html += '<tr><td>Levensdomeinen</td><td>' + a.levensdomein.map(App.esc).join(', ') + '</td></tr>';
+    if (a.vindplaats && a.vindplaats.length) html += '<tr><td>Vindplaats</td><td>' + a.vindplaats.map(App.esc).join(', ') + '</td></tr>';
+    if (a.methodiek && a.methodiek.length) html += '<tr><td>Methodiek</td><td>' + a.methodiek.map(App.esc).join(', ') + '</td></tr>';
+    if (a.toeleiding && a.toeleiding.length) html += '<tr><td>Toeleiding</td><td>' + a.toeleiding.map(App.esc).join(', ') + '</td></tr>';
+    if (a.extraInfo) html += '<tr><td>Notitie</td><td>' + App.esc(a.extraInfo) + '</td></tr>';
+    html += '</table>';
+
+    // Bewerk-knop
+    html += '<button class="pdb-btn-bewerk" onclick="App.laadIaBewerk(\'' + a.id + '\',\'pg-persoon-db\')">'
+      + '<i data-lucide="edit-2"></i> Bewerken</button>';
+
+    html += '</div>';
     return html;
   },
 
@@ -4890,6 +5009,7 @@ _collectProjectFotos: function(naam) {
     else if (p === 'pg-archief')           App.renderArchief();
     else if (p === 'pg-jaarplan-mod')      App.renderJaarplan();
     else if (p === 'pg-dashboard')         App.renderDashboard();
+    else if (p === 'pg-persoon-db')        App.renderPersoonDb();
   },
 
   /* ══════════════════════════════════════

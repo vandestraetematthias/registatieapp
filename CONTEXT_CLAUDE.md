@@ -1,5 +1,5 @@
 # Buurtwerk Venning — Volledig contextdocument voor Claude
-**Versie**: 3.1.0 | **Datum**: 2026-06-21
+**Versie**: 3.1.4 | **Datum**: 2026-06-21
 **GitHub**: `vandestraetematthias/registatieapp` (branch: `main`)
 **Firebase project**: `buurtwerk-1b254`
 **Lokaal pad**: `C:/Users/matth/registatieapp/`
@@ -22,7 +22,7 @@ Een Progressive Web App (PWA) voor **Buurtwerk Venning** — een buurtwerking in
 | Auth | Firebase Auth (email+password) |
 | Database | Firebase Firestore (compat SDK v9.22.2) realtime |
 | Storage | Firebase Storage (foto's/bonnen) |
-| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.1.0`) |
+| PWA | Service Worker (`service-worker.js`, cache `buurtwerk-v3.1.4`) |
 | Fonts | Poppins (Google Fonts) |
 | Icons | Lucide (CDN) |
 | PDF export | jsPDF + html2canvas |
@@ -187,10 +187,10 @@ Sleutelmethoden:
 - `App._dashMedia()` — rendert `#dash-media` als klikbaar thumbnail-grid (`.dash-thumb-grid`); elke `<img class="dash-thumb">` uit `DB.collectief[].fotoUrl`
 - `App._dashFotoVergroot(url, naam)` — opent bestaande `#lightbox` met foto + zet `#lightbox-caption` op actienaam
 
-#### Database pagina (v3.1.0) — `pg-persoon-db`
-- Twee sub-tabs: **Personen** en **Collectieve Acties**, gewisseld via `App.dbTab(tab)`
-- `App.renderPersoonDb()` — hoofdrender, roept `_dbRenderLijst('')` aan (en `_cdbRenderLijst` als collectief-tab actief)
-- `App.dbTab(tab)` — wissel sub-tab: toont/verbergt `db-panel-personen` / `db-panel-collectief`, activeert tab-knoppen
+#### Database pagina (v3.1.4) — `pg-persoon-db`
+- Drie sub-tabs: **Personen**, **Collectieve Acties** en **Individuele Acties**, gewisseld via `App.dbTab(tab)`
+- `App.renderPersoonDb()` — hoofdrender, roept `_dbRenderLijst('')` aan (en `_cdbRenderLijst`/`_idbRenderLijst` als de betreffende tab actief is)
+- `App.dbTab(tab)` — wissel sub-tab: toont/verbergt `db-panel-personen` / `db-panel-collectief` / `db-panel-individueel`, activeert tab-knoppen
 - `App._dbZoek()` — live filter op `#pdb-zoekbalk` → `_dbRenderLijst(q)`
 - `App._dbRenderLijst(zoek)` — rendert `#pdb-lijst`: personen gesorteerd familienaam/voornaam, met alfabetische scheidingslabels (`.pdb-alfa-label`), persoonsrijen (`.pdb-rij`) en lege dossier-containers
 - `App._dbOpenPersoon(id)` — toggle dossier: haalt persoon + acties op, vult `.pdb-dossier` via `_dbDossierHTML()`
@@ -202,6 +202,11 @@ Sleutelmethoden:
 - `App._cdbRenderLijst(zoek)` — rendert `#cdb-lijst`: hoofdacties (module == null) gesorteerd alfabetisch op naam, met scheidingslabels en uitklapbare dossiers
 - `App._cdbOpenActie(id)` — toggle collectief dossier: laadt hoofdactie + bijhorende modules, vult via `_cdbDossierHTML()`
 - `App._cdbDossierHTML(actie, modules)` — genereert HTML: tellers (bewoners/nieuw/vrijwilligers/modules), profieltabel, Bewerken-knop, modulelijst per type (Logistiek/Overleg/Activiteit) met datum, notitie, kosten, foto-thumbnail
+- `App._idbZoek()` — live filter op `#idb-zoekbalk` → `_idbRenderLijst(q)`
+- `App._idbRenderLijst(zoek)` — rendert `#idb-lijst`: alle actieve individuele acties gesorteerd **nieuwste eerst** op `datum`; elke rij toont datum / bewonernaam / levensdomeinen-tags / tijdsduur
+- `App._idbOpenActie(id)` — toggle dossier: vult `.pdb-dossier` via `_idbDossierHTML()`; sluit andere open dossiers
+- `App._idbDossierHTML(actie, persoon)` — genereert HTML: 4 tellerblokjes (datum/periode/duur/uren), detailtabel (levensdomeinen/vindplaats/methodiek/toeleiding/notitie), Bewerken-knop → `laadIaBewerk(id,'pg-persoon-db')`
+- `App.laadIaBewerk(id, terugPagina)` — optionele `terugPagina` param: als `'pg-persoon-db'` dan toont terugknop "← Database" en navigeert terug naar databasepagina
 
 #### Navigatie
 - `App.nav(pagina)` — Wisselt actieve pagina, scrollt naar top, triggert renders
@@ -345,7 +350,7 @@ Score 0–3 per persoon, 1 punt per criterium:
 - Leeg: `dash-leeg`
 
 **Database CSS-klassen (v3.1.0)**:
-- `db-tabs` — flex balk met sub-tabknoppen, sticky top, border-bottom
+- `db-tabs` — flex balk met 3 sub-tabknoppen (Personen / Collectieve Acties / Individuele Acties), sticky top, border-bottom
 - `db-tab-btn` — tab-knop, `.actief` = groene border-bottom + groene tekst
 - `db-panel` — tab-inhoud container, overflow-y auto
 - `pdb-zoek-wrap` — padding wrapper voor zoekbalk
@@ -432,11 +437,13 @@ pg-dashboard
 1. `pg-col-actie-wiz` → `App.slaCaOp()` → hoofdactie (`module: null`)
 2. `pg-collectief-module` → `App.startModule(type)` → module-formulier → sub-record (`module: 'Logistiek'` etc.)
 
-### Database pagina (v3.1.0)
+### Database pagina (v3.1.4)
 1. Bottom nav → "Database" → `App.nav('pg-persoon-db')` → sub-tab Personen actief
 2. **Personen**: zoekbalk → gefilterde alfabetische lijst → klik rij → uitklapbaar dossier met tellerblokjes, profiel, traject, donuts
 3. **Collectieve Acties**: klik tab → `App.dbTab('collectief')` → `_cdbRenderLijst('')` → klik actie → modules tonen
-4. Bewerken-knop in dossier → `App.laadPerBewerk(id)` of `App.laadCaBewerk(id)` → bewerkingsmodus
+4. **Individuele Acties**: klik tab → `App.dbTab('individueel')` → `_idbRenderLijst('')` → chronologische lijst (nieuwste eerst) → klik rij → uitklapbaar dossier met details en Bewerken-knop
+5. Bewerken-knop → `App.laadPerBewerk(id)`, `App.laadCaBewerk(id)` of `App.laadIaBewerk(id,'pg-persoon-db')` → bewerkingsmodus, terugknop navigeert terug naar database
+6. Realtime sync: `_herlaadHuidigePagina()` omvat nu ook `pg-persoon-db` → alle tabs herladen automatisch na Firestore-update
 
 ### Dashboard refreshen
 1. `App.renderDashboard()` → `_dashData()` → alle render-functies
@@ -448,6 +455,7 @@ pg-dashboard
 
 | Tag | Beschrijving |
 |---|---|
+| `v3.1.4` | Derde sub-tab "Individuele Acties" toegevoegd aan Database-pagina: chronologische lijst (nieuwste eerst), uitklapbare dossiers met details, Bewerken-knop met terugnavigatie naar database; realtime sync (`_herlaadHuidigePagina`) uitgebreid met `pg-persoon-db` |
 | `v3.1.0` | Verwijdering fietsapp (pg-fiets-gps, Google Maps API, gps-lb functies/CSS); Database-pagina als 6e hoofdtab met sub-tabs Personen + Collectieve Acties, uitklapbare dossiers, bewerkfuncties en scroll-fixes |
 | `v3.0.5` | Dashboard foto-thumbnails (klikbaar grid, lightbox-caption); Persoonsdatabase `pg-persoon-db` met zoekbalk, alfabetische lijst, uitklapbaar dossier + SVG donut-analyse per levensdomein |
 | `v3.0.4` | Bugfix `renderColStart`: module-subtitel toont nu datum+locatie/type/notitie i.p.v. herhaalde actienaam |
