@@ -6,7 +6,7 @@
 
 'use strict';
 
-var APP_VERSION = '3.1.1';
+var APP_VERSION = '3.1.2';
 
 /* ══════════════════════════════════════════
    FIREBASE CONFIG & INIT
@@ -693,9 +693,11 @@ var App = {
         return p;
       });
       DB.slaPerOp(lijst);
+      var terugNaarDb = State._dbBewerkTerug;
       State._bewerktPersoId = null;
+      State._dbBewerkTerug = false;
       App.toast('Persoon bijgewerkt.', true);
-      App.nav('pg-rapport-personen');
+      App.nav(terugNaarDb ? 'pg-persoon-db' : 'pg-rapport-personen');
       return;
     }
 
@@ -4498,8 +4500,9 @@ _collectProjectFotos: function(naam) {
       '<tr><td>Gekend bij</td><td>' + App.esc(arr(p.gekendBij)) + '</td></tr>' +
       (p.notitie ? '<tr><td>Notitie</td><td>' + App.esc(p.notitie) + '</td></tr>' : '') +
       '</table>' +
-      '<div style="margin-bottom:12px">' +
-      '<button onclick="App.laadPerBewerk(\'' + p.id + '\')" style="background:var(--groen);color:#fff;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:0.82rem;font-weight:600">\u270F\uFE0F Bewerken</button>' +
+      '<div class="pdb-actie-knoppen">' +
+      '<button class="pdb-btn-bewerk" onclick="App._dbBekijkPersoon(\'' + p.id + '\')"><i data-lucide="edit-2"></i> Bewerken</button>' +
+      '<button class="pdb-btn-verwijder" onclick="App._dbVerwijderPersoon(\'' + p.id + '\',\'' + App.esc(p.voornaam + ' ' + p.familienaam) + '\')"><i data-lucide="trash-2"></i> Verwijderen</button>' +
       '</div>';
 
     // Historiek
@@ -4586,6 +4589,51 @@ _collectProjectFotos: function(naam) {
     }
 
     return html;
+  },
+
+  // Bewerken vanuit database-dossier → wizard, terugknop terug naar pg-persoon-db
+  _dbBekijkPersoon: function(id) {
+    var p = DB.personen.find(function(x) { return x.id === id; });
+    if (!p) return;
+    State._bewerktPersoId = id;
+    App.nav('pg-persoon-wiz');
+    document.getElementById('per-voornaam').value    = p.voornaam    || '';
+    document.getElementById('per-familienaam').value = p.familienaam || '';
+    document.getElementById('per-adres').value       = p.adres       || '';
+    document.getElementById('per-postcode').value    = p.postcode    || '';
+    document.getElementById('per-gemeente').value    = p.gemeente    || '';
+    document.getElementById('per-notitie').value     = p.notitie     || '';
+    App._setKeuzes('per-leeftijd',    [p.leeftijd || '']);
+    App._setKeuzes('per-inkomen',     p.inkomen      || []);
+    App._setKeuzes('per-woon',        p.huisvesting  || []);
+    App._setKeuzes('per-woonsituatie',[p.woonsituatie || '']);
+    App._setKeuzes('per-eerste',      [p.eersteContact || '']);
+    App._setKeuzes('per-type',        Array.isArray(p.type) ? p.type : (p.type ? [p.type] : []));
+    App._setKeuzes('per-gekend-bij',  p.gekendBij    || []);
+    var wh = document.querySelector('#pg-persoon-wiz .wiz-header h1');
+    var wp = document.querySelector('#pg-persoon-wiz .wiz-header p');
+    if (wh) wh.textContent = '\u270F\uFE0F Persoon bewerken';
+    if (wp) wp.textContent = p.voornaam + ' ' + p.familienaam + ' \u2014 nr. ' + p.volgnummer;
+    var terugBtn = document.querySelector('#pg-persoon-wiz .terug-link button');
+    if (terugBtn) {
+      terugBtn.textContent = '\u2190 Database';
+      terugBtn.onclick = function() { State._bewerktPersoId = null; App.nav('pg-persoon-db'); };
+    }
+    // Zorg dat opslaan terugkeert naar database
+    State._dbBewerkTerug = true;
+  },
+
+  // Verwijder persoon uit Firestore en cache
+  _dbVerwijderPersoon: function(id, naam) {
+    if (!confirm('Weet je zeker dat je ' + naam + ' permanent wilt verwijderen uit de database?\n\nDeze actie kan niet ongedaan worden gemaakt.')) return;
+    var lijst = DB.personen.filter(function(p) { return p.id !== id; });
+    DB.slaPerOp(lijst);
+    // Sluit het dossier en herlaad de lijst direct
+    var dosEl = document.getElementById('pdb-dos-' + id);
+    var rijEl = document.getElementById('pdb-rij-' + id);
+    if (dosEl) dosEl.remove();
+    if (rijEl) rijEl.remove();
+    App.toast(naam + ' verwijderd.', true);
   },
 
   renderDashboard: function() {

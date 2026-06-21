@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=3.1.1">
+<link rel="stylesheet" href="style.css?v=3.1.2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -159,33 +159,40 @@
      2B-DB. PERSOONSDATABASE
 ══════════════════════════════════════════ -->
 <div class="pagina" id="pg-persoon-db">
-  <div class="pagina-kop">
-    <h2>Database</h2>
-  </div>
-  <!-- Sub-tab navigatie -->
-  <div class="db-tabs">
-    <button class="db-tab-btn actief" onclick="App.dbTab('personen')" id="db-tab-personen">
-      <i data-lucide="users"></i> Personen
-    </button>
-    <button class="db-tab-btn" onclick="App.dbTab('collectief')" id="db-tab-collectief">
-      <i data-lucide="calendar"></i> Collectieve Acties
-    </button>
-  </div>
+  <div class="pdb-wrap sectie-ind">
 
-  <!-- Tab: Personen -->
-  <div id="db-panel-personen" class="db-panel">
-    <div class="pdb-zoek-wrap">
-      <input type="search" id="pdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op naam..." oninput="App._dbZoek()">
+    <div class="pdb-header">
+      <div class="start-icon"><i data-lucide="database"></i></div>
+      <h1>Database</h1>
+      <p>Personen en collectieve acties</p>
     </div>
-    <div id="pdb-lijst"></div>
-  </div>
 
-  <!-- Tab: Collectieve Acties -->
-  <div id="db-panel-collectief" class="db-panel" style="display:none">
-    <div class="pdb-zoek-wrap">
-      <input type="search" id="cdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op actienaam..." oninput="App._cdbZoek()">
+    <!-- Sub-tab navigatie -->
+    <div class="db-tabs">
+      <button class="db-tab-btn actief" onclick="App.dbTab('personen')" id="db-tab-personen">
+        <i data-lucide="users"></i> Personen
+      </button>
+      <button class="db-tab-btn" onclick="App.dbTab('collectief')" id="db-tab-collectief">
+        <i data-lucide="calendar"></i> Collectieve Acties
+      </button>
     </div>
-    <div id="cdb-lijst"></div>
+
+    <!-- Tab: Personen -->
+    <div id="db-panel-personen" class="db-panel">
+      <div class="pdb-zoek-wrap">
+        <input type="search" id="pdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op naam..." oninput="App._dbZoek()">
+      </div>
+      <div id="pdb-lijst"></div>
+    </div>
+
+    <!-- Tab: Collectieve Acties -->
+    <div id="db-panel-collectief" class="db-panel" style="display:none">
+      <div class="pdb-zoek-wrap">
+        <input type="search" id="cdb-zoekbalk" class="pdb-zoek" placeholder="Zoek op actienaam..." oninput="App._cdbZoek()">
+      </div>
+      <div id="cdb-lijst"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1667,11 +1674,11 @@
   </button>
 </nav>
 
-<script src="app.js?v=3.1.1"></script>
+<script src="app.js?v=3.1.2"></script>
 <script>
   // Versie-check: lege cache en herlaad bij nieuwe versie
   (function() {
-    var CURRENT_VERSION = '3.1.1';
+    var CURRENT_VERSION = '3.1.2';
     var stored = localStorage.getItem('app_version');
     if (stored !== CURRENT_VERSION) {
       localStorage.setItem('app_version', CURRENT_VERSION);

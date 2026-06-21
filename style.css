@@ -1333,32 +1333,34 @@ tr:nth-child(even) td { background: #fafaf9; }
 .pdb-alfa-label {
   font-size: 0.68rem;
   font-weight: 800;
-  color: var(--groen);
-  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 14px 6px 6px;
-  border-bottom: 2px solid var(--glas-rand);
+  border-bottom: 1.5px solid rgba(255,255,255,0.3);
   margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 6px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 .pdb-rij {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-  border: 1px solid transparent;
-  margin-bottom: 4px;
+  transition: box-shadow 0.15s, transform 0.12s;
+  border: 1.5px solid rgba(255,255,255,0.7);
+  margin-bottom: 6px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(58,106,72,0.10);
 }
 .pdb-rij:hover {
-  background: var(--glas);
-  border-color: var(--glas-rand);
-  box-shadow: 0 3px 14px rgba(88,121,98,0.12);
-  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(58,106,72,0.18);
+  transform: translateY(-2px);
+  border-color: var(--groen);
 }
 .pdb-rij-nr {
   font-size: 0.65rem;
@@ -1378,10 +1380,11 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 .pdb-rij-gemeente {
   font-size: 0.75rem;
-  color: var(--zacht);
-  background: #f0f4ee;
+  color: var(--groen);
+  background: #e8f5e9;
   border-radius: 6px;
   padding: 2px 8px;
+  font-weight: 500;
 }
 .pdb-rij-pijl {
   font-size: 1rem;
@@ -1525,24 +1528,54 @@ tr:nth-child(even) td { background: #fafaf9; }
 }
 
 /* ══════════════════════════════════════════
-   DATABASE PAGINA (v3.1.0)
+   DATABASE PAGINA (v3.1.2)
 ══════════════════════════════════════════ */
 
-/* Database pagina — flex-direction via .pagina.actief, geen display override hier */
-#pg-persoon-db {
-  overflow-y: hidden;
+/* Scrollbare wrapper — zelfde structuur als start-wrap */
+.pdb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 0 100px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.pagina-kop {
-  padding: 16px 16px 8px;
-  border-bottom: 1px solid var(--rand);
+/* Paginakop — icoon + titel zoals start-pagina's */
+.pdb-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 8px;
+  text-align: center;
 }
-
-.pagina-kop h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
+.pdb-header .start-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  background: rgba(58,106,72,0.88);
+  box-shadow: 0 4px 20px rgba(58,106,72,0.60);
+}
+.pdb-header .start-icon i { color: #fff; width: 26px; height: 26px; }
+.pdb-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px;
   color: var(--tekst);
+}
+.pdb-header p {
+  font-size: 0.85rem;
+  color: var(--zacht);
+  margin: 0 0 4px;
 }
 
 /* Database sub-tabs */
@@ -1550,12 +1583,10 @@ tr:nth-child(even) td { background: #fafaf9; }
   display: flex;
   gap: 8px;
   padding: 12px 16px 0;
-  border-bottom: 2px solid var(--rand);
-  background: var(--achtergrond);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  border-bottom: 2px solid rgba(255,255,255,0.35);
+  background: transparent;
   flex-shrink: 0;
+  margin: 0 16px;
 }
 
 .db-tab-btn {
@@ -1564,38 +1595,36 @@ tr:nth-child(even) td { background: #fafaf9; }
   gap: 6px;
   padding: 8px 16px;
   border: none;
-  background: none;
-  color: var(--zacht);
+  background: rgba(255,255,255,0.25);
+  color: var(--tekst);
   font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.88rem;
+  font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  border-radius: 4px 4px 0 0;
-  transition: color 0.2s, border-color 0.2s;
+  border-radius: 8px 8px 0 0;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .db-tab-btn.actief {
+  background: #fff;
   color: var(--groen);
   border-bottom-color: var(--groen);
 }
 
 .db-tab-btn:hover:not(.actief) {
-  color: var(--tekst);
-  background: var(--groen-licht);
+  background: rgba(255,255,255,0.45);
 }
 
-/* Database panels */
+/* Database panels — padding voor zijmarges */
 .db-panel {
-  overflow-y: auto;
-  flex: 1;
-  -webkit-overflow-scrolling: touch;
+  padding: 0 16px;
 }
 
 /* Zoekbalk wrapper */
 .pdb-zoek-wrap {
-  padding: 12px 16px 8px;
+  padding: 12px 0 8px;
 }
 
 /* Sectie koptitel in dossier */
@@ -1620,5 +1649,49 @@ tr:nth-child(even) td { background: #fafaf9; }
   font-size: 0.82rem;
   color: var(--tekst);
   padding: 4px 0;
+}
+
+/* Bewerken + verwijder knoppen in persoonsdossier */
+.pdb-actie-knoppen {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.pdb-btn-bewerk {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: var(--groen);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.pdb-btn-bewerk:hover { background: #166534; transform: translateY(-1px); }
+.pdb-btn-verwijder {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: #fff;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.pdb-btn-verwijder:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+  transform: translateY(-1px);
 }
 
